@@ -1,0 +1,188 @@
+import { createClient, SupabaseClient } from "@supabase/supabase-js";
+import { Submission, SubmissionData, SubmissionType } from "@/types/whiskey";
+
+// ── Browser (public anon) client ──────────────────────────────────────────────
+let _client: SupabaseClient | null = null;
+
+function getClient(): SupabaseClient | null {
+  if (_client) return _client;
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!url || !key || url === "your-project-url" || key === "your-anon-key") return null;
+  try {
+    _client = createClient(url, key);
+    return _client;
+  } catch {
+    return null;
+  }
+}
+
+// ── Server (service role) client — only used in Server Components / Actions ───
+export function getServiceClient(): SupabaseClient | null {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) return null;
+  try {
+    return createClient(url, key, { auth: { persistSession: false } });
+  } catch {
+    return null;
+  }
+}
+
+// ── Ratings ───────────────────────────────────────────────────────────────────
+
+export async function fetchBottleRatings(bottleId: string) {
+  const client = getClient();
+  if (!client) return [];
+  const { data, error } = await client
+    .from("ratings")
+    .select("rating, nose, palate, finish, created_at")
+    .eq("bottle_id", bottleId)
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function fetchAllAverageRatings(): Promise<
+  Record<string, { avg: number; count: number }>
+> {
+  const client = getClient();
+  if (!client) return {};
+  const { data, error } = await client.from("ratings").select("bottle_id, rating");
+  if (error) throw error;
+
+  const map: Record<string, { sum: number; count: number }> = {};
+  for (const row of data ?? []) {
+    if (!map[row.bottle_id]) map[row.bottle_id] = { sum: 0, count: 0 };
+    map[row.bottle_id].sum += row.rating;
+    map[row.bottle_id].count += 1;
+  }
+  return Object.fromEntries(
+    Object.entries(map).map(([id, { sum, count }]) => [
+      id,
+      { avg: Math.round((sum / count) * 10) / 10, count },
+    ])
+  );
+}
+
+export async function submitRating(payload: {
+  bottleId: string;
+  rating: number;
+  nose?: string;
+  palate?: string;
+  finish?: string;
+  sessionId: string;
+}) {
+  const client = getClient();
+  if (!client) throw new Error("Supabase is not configured. Add credentials to .env.local");
+  const { error } = await client.from("ratings").upsert(
+    {
+      bottle_id: payload.bottleId,
+      rating: payload.rating,
+      nose: payload.nose ?? null,
+      palate: payload.palate ?? null,
+      finish: payload.finish ?? null,
+      session_id: payload.sessionId,
+    },
+    { onConflict: "bottle_id,session_id" }
+  );
+  if (error) throw error;
+}
+
+// ── Community Submissions ─────────────────────────────────────────────────────
+
+export async function submitEntry(payload: {
+  type: SubmissionType;
+  data: SubmissionData;
+  parentId?: string;
+  parentName?: string;
+  sessionId: string;
+}) {
+  const client = getClient();
+  if (!client) throw new Error("Supabase is not configured. Add credentials to .env.local");
+  const { error } = await client.from("submissions").insert({
+    type: payload.type,
+    data: payload.data,
+    parent_id: payload.parentId ?? null,
+    parent_name: payload.parentName ?? null,
+    session_id: payload.sessionId,
+  });
+  if (error) throw error;
+}
+
+export async function fetchApprovedSubmissions(): Promise<Submission[]> {
+  const client = getClient();
+  if (!client) return [];
+  const { data, error } = await client
+    .from("submissions")
+    .select("*")
+    .eq("status", "approved")
+    .order("reviewed_at", { ascending: true });
+  if (error) {
+    console.warn("Could not load community submissions:", error.message);
+    return [];
+  }
+  return (data ?? []).map(rowToSubmission);
+}
+
+// ── Admin functions (use service role client) ─────────────────────────────────
+
+export async function fetchPendingSubmissions(): Promise<Submission[]> {
+  const client = getServiceClient();
+  if (!client) return [];
+  const { data, error } = await client
+    .from("submissions")
+    .select("*")
+    .eq("status", "pending")
+    .order("submitted_at", { ascending: true });
+  if (error) throw error;
+  return (data ?? []).map(rowToSubmission);
+}
+
+export async function fetchReviewedSubmissions(): Promise<Submission[]> {
+  const client = getServiceClient();
+  if (!client) return [];
+  const { data, error } = await client
+    .from("submissions")
+    .select("*")
+    .neq("status", "pending")
+    .order("reviewed_at", { ascending: false })
+    .limit(50);
+  if (error) throw error;
+  return (data ?? []).map(rowToSubmission);
+}
+
+export async function reviewSubmission(
+  id: string,
+  status: "approved" | "rejected",
+  adminNote?: string
+) {
+  const client = getServiceClient();
+  if (!client) throw new Error("Service role key not configured");
+  const { error } = await client
+    .from("submissions")
+    .update({
+      status,
+      admin_note: adminNote ?? null,
+      reviewed_at: new Date().toISOString(),
+    })
+    .eq("id", id);
+  if (error) throw error;
+}
+
+// ── Helper ────────────────────────────────────────────────────────────────────
+
+function rowToSubmission(row: Record<string, unknown>): Submission {
+  return {
+    id: row.id as string,
+    type: row.type as Submission["type"],
+    data: row.data as SubmissionData,
+    parentId: (row.parent_id as string | null) ?? undefined,
+    parentName: (row.parent_name as string | null) ?? undefined,
+    sessionId: row.session_id as string,
+    status: row.status as Submission["status"],
+    adminNote: (row.admin_note as string | null) ?? undefined,
+    submittedAt: row.submitted_at as string,
+    reviewedAt: (row.reviewed_at as string | null) ?? undefined,
+  };
+}

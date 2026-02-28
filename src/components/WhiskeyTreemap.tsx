@@ -30,6 +30,8 @@ interface Props {
   colorMode: ColorMode;
   onBottleClick: (node: TreemapNode) => void;
   ratings: Record<string, { avg: number; count: number }>;
+  onBrandClick?: (brandName: string) => void;
+  onSubBrandClick?: (subBrandName: string, brandName: string) => void;
 }
 
 function getColorScale(colorMode: ColorMode) {
@@ -60,10 +62,7 @@ function getNodeValue(
   }
 }
 
-/**
- * Returns a contrast-safe text color (#0f172a or #ffffff) for the given
- * background fill, based on WCAG relative luminance.
- */
+/** WCAG relative luminance → dark or light text */
 function getContrastColor(fill: string): string {
   const c = d3.color(fill);
   if (!c) return "#ffffff";
@@ -73,15 +72,10 @@ function getContrastColor(fill: string): string {
     return n <= 0.03928 ? n / 12.92 : Math.pow((n + 0.055) / 1.055, 2.4);
   };
   const L = 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
-  // Use dark text when background is light (threshold calibrated for our palette)
   return L > 0.35 ? "#0f172a" : "#ffffff";
 }
 
-/**
- * Wraps `text` into lines that fit within `maxWidth` (using character-width
- * estimation) up to `maxLines` lines. Returns an array of line strings.
- */
-const CHAR_W = 0.57; // empirical: avg char width / font size for system-ui
+const CHAR_W = 0.57;
 
 function wrapTextToLines(
   text: string,
@@ -93,7 +87,6 @@ function wrapTextToLines(
   const words = text.split(" ");
   const lines: string[] = [];
   let current = "";
-
   for (const word of words) {
     const candidate = current ? `${current} ${word}` : word;
     if (candidate.length <= charLimit) {
@@ -101,16 +94,21 @@ function wrapTextToLines(
     } else {
       if (current) lines.push(current);
       if (lines.length >= maxLines) break;
-      // If a single word is too long, hard-truncate it
-      current =
-        word.length > charLimit ? word.slice(0, charLimit - 1) + "…" : word;
+      current = word.length > charLimit ? word.slice(0, charLimit - 1) + "…" : word;
     }
   }
   if (current && lines.length < maxLines) lines.push(current);
   return lines.slice(0, maxLines);
 }
 
-export default function WhiskeyTreemap({ data, colorMode, onBottleClick, ratings }: Props) {
+export default function WhiskeyTreemap({
+  data,
+  colorMode,
+  onBottleClick,
+  ratings,
+  onBrandClick,
+  onSubBrandClick,
+}: Props) {
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -136,13 +134,10 @@ export default function WhiskeyTreemap({ data, colorMode, onBottleClick, ratings
     const treemap = d3
       .treemap<TreemapNode>()
       .size([width, height])
-      .paddingOuter(3)
-      // Give each level only as much top-padding as its label needs
-      .paddingTop((d) => {
-        if (d.depth === 0) return 0;   // root — no label
-        if (d.depth === 1) return 18;  // brand label (12px font + 6px gap)
-        return 14;                     // sub-brand label (10px font + 4px gap)
-      })
+      .paddingOuter(2)
+      // Only brand level gets a reserved strip for its label.
+      // Sub-brand labels float as overlay pills → zero wasted space.
+      .paddingTop((d) => (d.depth === 1 ? 16 : 0))
       .paddingInner(1)
       .round(true);
 
@@ -170,7 +165,7 @@ export default function WhiskeyTreemap({ data, colorMode, onBottleClick, ratings
       .style("opacity", "0")
       .style("transition", "opacity 0.15s");
 
-    // ── Draw nodes ────────────────────────────────────────────────────────────
+    // ── Node groups ───────────────────────────────────────────────────────────
     const nodes = svg
       .selectAll<SVGGElement, d3.HierarchyRectangularNode<TreemapNode>>("g.node")
       .data(root.descendants() as d3.HierarchyRectangularNode<TreemapNode>[])
@@ -189,7 +184,7 @@ export default function WhiskeyTreemap({ data, colorMode, onBottleClick, ratings
       d3.select(this).attr("clip-path", `url(#${clipId})`);
     });
 
-    // Rectangles
+    // ── Rectangles ────────────────────────────────────────────────────────────
     nodes
       .append("rect")
       .attr("width", (d) => Math.max(0, d.x1 - d.x0))
@@ -201,19 +196,19 @@ export default function WhiskeyTreemap({ data, colorMode, onBottleClick, ratings
           const val = getNodeValue(d, colorMode, ratings);
           return val !== null ? colorScale(val) : unratedColor;
         }
-        if (d.data.type === "subBrand") return "rgba(30,30,40,0.6)";
-        if (d.data.type === "brand") return "rgba(15,15,25,0.8)";
+        if (d.data.type === "subBrand") return "rgba(30,30,40,0.25)";
+        if (d.data.type === "brand") return "rgba(15,15,25,0.85)";
         return "transparent";
       })
       .attr("stroke", (d) => {
         if (d.data.source === "community") return "rgba(139,92,246,0.75)";
-        if (d.data.type === "brand") return "rgba(245,158,11,0.6)";
-        if (d.data.type === "subBrand") return "rgba(245,158,11,0.25)";
+        if (d.data.type === "brand") return "rgba(245,158,11,0.5)";
+        if (d.data.type === "subBrand") return "rgba(245,158,11,0.2)";
         return "rgba(255,255,255,0.08)";
       })
       .attr("stroke-width", (d) => {
         if (d.data.source === "community") return 1.5;
-        if (d.data.type === "brand") return 2;
+        if (d.data.type === "brand") return 1.5;
         return 1;
       })
       .attr("stroke-dasharray", (d) => (d.data.source === "community" ? "5,3" : null))
@@ -273,62 +268,11 @@ export default function WhiskeyTreemap({ data, colorMode, onBottleClick, ratings
         }
       });
 
-    // ── Labels ────────────────────────────────────────────────────────────────
-
-    // Brand labels
-    const brandNodes = nodes.filter((d) => d.data.type === "brand");
-
-    brandNodes
-      .append("text")
-      .attr("x", 6)
-      .attr("y", 13)
-      .attr("fill", "#f59e0b")
-      .attr("font-size", "12px")
-      .attr("font-weight", "700")
-      .attr("font-family", "system-ui, sans-serif")
-      .attr("text-anchor", "start")
-      .text((d) => {
-        const w = d.x1 - d.x0;
-        const name = d.data.name;
-        return w > 80 ? name : name.substring(0, Math.floor(w / 8));
-      });
-
-    // NDP badge — small second line below brand name
-    brandNodes
-      .filter((d) => !!d.data.isNDP)
-      .append("text")
-      .attr("x", 6)
-      .attr("y", 13)
-      .attr("fill", "rgba(245,158,11,0.55)")
-      .attr("font-size", "8px")
-      .attr("font-weight", "700")
-      .attr("font-family", "system-ui, sans-serif")
-      .attr("text-anchor", "start")
-      .attr("dy", "13px")
-      .text((d) => ((d.x1 - d.x0) > 60 ? "NDP" : ""));
-
-    // Sub-brand labels
-    nodes
-      .filter((d) => d.data.type === "subBrand")
-      .append("text")
-      .attr("x", 4)
-      .attr("y", 11)
-      .attr("fill", (d) =>
-        d.data.source === "community" ? "rgba(196,181,253,0.75)" : "rgba(245,158,11,0.7)"
-      )
-      .attr("font-size", "10px")
-      .attr("font-weight", "600")
-      .attr("font-family", "system-ui, sans-serif")
-      .text((d) => {
-        const w = d.x1 - d.x0;
-        return w > 60 ? d.data.name : "";
-      });
-
     // ── Bottle labels: dynamic contrast + word-wrap ───────────────────────────
-    const FONT = 10;   // px — bottle name font size
-    const LINE = 13;   // px — line height
-    const PAD  = 4;    // px — inner cell padding
-    const SUB  = 9;    // px — sub-label font size
+    const FONT = 10;
+    const LINE = 13;
+    const PAD  = 4;
+    const SUB  = 9;
 
     nodes
       .filter((d) => d.data.type === "bottle")
@@ -338,27 +282,22 @@ export default function WhiskeyTreemap({ data, colorMode, onBottleClick, ratings
         const h = d.y1 - d.y0;
         if (w < 30 || h < 20) return;
 
-        // Determine background color for this cell → pick contrasting text color
         const val = getNodeValue(d, colorMode, ratings);
         const fillHex = val !== null ? colorScale(val) : unratedColor;
         const textColor = getContrastColor(fillHex);
         const mutedColor =
           textColor === "#0f172a" ? "rgba(15,23,42,0.55)" : "rgba(255,255,255,0.55)";
 
-        // How much height is available for the name block?
         const showSub = h >= 44;
-        const subBlockH = showSub ? SUB + 3 : 0;   // sub-label height + gap
+        const subBlockH = showSub ? SUB + 3 : 0;
         const availH = h - PAD * 2 - subBlockH;
         const availW = w - PAD * 2;
         const maxLines = Math.max(1, Math.floor(availH / LINE));
 
         const lines = wrapTextToLines(d.data.name, availW, maxLines, FONT);
         const nameH = lines.length * LINE;
-
-        // Vertically center the name+sub block
         const blockTop = (h - nameH - subBlockH) / 2;
 
-        // Name tspans
         const nameEl = g
           .append("text")
           .attr("fill", textColor)
@@ -376,7 +315,6 @@ export default function WhiskeyTreemap({ data, colorMode, onBottleClick, ratings
             .text(line);
         });
 
-        // Sub-label (price / rating / rarity)
         if (showSub) {
           let sublabel = "";
           if (colorMode === "price")
@@ -387,7 +325,6 @@ export default function WhiskeyTreemap({ data, colorMode, onBottleClick, ratings
           } else if (colorMode === "rarity") {
             sublabel = d.data.rarity ?? "";
           }
-
           if (sublabel) {
             g.append("text")
               .attr("x", w / 2)
@@ -400,7 +337,140 @@ export default function WhiskeyTreemap({ data, colorMode, onBottleClick, ratings
           }
         }
       });
-  }, [data, colorMode, onBottleClick, ratings]);
+
+    // ── Overlay label layer — rendered last so it sits above all cell content ─
+    //
+    // Brand labels live in their 16px paddingTop strip (no overlap with cells).
+    // Sub-brand labels float as small pills over the top-left of their cell area.
+    //
+    const labelLayer = svg.append("g").attr("class", "label-overlay");
+
+    // Brand labels (in the dedicated 16px strip)
+    (root.descendants() as d3.HierarchyRectangularNode<TreemapNode>[])
+      .filter((d) => d.data.type === "brand")
+      .forEach((d) => {
+        const x = d.x0;
+        const y = d.y0;
+        const w = d.x1 - d.x0;
+        if (w < 24) return;
+
+        const name = w > 90 ? d.data.name : d.data.name.substring(0, Math.floor(w / 8));
+        if (!name) return;
+
+        const isClickable = !!onBrandClick;
+
+        const g = labelLayer
+          .append("g")
+          .style("cursor", isClickable ? "pointer" : "default");
+
+        if (isClickable) {
+          // Invisible hit-area covering the full brand strip
+          g.append("rect")
+            .attr("x", x)
+            .attr("y", y)
+            .attr("width", w)
+            .attr("height", 16)
+            .attr("fill", "transparent")
+            .on("click", () => onBrandClick!(d.data.name))
+            .on("mouseover", function () {
+              labelText.attr("fill", "#fbbf24");
+            })
+            .on("mouseout", function () {
+              labelText.attr("fill", "#f59e0b");
+            });
+        }
+
+        const labelText = g
+          .append("text")
+          .attr("x", x + 6)
+          .attr("y", y + 11)
+          .attr("fill", "#f59e0b")
+          .attr("font-size", "11px")
+          .attr("font-weight", "700")
+          .attr("font-family", "system-ui, sans-serif")
+          .attr("text-anchor", "start")
+          .style("pointer-events", "none")
+          .text(name);
+
+        if (d.data.isNDP && w > 70) {
+          g.append("text")
+            .attr("x", x + 6 + name.length * 6.8 + 5)
+            .attr("y", y + 10)
+            .attr("fill", "rgba(245,158,11,0.45)")
+            .attr("font-size", "8px")
+            .attr("font-weight", "700")
+            .attr("font-family", "system-ui, sans-serif")
+            .style("pointer-events", "none")
+            .text("NDP");
+        }
+
+        // Chevron hint when clickable
+        if (isClickable && w > 100) {
+          g.append("text")
+            .attr("x", x + w - 8)
+            .attr("y", y + 11)
+            .attr("fill", "rgba(245,158,11,0.3)")
+            .attr("font-size", "9px")
+            .attr("text-anchor", "end")
+            .style("pointer-events", "none")
+            .text("›");
+        }
+      });
+
+    // Sub-brand labels (floating pill over top-left of sub-brand area)
+    (root.descendants() as d3.HierarchyRectangularNode<TreemapNode>[])
+      .filter((d) => d.data.type === "subBrand")
+      .forEach((d) => {
+        const x = d.x0;
+        const y = d.y0;
+        const w = d.x1 - d.x0;
+        const h = d.y1 - d.y0;
+        if (w < 40 || h < 16) return;
+
+        const name = d.data.name;
+        const isCommunity = d.data.source === "community";
+        const isClickable = !!onSubBrandClick;
+
+        const PILL_H = 14;
+        const pillW = Math.min(name.length * 5.8 + 10, w - 4);
+
+        const g = labelLayer
+          .append("g")
+          .style("cursor", isClickable ? "pointer" : "default");
+
+        // Pill background
+        const pill = g
+          .append("rect")
+          .attr("x", x + 2)
+          .attr("y", y + 1)
+          .attr("width", pillW)
+          .attr("height", PILL_H)
+          .attr("rx", 3)
+          .attr("fill", "rgba(8,8,18,0.82)");
+
+        g.append("text")
+          .attr("x", x + 6)
+          .attr("y", y + 10)
+          .attr("fill", isCommunity ? "rgba(196,181,253,0.9)" : "rgba(245,158,11,0.8)")
+          .attr("font-size", "10px")
+          .attr("font-weight", "600")
+          .attr("font-family", "system-ui, sans-serif")
+          .style("pointer-events", "none")
+          .text(name);
+
+        if (isClickable) {
+          const parentBrand = (d as d3.HierarchyRectangularNode<TreemapNode> & {
+            parent?: d3.HierarchyNode<TreemapNode>;
+          }).parent?.data.name ?? "";
+
+          g.on("click", () => onSubBrandClick!(name, parentBrand))
+            .on("mouseover", () =>
+              pill.attr("fill", isCommunity ? "rgba(139,92,246,0.25)" : "rgba(245,158,11,0.18)")
+            )
+            .on("mouseout", () => pill.attr("fill", "rgba(8,8,18,0.82)"));
+        }
+      });
+  }, [data, colorMode, onBottleClick, ratings, onBrandClick, onSubBrandClick]);
 
   useEffect(() => {
     draw();

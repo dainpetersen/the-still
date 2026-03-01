@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "The Still",
+  title: "Common Cask",
   description: "American Whiskey — Explore, rate, and discover with the community",
 };
 

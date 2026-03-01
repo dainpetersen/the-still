@@ -117,7 +117,7 @@ export default function Home() {
       >
         <Logo />
         <span className="text-xs hidden md:block" style={{ color: "rgba(245,158,11,0.4)" }}>
-          American Whiskey — Explore &amp; Rate
+          Common Cask — Explore &amp; Rate
         </span>
 
         {/* Breadcrumb */}

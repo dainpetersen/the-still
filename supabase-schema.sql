@@ -114,8 +114,15 @@ create table if not exists public.bottles (
   description       text,
   source_distillery text,
   entry_source      text        default 'official',
+  availability      text        default 'current'
+                    check (availability in ('current', 'limited_release', 'discontinued')),
   created_at        timestamptz default now()
 );
+
+-- Migration: add availability column if the table already exists
+alter table public.bottles add column if not exists availability text
+  default 'current'
+  check (availability in ('current', 'limited_release', 'discontinued'));
 
 alter table public.bottles enable row level security;
 create policy "Bottles are public"    on public.bottles for select using (true);

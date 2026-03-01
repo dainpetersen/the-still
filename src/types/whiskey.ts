@@ -1,6 +1,7 @@
 export type RarityLevel = "common" | "limited" | "rare" | "allocated" | "unicorn";
 export type ColorMode = "price" | "rating" | "rarity";
 export type DataSource = "official" | "community";
+export type AvailabilityStatus = "current" | "limited_release" | "discontinued";
 export type SubmissionType = "brand" | "sub_brand" | "bottle";
 export type SubmissionStatus = "pending" | "approved" | "rejected";
 
@@ -16,6 +17,7 @@ export interface Bottle {
   description: string;
   sourceDistillery?: string; // for NDP bottles, e.g. "MGP" or "Undisclosed"
   source?: DataSource;     // "official" | "community"
+  availability?: AvailabilityStatus; // "current" | "limited_release" | "discontinued"
   // Populated from Supabase at runtime
   avgRating?: number;
   ratingCount?: number;
@@ -56,6 +58,7 @@ export interface TreemapDatum {
   isNDP?: boolean;
   source?: DataSource;
   sourceDistillery?: string;
+  availability?: AvailabilityStatus;
   children?: TreemapDatum[];
 }
 

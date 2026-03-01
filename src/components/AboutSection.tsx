@@ -33,10 +33,10 @@ export default function AboutSection({
 }: Props) {
   return (
     <section
-      className="px-6 py-20 md:px-12 lg:px-20"
+      className="px-6 py-14 md:px-12 lg:px-20"
       style={{
         background: "linear-gradient(180deg, #0a0610 0%, #0f0a18 100%)",
-        borderTop: "1px solid rgba(245,158,11,0.1)",
+        borderBottom: "1px solid rgba(245,158,11,0.1)",
       }}
     >
       <div className="max-w-4xl">
@@ -47,14 +47,14 @@ export default function AboutSection({
         >
           About
         </p>
-        <h2 className="text-3xl font-bold text-white mb-8">What is Common Cask?</h2>
+        <h2 className="text-3xl font-bold text-white mb-6">What is Common Cask?</h2>
 
         {/* Body */}
-        <div className="space-y-5 text-base leading-relaxed" style={{ color: "rgba(255,255,255,0.6)" }}>
+        <div className="space-y-4 text-base leading-relaxed" style={{ color: "rgba(255,255,255,0.6)" }}>
           <p>
             Common Cask is a community-driven catalog of American whiskey — built to map the landscape
             of domestic distilleries, sub-brands, and bottles in one interactive view. The treemap
-            above lets you navigate from distillery down to individual bottles, color-coded by price,
+            below lets you navigate from distillery down to individual bottles, color-coded by price,
             rarity, or community rating.
           </p>
           <p>
@@ -72,7 +72,7 @@ export default function AboutSection({
 
         {/* Stats */}
         <div
-          className="mt-12 py-8 rounded-2xl flex flex-wrap justify-around gap-8"
+          className="mt-10 py-7 rounded-2xl flex flex-wrap justify-around gap-8"
           style={{
             background: "rgba(10,10,20,0.7)",
             border: "1px solid rgba(245,158,11,0.12)",
@@ -84,16 +84,14 @@ export default function AboutSection({
           {communityCount > 0 && <Stat value={communityCount} label="Community Additions" />}
         </div>
 
-        {/* CTA */}
-        <div
-          className="mt-8 p-6 rounded-2xl"
-          style={{ border: "1px dashed rgba(245,158,11,0.25)", background: "rgba(245,158,11,0.03)" }}
-        >
-          <p className="text-sm font-semibold text-white mb-1">Want to improve the catalog?</p>
-          <p className="text-sm" style={{ color: "rgba(255,255,255,0.4)" }}>
-            Submit new brands, sub-brands, or bottles using the button in the sidebar. You can also
-            rate any bottle you&apos;ve tried — scores update live across the site.
-          </p>
+        {/* Scroll nudge */}
+        <div className="mt-8 flex flex-col items-center gap-1">
+          <span className="text-xs uppercase tracking-widest" style={{ color: "rgba(245,158,11,0.35)" }}>
+            Explore the catalog below
+          </span>
+          <svg width="16" height="10" viewBox="0 0 16 10" fill="none">
+            <path d="M2 2L8 8L14 2" stroke="rgba(245,158,11,0.35)" strokeWidth="1.5" strokeLinecap="round" />
+          </svg>
         </div>
       </div>
     </section>

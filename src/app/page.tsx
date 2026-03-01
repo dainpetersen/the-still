@@ -171,8 +171,16 @@ export default function Home() {
         </div>
       </header>
 
-      {/* Hero layout — fills viewport height minus header */}
-      <div className="flex" style={{ height: "calc(100vh - 64px)" }}>
+      {/* ── About / intro section at the top ───────────────────────── */}
+      <AboutSection
+        distilleryCount={mergedBrands.length}
+        bottleCount={mergedBrands.reduce((s, b) => s + b.subBrands.reduce((ss, sb) => ss + sb.bottles.length, 0), 0)}
+        ratingCount={Object.keys(ratings).length}
+        communityCount={communityCount}
+      />
+
+      {/* Hero layout — fills viewport height */}
+      <div className="flex" style={{ height: "100vh" }}>
         {/* Treemap */}
         <div className="flex-1 relative min-h-0">
           <WhiskeyTreemap
@@ -382,27 +390,7 @@ export default function Home() {
 
       {/* ── Scrollable sections below the treemap hero ───────────────── */}
 
-      {/* Scroll hint arrow */}
-      <div
-        className="flex flex-col items-center py-6 gap-1"
-        style={{ background: "#080a0f" }}
-      >
-        <span className="text-xs uppercase tracking-widest" style={{ color: "rgba(245,158,11,0.35)" }}>
-          Scroll to explore
-        </span>
-        <svg width="16" height="10" viewBox="0 0 16 10" fill="none">
-          <path d="M2 2L8 8L14 2" stroke="rgba(245,158,11,0.35)" strokeWidth="1.5" strokeLinecap="round" />
-        </svg>
-      </div>
-
       <TopRatedSection brands={mergedBrands} ratings={ratings} />
-
-      <AboutSection
-        distilleryCount={mergedBrands.length}
-        bottleCount={mergedBrands.reduce((s, b) => s + b.subBrands.reduce((ss, sb) => ss + sb.bottles.length, 0), 0)}
-        ratingCount={Object.keys(ratings).length}
-        communityCount={communityCount}
-      />
 
       {/* Footer */}
       <footer

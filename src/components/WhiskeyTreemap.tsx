@@ -128,7 +128,11 @@ export default function WhiskeyTreemap({
 
     const root = d3
       .hierarchy<TreemapNode>(data)
-      .sum(() => 1)
+      // Only count leaf nodes (bottles) so parent nodes don't consume space.
+      // If we used () => 1, every brand/sub-brand node would claim 1 extra unit
+      // of area, causing treemapSlice to leave a proportional gap at the bottom
+      // of each sub-brand container.
+      .sum((d) => (d.children && d.children.length > 0 ? 0 : 1))
       .sort((a, b) => (b.value ?? 0) - (a.value ?? 0));
 
     const treemap = d3
@@ -139,6 +143,16 @@ export default function WhiskeyTreemap({
       // Sub-brand labels float as overlay pills → zero wasted space.
       .paddingTop((d) => (d.depth === 1 ? 16 : 0))
       .paddingInner(1)
+      // At the sub-brand level (depth=2), use treemapSlice so bottles always
+      // stack top-to-bottom and fill 100% of the sub-brand area.  At every
+      // other level keep the default squarify aesthetic.
+      .tile((node, x0, y0, x1, y1) => {
+        if (node.depth === 2) {
+          d3.treemapSlice(node, x0, y0, x1, y1);
+        } else {
+          d3.treemapSquarify(node, x0, y0, x1, y1);
+        }
+      })
       .round(true);
 
     treemap(root);

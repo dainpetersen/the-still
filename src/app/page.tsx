@@ -171,13 +171,19 @@ export default function Home() {
         </div>
       </header>
 
-      {/* ── About / intro section at the top ───────────────────────── */}
-      <AboutSection
-        distilleryCount={mergedBrands.length}
-        bottleCount={mergedBrands.reduce((s, b) => s + b.subBrands.reduce((ss, sb) => ss + sb.bottles.length, 0), 0)}
-        ratingCount={Object.keys(ratings).length}
-        communityCount={communityCount}
-      />
+      {/* ── Intro row: About (left) + Top Rated panel (right) ──────── */}
+      <div
+        className="flex flex-col lg:flex-row"
+        style={{ borderBottom: "1px solid rgba(245,158,11,0.1)" }}
+      >
+        <AboutSection
+          distilleryCount={mergedBrands.length}
+          bottleCount={mergedBrands.reduce((s, b) => s + b.subBrands.reduce((ss, sb) => ss + sb.bottles.length, 0), 0)}
+          ratingCount={Object.keys(ratings).length}
+          communityCount={communityCount}
+        />
+        <TopRatedSection brands={mergedBrands} ratings={ratings} panel />
+      </div>
 
       {/* Hero layout — fills viewport height */}
       <div className="flex" style={{ height: "100vh" }}>
@@ -388,9 +394,7 @@ export default function Home() {
         </aside>
       </div>
 
-      {/* ── Scrollable sections below the treemap hero ───────────────── */}
-
-      <TopRatedSection brands={mergedBrands} ratings={ratings} />
+      {/* ── Scroll indicator ─────────────────────────────────────────── */}
 
       {/* Footer */}
       <footer

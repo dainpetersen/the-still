@@ -6,6 +6,8 @@ import { Brand } from "@/types/whiskey";
 interface Props {
   brands: Brand[];
   ratings: Record<string, { avg: number; count: number }>;
+  /** When true, renders as a compact right-panel column */
+  panel?: boolean;
 }
 
 const RARITY_COLOR: Record<string, string> = {
@@ -16,14 +18,12 @@ const RARITY_COLOR: Record<string, string> = {
   unicorn: "rgba(167,139,250,0.9)",
 };
 
-export default function TopRatedSection({ brands, ratings }: Props) {
-  // Flatten all bottles, attach rating data + brand/sub-brand names
+export default function TopRatedSection({ brands, ratings, panel = false }: Props) {
   const ranked = useMemo(() => {
     const rows: {
       id: string;
       name: string;
       brandName: string;
-      subBrandName: string;
       avg: number;
       count: number;
       rarity: string;
@@ -38,7 +38,6 @@ export default function TopRatedSection({ brands, ratings }: Props) {
               id: bottle.id,
               name: bottle.name,
               brandName: brand.name,
-              subBrandName: sub.name,
               avg: r.avg,
               count: r.count,
               rarity: bottle.rarity ?? "common",
@@ -48,22 +47,88 @@ export default function TopRatedSection({ brands, ratings }: Props) {
       }
     }
 
-    return rows.sort((a, b) => b.avg - a.avg || b.count - a.count).slice(0, 15);
+    return rows.sort((a, b) => b.avg - a.avg || b.count - a.count).slice(0, 10);
   }, [brands, ratings]);
 
   const maxRating = 10;
 
+  if (panel) {
+    return (
+      <div
+        className="flex flex-col px-6 py-10 lg:w-80 xl:w-96 flex-shrink-0"
+        style={{ borderLeft: "1px solid rgba(245,158,11,0.1)" }}
+      >
+        {/* Heading */}
+        <p
+          className="text-xs uppercase tracking-[0.25em] mb-2"
+          style={{ color: "rgba(245,158,11,0.6)" }}
+        >
+          Community Scores
+        </p>
+        <h3 className="text-lg font-bold text-white mb-4">Top Rated Bottles</h3>
+
+        {ranked.length === 0 ? (
+          <div
+            className="flex-1 rounded-xl flex flex-col items-center justify-center text-center p-6 gap-2"
+            style={{ border: "1px solid rgba(245,158,11,0.1)", background: "rgba(10,10,20,0.5)" }}
+          >
+            <p className="text-sm font-semibold text-white">No ratings yet</p>
+            <p className="text-xs" style={{ color: "rgba(255,255,255,0.3)" }}>
+              Rate a bottle in the treemap below — it will appear here.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-3 flex-1">
+            {ranked.map((item, i) => (
+              <div key={item.id} className="flex items-center gap-2">
+                {/* Rank */}
+                <span
+                  className="w-4 text-right text-xs font-bold flex-shrink-0"
+                  style={{ color: i < 3 ? "rgba(245,158,11,0.9)" : "rgba(255,255,255,0.2)" }}
+                >
+                  {i + 1}
+                </span>
+
+                {/* Name + brand */}
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-semibold text-white truncate leading-tight">{item.name}</p>
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                    {/* Bar */}
+                    <div className="relative h-1 flex-1 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.07)" }}>
+                      <div
+                        className="absolute left-0 top-0 h-full rounded-full"
+                        style={{
+                          width: `${(item.avg / maxRating) * 100}%`,
+                          background: `linear-gradient(90deg, rgba(245,158,11,0.4) 0%, ${RARITY_COLOR[item.rarity] ?? "rgba(245,158,11,0.7)"} 100%)`,
+                          transition: "width 0.6s ease",
+                        }}
+                      />
+                    </div>
+                    {/* Score */}
+                    <span
+                      className="text-xs font-bold tabular-nums flex-shrink-0"
+                      style={{ color: RARITY_COLOR[item.rarity] ?? "rgba(245,158,11,0.9)" }}
+                    >
+                      {item.avg.toFixed(1)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Full-width standalone section (kept for potential future use)
   return (
     <section
       className="px-6 py-16 md:px-12 lg:px-20"
       style={{ background: "linear-gradient(180deg, #080a0f 0%, #0a0610 100%)" }}
     >
-      {/* Heading */}
-      <div className="mb-10">
-        <p
-          className="text-xs uppercase tracking-[0.25em] mb-1"
-          style={{ color: "rgba(245,158,11,0.6)" }}
-        >
+      <div className="mb-8">
+        <p className="text-xs uppercase tracking-[0.25em] mb-1" style={{ color: "rgba(245,158,11,0.6)" }}>
           Community Scores
         </p>
         <h2 className="text-3xl font-bold text-white">Top Rated Bottles</h2>
@@ -74,72 +139,40 @@ export default function TopRatedSection({ brands, ratings }: Props) {
 
       {ranked.length === 0 ? (
         <div
-          className="rounded-2xl p-10 text-center"
+          className="rounded-2xl p-10 text-center max-w-xl"
           style={{ border: "1px solid rgba(245,158,11,0.12)", background: "rgba(10,10,20,0.6)" }}
         >
           <p className="text-lg font-semibold text-white mb-2">No ratings yet</p>
           <p className="text-sm" style={{ color: "rgba(255,255,255,0.35)" }}>
-            Explore the treemap above and be the first to rate a bottle.
+            Explore the treemap and be the first to rate a bottle.
           </p>
         </div>
       ) : (
-        <div className="space-y-3 max-w-4xl">
+        <div className="space-y-3 max-w-2xl">
           {ranked.map((item, i) => (
-            <div
-              key={item.id}
-              className="flex items-center gap-4 group"
-            >
-              {/* Rank number */}
+            <div key={item.id} className="flex items-center gap-4">
               <span
                 className="w-6 text-right text-sm font-bold flex-shrink-0"
                 style={{ color: i < 3 ? "rgba(245,158,11,0.9)" : "rgba(255,255,255,0.2)" }}
               >
                 {i + 1}
               </span>
-
-              {/* Name + brand */}
-              <div className="w-64 flex-shrink-0 min-w-0">
-                <p className="text-sm font-semibold text-white truncate leading-tight">{item.name}</p>
-                <p className="text-xs truncate" style={{ color: "rgba(255,255,255,0.35)" }}>
-                  {item.brandName}
-                </p>
+              <div className="w-48 flex-shrink-0 min-w-0">
+                <p className="text-sm font-semibold text-white truncate">{item.name}</p>
+                <p className="text-xs truncate" style={{ color: "rgba(255,255,255,0.35)" }}>{item.brandName}</p>
               </div>
-
-              {/* Bar */}
-              <div className="flex-1 relative h-6 flex items-center min-w-0">
+              <div className="flex-1 relative h-5 flex items-center">
+                <div className="h-1.5 rounded-full absolute left-0 w-full" style={{ background: "rgba(255,255,255,0.07)" }} />
                 <div
-                  className="h-2 rounded-full absolute left-0"
+                  className="h-1.5 rounded-full absolute left-0"
                   style={{
                     width: `${(item.avg / maxRating) * 100}%`,
                     background: `linear-gradient(90deg, rgba(245,158,11,0.4) 0%, ${RARITY_COLOR[item.rarity] ?? "rgba(245,158,11,0.7)"} 100%)`,
-                    transition: "width 0.6s ease",
                   }}
                 />
-                <div
-                  className="h-2 rounded-full absolute left-0 w-full opacity-10"
-                  style={{ background: "rgba(255,255,255,0.1)" }}
-                />
               </div>
-
-              {/* Score */}
-              <div className="flex items-baseline gap-1 flex-shrink-0 w-20 justify-end">
-                <span
-                  className="text-lg font-bold tabular-nums"
-                  style={{ color: RARITY_COLOR[item.rarity] ?? "rgba(245,158,11,0.9)" }}
-                >
-                  {item.avg.toFixed(1)}
-                </span>
-                <span className="text-xs" style={{ color: "rgba(255,255,255,0.25)" }}>
-                  / 10
-                </span>
-              </div>
-
-              {/* Count */}
-              <span
-                className="text-xs flex-shrink-0 w-16 text-right hidden sm:block"
-                style={{ color: "rgba(255,255,255,0.2)" }}
-              >
-                {item.count} {item.count === 1 ? "rating" : "ratings"}
+              <span className="text-sm font-bold tabular-nums flex-shrink-0" style={{ color: RARITY_COLOR[item.rarity] ?? "rgba(245,158,11,0.9)" }}>
+                {item.avg.toFixed(1)}
               </span>
             </div>
           ))}

@@ -70,6 +70,7 @@ export async function fetchCatalog(): Promise<Brand[] | null> {
             description: bt.description ?? "",
             sourceDistillery: bt.source_distillery ?? undefined,
             source: (bt.entry_source as "official" | "community") ?? "official",
+            availability: (bt.availability as "current" | "limited_release" | "discontinued") ?? "current",
           })),
       })),
   }));

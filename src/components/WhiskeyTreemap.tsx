@@ -20,6 +20,7 @@ interface TreemapNode {
   isNDP?: boolean;
   source?: "official" | "community";
   sourceDistillery?: string;
+  availability?: "current" | "limited_release" | "discontinued";
   country?: string;
   region?: string;
   children?: TreemapNode[];
@@ -185,7 +186,11 @@ export default function WhiskeyTreemap({
       .data(root.descendants() as d3.HierarchyRectangularNode<TreemapNode>[])
       .join("g")
       .attr("class", "node")
-      .attr("transform", (d) => `translate(${d.x0},${d.y0})`);
+      .attr("transform", (d) => `translate(${d.x0},${d.y0})`)
+      // Dim discontinued bottles at the group level so both rect + text fade
+      .style("opacity", (d) =>
+        d.data.type === "bottle" && d.data.availability === "discontinued" ? 0.35 : 1
+      );
 
     nodes.each(function (d, i) {
       const clipId = `clip-${i}`;
@@ -239,6 +244,12 @@ export default function WhiskeyTreemap({
           d.data.source === "community"
             ? `<div style="margin-top:4px;font-size:10px;color:rgba(196,181,253,0.9);background:rgba(139,92,246,0.15);padding:2px 6px;border-radius:4px;display:inline-block">★ Community entry</div>`
             : "";
+        const availabilityBadge =
+          d.data.availability === "discontinued"
+            ? `<div style="margin-top:4px;font-size:10px;color:rgba(156,163,175,0.9);background:rgba(75,85,99,0.25);padding:2px 6px;border-radius:4px;display:inline-block">⛔ Discontinued</div>`
+            : d.data.availability === "limited_release"
+            ? `<div style="margin-top:4px;font-size:10px;color:rgba(245,158,11,0.9);background:rgba(245,158,11,0.1);padding:2px 6px;border-radius:4px;display:inline-block">⏳ Limited release</div>`
+            : "";
         const sourceLine = d.data.sourceDistillery
           ? `<div style="font-size:11px;color:#6b7280">Source: ${d.data.sourceDistillery}</div>`
           : "";
@@ -252,7 +263,7 @@ export default function WhiskeyTreemap({
              ${sourceLine}
              ${ratingInfo ? `<div>⭐ ${ratingInfo.avg}/10 (${ratingInfo.count} rating${ratingInfo.count !== 1 ? "s" : ""})</div>` : "<div style='color:#6b7280'>No ratings yet</div>"}
              <div style="margin-top:6px;font-size:11px;color:#9ca3af;font-style:italic">${d.data.description ?? ""}</div>
-             ${communityBadge}
+             ${communityBadge}${availabilityBadge}
              <div style="margin-top:6px;font-size:11px;color:#f59e0b">Click to rate</div>`
           )
           .style("opacity", "1");

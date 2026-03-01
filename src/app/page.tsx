@@ -37,6 +37,7 @@ export default function Home() {
   // ── Filtering state ───────────────────────────────────────────────────────
   const [filterBrand, setFilterBrand] = useState<string | null>(null);
   const [filterSubBrand, setFilterSubBrand] = useState<string | null>(null);
+  const [showDiscontinued, setShowDiscontinued] = useState(true);
 
   const handleBrandClick = useCallback((brandName: string) => {
     setFilterBrand(brandName);
@@ -59,12 +60,23 @@ export default function Home() {
 
   // ── Derived display data ──────────────────────────────────────────────────
   const displayBrands = useMemo((): Brand[] => {
-    if (!filterBrand) return mergedBrands;
-    const brand = mergedBrands.find((b) => b.name === filterBrand);
-    if (!brand) return mergedBrands;
+    // Strip discontinued bottles if the toggle is off
+    const base = showDiscontinued
+      ? mergedBrands
+      : mergedBrands.map((b) => ({
+          ...b,
+          subBrands: b.subBrands.map((sb) => ({
+            ...sb,
+            bottles: sb.bottles.filter((bt) => bt.availability !== "discontinued"),
+          })),
+        }));
+
+    if (!filterBrand) return base;
+    const brand = base.find((b) => b.name === filterBrand);
+    if (!brand) return base;
     if (!filterSubBrand) return [brand];
     return [{ ...brand, subBrands: brand.subBrands.filter((sb) => sb.name === filterSubBrand) }];
-  }, [mergedBrands, filterBrand, filterSubBrand]);
+  }, [mergedBrands, filterBrand, filterSubBrand, showDiscontinued]);
 
   const displayData = useMemo(() => buildTreemapData(displayBrands), [displayBrands]);
 
@@ -352,6 +364,38 @@ export default function Home() {
                 : filterBrand
                 ? "Click a sub-brand label to drill in, or a bottle to rate it."
                 : "Click a brand label to filter. Click a bottle to rate it. Switch color modes to explore."}
+            </p>
+          </div>
+
+          {/* Availability filter */}
+          <div
+            className="rounded-xl p-3"
+            style={{ background: "rgba(10,10,20,0.85)", border: "1px solid rgba(245,158,11,0.15)" }}
+          >
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
+              Availability
+            </p>
+            <div className="flex rounded-lg overflow-hidden text-xs" style={{ border: "1px solid rgba(245,158,11,0.2)" }}>
+              {[
+                { label: "All", value: true },
+                { label: "Current", value: false },
+              ].map(({ label, value }) => (
+                <button
+                  key={label}
+                  onClick={() => setShowDiscontinued(value)}
+                  className="flex-1 py-1.5 transition-colors"
+                  style={{
+                    background: showDiscontinued === value ? "rgba(245,158,11,0.18)" : "transparent",
+                    color: showDiscontinued === value ? "#f59e0b" : "rgba(255,255,255,0.35)",
+                    fontWeight: showDiscontinued === value ? "600" : "400",
+                  }}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <p className="text-xs mt-2" style={{ color: "rgba(255,255,255,0.25)" }}>
+              {showDiscontinued ? "Includes discontinued bottles" : "Hiding discontinued bottles"}
             </p>
           </div>
 

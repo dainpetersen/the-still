@@ -3,12 +3,14 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import dynamic from "next/dynamic";
 import { WHISKEY_DATA, buildTreemapData } from "@/data/whiskeys";
-import { fetchAllAverageRatings, fetchApprovedSubmissions } from "@/lib/supabase";
+import { fetchAllAverageRatings, fetchApprovedSubmissions, fetchCatalog } from "@/lib/supabase";
 import { mergeApprovedSubmissions } from "@/lib/mergeSubmissions";
 import { Brand, ColorMode } from "@/types/whiskey";
 import ColorLegend from "@/components/ColorLegend";
 import RatingModal from "@/components/RatingModal";
 import SubmissionModal from "@/components/SubmissionModal";
+import TopRatedSection from "@/components/TopRatedSection";
+import AboutSection from "@/components/AboutSection";
 import Logo from "@/components/Logo";
 
 const WhiskeyTreemap = dynamic(() => import("@/components/WhiskeyTreemap"), { ssr: false });
@@ -83,15 +85,22 @@ export default function Home() {
   // ── Data loading ──────────────────────────────────────────────────────────
   const loadData = useCallback(async () => {
     try {
-      const [ratingsData, approvedSubs] = await Promise.all([
+      const [ratingsData, approvedSubs, catalogData] = await Promise.all([
         fetchAllAverageRatings(),
         fetchApprovedSubmissions(),
+        fetchCatalog(),
       ]);
       setRatings(ratingsData);
+
+      // Use Supabase catalog if available, otherwise fall back to static data
+      const baseData = catalogData ?? WHISKEY_DATA;
+
       if (approvedSubs.length > 0) {
-        const merged = mergeApprovedSubmissions(WHISKEY_DATA, approvedSubs);
+        const merged = mergeApprovedSubmissions(baseData, approvedSubs);
         setMergedBrands(merged);
         setCommunityCount(approvedSubs.filter((s) => s.type === "bottle").length);
+      } else {
+        setMergedBrands(baseData);
       }
     } catch {
       // Gracefully degrade without Supabase
@@ -104,16 +113,20 @@ export default function Home() {
 
   return (
     <main
-      className="flex flex-col min-h-screen"
+      className="flex flex-col"
       style={{
         background: "linear-gradient(160deg, #0a0608 0%, #0f0a18 50%, #080a0f 100%)",
         color: "#f5f5f5",
       }}
     >
-      {/* Header */}
+      {/* Header — sticky so it stays visible when scrolling into sections */}
       <header
-        className="px-6 py-3 flex items-center gap-4 flex-shrink-0"
-        style={{ borderBottom: "1px solid rgba(245,158,11,0.2)" }}
+        className="sticky top-0 z-40 px-6 py-3 flex items-center gap-4 flex-shrink-0"
+        style={{
+          borderBottom: "1px solid rgba(245,158,11,0.2)",
+          background: "rgba(10,6,8,0.92)",
+          backdropFilter: "blur(8px)",
+        }}
       >
         <Logo />
         <span className="text-xs hidden md:block" style={{ color: "rgba(245,158,11,0.4)" }}>
@@ -158,10 +171,10 @@ export default function Home() {
         </div>
       </header>
 
-      {/* Main layout */}
-      <div className="flex flex-1 overflow-hidden">
+      {/* Hero layout — fills viewport height minus header */}
+      <div className="flex" style={{ height: "calc(100vh - 64px)" }}>
         {/* Treemap */}
-        <div className="flex-1 relative min-h-0" style={{ minHeight: "calc(100vh - 56px)" }}>
+        <div className="flex-1 relative min-h-0">
           <WhiskeyTreemap
             data={displayData}
             colorMode={colorMode}
@@ -366,6 +379,41 @@ export default function Home() {
           </div>
         </aside>
       </div>
+
+      {/* ── Scrollable sections below the treemap hero ───────────────── */}
+
+      {/* Scroll hint arrow */}
+      <div
+        className="flex flex-col items-center py-6 gap-1"
+        style={{ background: "#080a0f" }}
+      >
+        <span className="text-xs uppercase tracking-widest" style={{ color: "rgba(245,158,11,0.35)" }}>
+          Scroll to explore
+        </span>
+        <svg width="16" height="10" viewBox="0 0 16 10" fill="none">
+          <path d="M2 2L8 8L14 2" stroke="rgba(245,158,11,0.35)" strokeWidth="1.5" strokeLinecap="round" />
+        </svg>
+      </div>
+
+      <TopRatedSection brands={mergedBrands} ratings={ratings} />
+
+      <AboutSection
+        distilleryCount={mergedBrands.length}
+        bottleCount={mergedBrands.reduce((s, b) => s + b.subBrands.reduce((ss, sb) => ss + sb.bottles.length, 0), 0)}
+        ratingCount={Object.keys(ratings).length}
+        communityCount={communityCount}
+      />
+
+      {/* Footer */}
+      <footer
+        className="px-6 py-6 text-center text-xs"
+        style={{
+          borderTop: "1px solid rgba(245,158,11,0.08)",
+          color: "rgba(255,255,255,0.18)",
+        }}
+      >
+        Common Cask · Community-driven American whiskey catalog · Suggestions welcome
+      </footer>
 
       {/* Rating Modal */}
       {selectedBottle && selectedBottle.id && (

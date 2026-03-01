@@ -1,5 +1,5 @@
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
-import { Submission, SubmissionData, SubmissionType } from "@/types/whiskey";
+import { Brand, Bottle, SubBrand, Submission, SubmissionData, SubmissionType } from "@/types/whiskey";
 
 // ── Browser (public anon) client ──────────────────────────────────────────────
 let _client: SupabaseClient | null = null;
@@ -27,6 +27,52 @@ export function getServiceClient(): SupabaseClient | null {
   } catch {
     return null;
   }
+}
+
+// ── Catalog ───────────────────────────────────────────────────────────────────
+// Returns null if Supabase is not configured or tables are empty (caller falls back to static data)
+export async function fetchCatalog(): Promise<Brand[] | null> {
+  const client = getClient();
+  if (!client) return null;
+
+  const [{ data: brandsData, error: be }, { data: subData, error: se }, { data: bottleData, error: bte }] =
+    await Promise.all([
+      client.from("brands").select("*").order("name"),
+      client.from("sub_brands").select("*"),
+      client.from("bottles").select("*"),
+    ]);
+
+  if (be || se || bte || !brandsData?.length) return null;
+
+  return brandsData.map((b): Brand => ({
+    id: b.id,
+    name: b.name,
+    country: b.country ?? "USA",
+    region: b.region ?? "",
+    isNDP: b.is_ndp ?? false,
+    subBrands: (subData ?? [])
+      .filter((s) => s.brand_id === b.id)
+      .map((s): SubBrand => ({
+        id: s.id,
+        name: s.name,
+        brandId: s.brand_id,
+        bottles: (bottleData ?? [])
+          .filter((bt) => bt.sub_brand_id === s.id)
+          .map((bt): Bottle => ({
+            id: bt.id,
+            name: bt.name,
+            subBrandId: bt.sub_brand_id,
+            price: bt.price ?? 0,
+            abv: bt.abv ?? 0,
+            age: bt.age ?? undefined,
+            rarity: bt.rarity ?? "common",
+            rarityScore: bt.rarity_score ?? 0,
+            description: bt.description ?? "",
+            sourceDistillery: bt.source_distillery ?? undefined,
+            source: (bt.entry_source as "official" | "community") ?? "official",
+          })),
+      })),
+  }));
 }
 
 // ── Ratings ───────────────────────────────────────────────────────────────────

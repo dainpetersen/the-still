@@ -7,12 +7,18 @@
  * Requires NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in .env.local
  */
 
-import { config } from "dotenv";
+import { readFileSync } from "fs";
 import { resolve } from "path";
 import { createClient } from "@supabase/supabase-js";
 
-// Load .env.local
-config({ path: resolve(process.cwd(), ".env.local") });
+// Load .env.local without requiring dotenv
+try {
+  const envFile = readFileSync(resolve(process.cwd(), ".env.local"), "utf-8");
+  for (const line of envFile.split("\n")) {
+    const match = line.match(/^([^#][^=]*)=(.*)$/);
+    if (match) process.env[match[1].trim()] = match[2].trim();
+  }
+} catch { /* .env.local not found — env vars may already be set */ }
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const key = process.env.SUPABASE_SERVICE_ROLE_KEY;

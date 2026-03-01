@@ -129,7 +129,65 @@ create policy "Bottles are public"    on public.bottles for select using (true);
 create policy "Admin write bottles"   on public.bottles for all   using (auth.role() = 'authenticated');
 
 
+-- ── User Profiles (extends auth.users) ───────────────────────────
+create table if not exists public.profiles (
+  id             uuid        primary key references auth.users(id) on delete cascade,
+  display_name   text,
+  location       text,
+  favorite_style text,
+  favorite_brand text,
+  avatar_url     text,
+  created_at     timestamptz default now()
+);
+
+alter table public.profiles enable row level security;
+
+create policy "Profiles are public"
+  on public.profiles for select using (true);
+
+create policy "Users insert own profile"
+  on public.profiles for insert
+  with check (auth.uid() = id);
+
+create policy "Users update own profile"
+  on public.profiles for update
+  using (auth.uid() = id);
+
+-- Auto-create a profile row whenever a new user signs up
+create or replace function handle_new_user()
+returns trigger language plpgsql security definer as $$
+begin
+  insert into public.profiles (id, display_name, avatar_url)
+  values (
+    new.id,
+    coalesce(new.raw_user_meta_data->>'full_name', split_part(new.email, '@', 1)),
+    new.raw_user_meta_data->>'avatar_url'
+  )
+  on conflict (id) do nothing;
+  return new;
+end;
+$$;
+
+-- Drop trigger first so re-running the script is idempotent
+drop trigger if exists on_auth_user_created on auth.users;
+create trigger on_auth_user_created
+  after insert on auth.users
+  for each row execute procedure handle_new_user();
+
+-- Link ratings to users (nullable — keeps existing anonymous ratings intact)
+alter table public.ratings add column if not exists user_id uuid references auth.users(id);
+
+
 -- ── Supabase Auth — Site URL config ──────────────────────────────
 -- In your Supabase dashboard → Authentication → URL Configuration:
 --   Site URL:        http://localhost:3000 (or your prod URL)
 --   Redirect URLs:   http://localhost:3000/admin/callback
+--                    http://localhost:3000/auth/callback
+--                    https://commoncask.com/auth/callback
+--                    https://www.commoncask.com/auth/callback
+--
+-- Google OAuth setup:
+--   1. console.cloud.google.com → APIs & Services → Credentials
+--   2. Create OAuth 2.0 Client ID (Web application)
+--   3. Authorized redirect URI: https://<your-supabase-project>.supabase.co/auth/v1/callback
+--   4. Paste Client ID + Secret into Supabase Dashboard → Auth → Providers → Google

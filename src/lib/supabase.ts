@@ -1,5 +1,5 @@
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
-import { Brand, Bottle, SubBrand, Submission, SubmissionData, SubmissionType } from "@/types/whiskey";
+import { Brand, Bottle, SubBrand, Submission, SubmissionData, SubmissionType, Profile } from "@/types/whiskey";
 
 // ── Browser (public anon) client ──────────────────────────────────────────────
 let _client: SupabaseClient | null = null;
@@ -119,6 +119,7 @@ export async function submitRating(payload: {
   palate?: string;
   finish?: string;
   sessionId: string;
+  userId?: string;
 }) {
   const client = getClient();
   if (!client) throw new Error("Supabase is not configured. Add credentials to .env.local");
@@ -130,6 +131,7 @@ export async function submitRating(payload: {
       palate: payload.palate ?? null,
       finish: payload.finish ?? null,
       session_id: payload.sessionId,
+      user_id: payload.userId ?? null,
     },
     { onConflict: "bottle_id,session_id" }
   );
@@ -215,6 +217,82 @@ export async function reviewSubmission(
     })
     .eq("id", id);
   if (error) throw error;
+}
+
+// ── Auth ──────────────────────────────────────────────────────────────────────
+
+export async function signInWithGoogle() {
+  const client = getClient();
+  if (!client) throw new Error("Supabase is not configured");
+  return client.auth.signInWithOAuth({
+    provider: "google",
+    options: {
+      redirectTo: `${typeof window !== "undefined" ? window.location.origin : ""}/auth/callback`,
+    },
+  });
+}
+
+export async function signInWithEmail(email: string, password: string) {
+  const client = getClient();
+  if (!client) throw new Error("Supabase is not configured");
+  const { error } = await client.auth.signInWithPassword({ email, password });
+  return { error };
+}
+
+export async function signUpWithEmail(email: string, password: string) {
+  const client = getClient();
+  if (!client) throw new Error("Supabase is not configured");
+  const { data, error } = await client.auth.signUp({ email, password });
+  return { user: data.user, error };
+}
+
+export async function signOut() {
+  const client = getClient();
+  if (!client) return;
+  await client.auth.signOut();
+}
+
+export function getAuthClient() {
+  return getClient();
+}
+
+// ── Profiles ──────────────────────────────────────────────────────────────────
+
+export async function fetchProfile(userId: string): Promise<Profile | null> {
+  const client = getClient();
+  if (!client) return null;
+  const { data, error } = await client
+    .from("profiles")
+    .select("*")
+    .eq("id", userId)
+    .single();
+  if (error || !data) return null;
+  return rowToProfile(data);
+}
+
+export async function upsertProfile(userId: string, fields: Partial<Omit<Profile, "id">>) {
+  const client = getClient();
+  if (!client) throw new Error("Supabase is not configured");
+  const { error } = await client.from("profiles").upsert({
+    id: userId,
+    display_name: fields.displayName,
+    location: fields.location,
+    favorite_style: fields.favoriteStyle,
+    favorite_brand: fields.favoriteBrand,
+    avatar_url: fields.avatarUrl,
+  });
+  if (error) throw error;
+}
+
+function rowToProfile(row: Record<string, unknown>): Profile {
+  return {
+    id: row.id as string,
+    displayName: (row.display_name as string | null) ?? null,
+    location: (row.location as string | null) ?? null,
+    favoriteStyle: (row.favorite_style as string | null) ?? null,
+    favoriteBrand: (row.favorite_brand as string | null) ?? null,
+    avatarUrl: (row.avatar_url as string | null) ?? null,
+  };
 }
 
 // ── Helper ────────────────────────────────────────────────────────────────────

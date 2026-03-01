@@ -102,3 +102,13 @@ export interface Submission {
   submittedAt: string;
   reviewedAt?: string;
 }
+
+// User profile (extends Supabase auth.users)
+export interface Profile {
+  id: string;
+  displayName: string | null;
+  location: string | null;
+  favoriteStyle: string | null;
+  favoriteBrand: string | null;
+  avatarUrl: string | null;
+}

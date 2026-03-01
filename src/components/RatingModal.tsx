@@ -18,6 +18,7 @@ interface Props {
   bottle: BottleInfo | null;
   onClose: () => void;
   onRatingSubmitted: () => void;
+  userId?: string;
 }
 
 interface ReviewEntry {
@@ -30,7 +31,7 @@ interface ReviewEntry {
 
 const STARS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 
-export default function RatingModal({ bottle, onClose, onRatingSubmitted }: Props) {
+export default function RatingModal({ bottle, onClose, onRatingSubmitted, userId }: Props) {
   const [rating, setRating] = useState(0);
   const [hovered, setHovered] = useState(0);
   const [nose, setNose] = useState("");
@@ -78,6 +79,7 @@ export default function RatingModal({ bottle, onClose, onRatingSubmitted }: Prop
         palate: palate || undefined,
         finish: finish || undefined,
         sessionId: getSessionId(),
+        userId,
       });
       setSubmitted(true);
       onRatingSubmitted();

@@ -2,13 +2,22 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import dynamic from "next/dynamic";
+import type { User } from "@supabase/supabase-js";
 import { WHISKEY_DATA, buildTreemapData } from "@/data/whiskeys";
-import { fetchAllAverageRatings, fetchApprovedSubmissions, fetchCatalog } from "@/lib/supabase";
+import {
+  fetchAllAverageRatings,
+  fetchApprovedSubmissions,
+  fetchCatalog,
+  getAuthClient,
+  fetchProfile,
+  signOut,
+} from "@/lib/supabase";
 import { mergeApprovedSubmissions } from "@/lib/mergeSubmissions";
-import { Brand, ColorMode } from "@/types/whiskey";
+import { Brand, ColorMode, Profile } from "@/types/whiskey";
 import ColorLegend from "@/components/ColorLegend";
 import RatingModal from "@/components/RatingModal";
 import SubmissionModal from "@/components/SubmissionModal";
+import AuthModal from "@/components/AuthModal";
 import TopRatedSection from "@/components/TopRatedSection";
 import AboutSection from "@/components/AboutSection";
 import Logo from "@/components/Logo";
@@ -30,9 +39,15 @@ export default function Home() {
   const [colorMode, setColorMode] = useState<ColorMode>("price");
   const [selectedBottle, setSelectedBottle] = useState<BottleNode | null>(null);
   const [showSubmit, setShowSubmit] = useState(false);
+  const [showAuth, setShowAuth] = useState(false);
   const [ratings, setRatings] = useState<Record<string, { avg: number; count: number }>>({});
   const [mergedBrands, setMergedBrands] = useState<Brand[]>(WHISKEY_DATA);
   const [communityCount, setCommunityCount] = useState(0);
+
+  // ── Auth state ────────────────────────────────────────────────────────────
+  const [user, setUser] = useState<User | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [showUserMenu, setShowUserMenu] = useState(false);
 
   // ── Filtering state ───────────────────────────────────────────────────────
   const [filterBrand, setFilterBrand] = useState<string | null>(null);
@@ -121,6 +136,27 @@ export default function Home() {
 
   useEffect(() => {
     loadData();
+
+    // Auth listener
+    const supabase = getAuthClient();
+    if (!supabase) return;
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      const u = session?.user ?? null;
+      setUser(u);
+      if (u) {
+        const p = await fetchProfile(u.id);
+        setProfile(p);
+      } else {
+        setProfile(null);
+      }
+    });
+    // Seed initial session
+    supabase.auth.getUser().then(({ data }) => {
+      const u = data.user ?? null;
+      setUser(u);
+      if (u) fetchProfile(u.id).then(setProfile);
+    });
+    return () => subscription.unsubscribe();
   }, [loadData]);
 
   return (
@@ -178,8 +214,85 @@ export default function Home() {
           </div>
         )}
 
-        <div className="ml-auto text-xs text-gray-600 hidden md:block">
-          {filterBrand ? "Click a sub-brand to drill in" : "Click any bottle to rate it"}
+        <div className="ml-auto flex items-center gap-3">
+          <span className="text-xs text-gray-600 hidden md:block">
+            {filterBrand ? "Click a sub-brand to drill in" : "Click any bottle to rate it"}
+          </span>
+
+          {/* Auth control */}
+          {user ? (
+            <div className="relative">
+              <button
+                onClick={() => setShowUserMenu((v) => !v)}
+                className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-all"
+                style={{
+                  background: profile?.avatarUrl ? "transparent" : "rgba(245,158,11,0.2)",
+                  border: "1px solid rgba(245,158,11,0.4)",
+                  color: "#f59e0b",
+                  overflow: "hidden",
+                }}
+                title={profile?.displayName ?? user.email ?? "Account"}
+              >
+                {profile?.avatarUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={profile.avatarUrl} alt="avatar" className="w-full h-full object-cover" />
+                ) : (
+                  (profile?.displayName ?? user.email ?? "?")[0].toUpperCase()
+                )}
+              </button>
+              {showUserMenu && (
+                <div
+                  className="absolute right-0 top-10 w-44 rounded-xl py-2 z-50"
+                  style={{
+                    background: "#0d0d18",
+                    border: "1px solid rgba(245,158,11,0.2)",
+                    boxShadow: "0 8px 30px rgba(0,0,0,0.5)",
+                  }}
+                >
+                  <div className="px-4 py-2 border-b" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
+                    <p className="text-xs font-semibold text-white truncate">
+                      {profile?.displayName ?? user.email}
+                    </p>
+                    {profile?.displayName && (
+                      <p className="text-xs truncate" style={{ color: "rgba(255,255,255,0.3)" }}>{user.email}</p>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => { setShowUserMenu(false); setShowAuth(true); }}
+                    className="w-full text-left px-4 py-2 text-sm transition-colors"
+                    style={{ color: "rgba(255,255,255,0.55)" }}
+                    onMouseEnter={(e) => (e.currentTarget.style.color = "#fff")}
+                    onMouseLeave={(e) => (e.currentTarget.style.color = "rgba(255,255,255,0.55)")}
+                  >
+                    Edit Profile
+                  </button>
+                  <button
+                    onClick={async () => { setShowUserMenu(false); await signOut(); }}
+                    className="w-full text-left px-4 py-2 text-sm transition-colors"
+                    style={{ color: "rgba(239,68,68,0.7)" }}
+                    onMouseEnter={(e) => (e.currentTarget.style.color = "rgba(239,68,68,1)")}
+                    onMouseLeave={(e) => (e.currentTarget.style.color = "rgba(239,68,68,0.7)")}
+                  >
+                    Sign Out
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : (
+            <button
+              onClick={() => setShowAuth(true)}
+              className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
+              style={{
+                border: "1px solid rgba(245,158,11,0.4)",
+                color: "rgba(245,158,11,0.85)",
+                background: "transparent",
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(245,158,11,0.08)")}
+              onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+            >
+              Sign In
+            </button>
+          )}
         </div>
       </header>
 
@@ -204,7 +317,10 @@ export default function Home() {
           <WhiskeyTreemap
             data={displayData}
             colorMode={colorMode}
-            onBottleClick={(node) => setSelectedBottle(node as BottleNode)}
+            onBottleClick={(node) => {
+              if (!user) { setShowAuth(true); return; }
+              setSelectedBottle(node as BottleNode);
+            }}
             ratings={ratings}
             onBrandClick={handleBrandClick}
             onSubBrandClick={handleSubBrandClick}
@@ -401,7 +517,7 @@ export default function Home() {
 
           {/* Community submission CTA */}
           <button
-            onClick={() => setShowSubmit(true)}
+            onClick={() => { if (!user) { setShowAuth(true); return; } setShowSubmit(true); }}
             className="w-full py-2.5 px-3 rounded-xl text-sm font-semibold transition-all"
             style={{
               border: "1px solid rgba(139,92,246,0.5)",
@@ -465,11 +581,20 @@ export default function Home() {
           }}
           onClose={() => setSelectedBottle(null)}
           onRatingSubmitted={loadData}
+          userId={user?.id}
         />
       )}
 
       {/* Submission Modal */}
       {showSubmit && <SubmissionModal onClose={() => setShowSubmit(false)} />}
+
+      {/* Auth Modal */}
+      {showAuth && (
+        <AuthModal
+          onSuccess={() => { setShowAuth(false); }}
+          onClose={() => setShowAuth(false)}
+        />
+      )}
     </main>
   );
 }

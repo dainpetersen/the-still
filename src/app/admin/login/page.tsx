@@ -33,11 +33,10 @@ export default function AdminLoginPage() {
       return;
     }
 
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? window.location.origin;
     const { error: authError } = await supabase.auth.signInWithOtp({
       email,
       options: {
-        emailRedirectTo: `${siteUrl}/admin/callback`,
+        emailRedirectTo: `${window.location.origin}/admin/callback`,
       },
     });
 

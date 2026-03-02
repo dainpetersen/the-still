@@ -190,7 +190,7 @@ export default function Home() {
     // Auth listener
     const supabase = getAuthClient();
     if (!supabase) return;
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       const u = session?.user ?? null;
       setUser(u);
       if (u) {
@@ -198,6 +198,13 @@ export default function Home() {
         setProfile(p);
       } else {
         setProfile(null);
+      }
+      // Re-fetch ratings once the token has been refreshed or a new sign-in completes.
+      // On a cold refresh with an expired token, the initial loadData() returns empty
+      // ratings because PostgREST rejects expired JWTs. TOKEN_REFRESHED fires once the
+      // client silently renews the token (~seconds after page load).
+      if (event === "TOKEN_REFRESHED" || event === "SIGNED_IN") {
+        loadData();
       }
     });
     // Seed initial session from localStorage (no network call — avoids race with getUser())
@@ -276,16 +283,20 @@ export default function Home() {
                 onClick={() => setShowUserMenu((v) => !v)}
                 className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-all"
                 style={{
-                  background: profile?.avatarUrl ? "transparent" : "rgba(245,158,11,0.2)",
+                  background: (profile?.avatarUrl ?? user.user_metadata?.avatar_url) ? "transparent" : "rgba(245,158,11,0.2)",
                   border: "1px solid rgba(245,158,11,0.4)",
                   color: "#f59e0b",
                   overflow: "hidden",
                 }}
                 title={profile?.displayName ?? user.email ?? "Account"}
               >
-                {profile?.avatarUrl ? (
+                {(profile?.avatarUrl ?? (user.user_metadata?.avatar_url as string | undefined)) ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={profile.avatarUrl} alt="avatar" className="w-full h-full object-cover" />
+                  <img
+                    src={profile?.avatarUrl ?? (user.user_metadata?.avatar_url as string)}
+                    alt="avatar"
+                    className="w-full h-full object-cover"
+                  />
                 ) : (
                   (profile?.displayName ?? user.email ?? "?")[0].toUpperCase()
                 )}

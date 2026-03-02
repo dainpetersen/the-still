@@ -97,7 +97,9 @@ export async function fetchAllAverageRatings(): Promise<
   const client = getClient();
   if (!client) return {};
   const { data, error } = await client.from("ratings").select("bottle_id, rating");
-  if (error) throw error;
+  // Don't throw — an expired JWT causes PostgREST to reject even public-table reads.
+  // Return empty so loadData() can still load the catalog instead of silently aborting.
+  if (error) return {};
 
   const map: Record<string, { sum: number; count: number }> = {};
   for (const row of data ?? []) {

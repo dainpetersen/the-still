@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect } from "react";
+import { Suspense, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { getAuthClient } from "@/lib/supabase";
 
-// Client-side OAuth callback — exchanges the PKCE code for a session using the
-// browser client so the session lands in localStorage (where createClient looks).
-// A server-side route.ts would store it in cookies, invisible to the browser client.
-export default function AuthCallback() {
+// Next.js requires useSearchParams() to be inside a Suspense boundary
+// during static generation — wrap the inner component accordingly.
+
+function CallbackHandler() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -40,5 +40,22 @@ export default function AuthCallback() {
     >
       <p style={{ color: "rgba(245,158,11,0.8)", fontSize: "0.9rem" }}>Signing you in…</p>
     </div>
+  );
+}
+
+export default function AuthCallback() {
+  return (
+    <Suspense
+      fallback={
+        <div
+          style={{
+            background: "linear-gradient(160deg, #0a0608 0%, #0f0a18 50%, #080a0f 100%)",
+            minHeight: "100vh",
+          }}
+        />
+      }
+    >
+      <CallbackHandler />
+    </Suspense>
   );
 }

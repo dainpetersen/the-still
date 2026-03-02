@@ -1,5 +1,5 @@
 -- ═══════════════════════════════════════════════════════════════
---  The Still — Full Database Schema
+--  Common Cask — Full Database Schema
 --  Run in your Supabase SQL editor
 -- ═══════════════════════════════════════════════════════════════
 

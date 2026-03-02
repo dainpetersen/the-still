@@ -263,52 +263,6 @@ export default function Home() {
         )}
 
         <div className="ml-auto flex items-center gap-3">
-          {/* View mode toggle */}
-          <div
-            className="flex rounded-lg overflow-hidden"
-            style={{ border: "1px solid rgba(245,158,11,0.25)" }}
-          >
-            {([
-              { mode: "treemap" as const, title: "Treemap view",
-                icon: (
-                  <svg width="15" height="15" viewBox="0 0 15 15" fill="currentColor">
-                    <rect x="0" y="0" width="6" height="6" rx="1"/>
-                    <rect x="8" y="0" width="7" height="6" rx="1"/>
-                    <rect x="0" y="8" width="4" height="7" rx="1"/>
-                    <rect x="6" y="8" width="9" height="7" rx="1"/>
-                  </svg>
-                ),
-              },
-              { mode: "bubbles" as const, title: "Bubble chart view",
-                icon: (
-                  <svg width="15" height="15" viewBox="0 0 15 15" fill="currentColor">
-                    <circle cx="4.5" cy="4.5" r="3.5"/>
-                    <circle cx="11" cy="4" r="2.5"/>
-                    <circle cx="3.5" cy="11.5" r="2"/>
-                    <circle cx="10" cy="11" r="3"/>
-                  </svg>
-                ),
-              },
-            ] as const).map(({ mode, title, icon }) => {
-              const active = viewMode === mode;
-              return (
-                <button
-                  key={mode}
-                  title={title}
-                  onClick={() => setViewMode(mode)}
-                  className="px-2.5 py-1.5 transition-all"
-                  style={{
-                    background: active ? "rgba(245,158,11,0.18)" : "transparent",
-                    color: active ? "#f59e0b" : "rgba(255,255,255,0.3)",
-                    borderRight: mode === "treemap" ? "1px solid rgba(245,158,11,0.25)" : undefined,
-                  }}
-                >
-                  {icon}
-                </button>
-              );
-            })}
-          </div>
-
           <span className="text-xs text-gray-600 hidden md:block">
             {filterBrand ? "Click a sub-brand to drill in" : "Click any bottle to rate it"}
           </span>
@@ -408,6 +362,56 @@ export default function Home() {
       <div className="flex" style={{ height: "100vh" }}>
         {/* Visualization */}
         <div className="flex-1 relative min-h-0">
+          {/* View mode toggle — floats over chart */}
+          <div
+            className="absolute top-3 right-3 z-10 flex rounded-lg overflow-hidden"
+            style={{
+              border: "1px solid rgba(245,158,11,0.25)",
+              background: "rgba(10,6,8,0.75)",
+              backdropFilter: "blur(6px)",
+            }}
+          >
+            {([
+              { mode: "treemap" as const, title: "Treemap view",
+                icon: (
+                  <svg width="15" height="15" viewBox="0 0 15 15" fill="currentColor">
+                    <rect x="0" y="0" width="6" height="6" rx="1"/>
+                    <rect x="8" y="0" width="7" height="6" rx="1"/>
+                    <rect x="0" y="8" width="4" height="7" rx="1"/>
+                    <rect x="6" y="8" width="9" height="7" rx="1"/>
+                  </svg>
+                ),
+              },
+              { mode: "bubbles" as const, title: "Bubble chart view",
+                icon: (
+                  <svg width="15" height="15" viewBox="0 0 15 15" fill="currentColor">
+                    <circle cx="4.5" cy="4.5" r="3.5"/>
+                    <circle cx="11" cy="4" r="2.5"/>
+                    <circle cx="3.5" cy="11.5" r="2"/>
+                    <circle cx="10" cy="11" r="3"/>
+                  </svg>
+                ),
+              },
+            ] as const).map(({ mode, title, icon }) => {
+              const active = viewMode === mode;
+              return (
+                <button
+                  key={mode}
+                  title={title}
+                  onClick={() => setViewMode(mode)}
+                  className="px-2.5 py-1.5 transition-all"
+                  style={{
+                    background: active ? "rgba(245,158,11,0.18)" : "transparent",
+                    color: active ? "#f59e0b" : "rgba(255,255,255,0.3)",
+                    borderRight: mode === "treemap" ? "1px solid rgba(245,158,11,0.25)" : undefined,
+                  }}
+                >
+                  {icon}
+                </button>
+              );
+            })}
+          </div>
+
           {viewMode === "treemap" ? (
             <WhiskeyTreemap
               data={displayData}

@@ -8,6 +8,7 @@ import { RarityLevel, SubmissionType } from "@/types/whiskey";
 
 interface Props {
   onClose: () => void;
+  userId?: string;
 }
 
 type Step = "type" | "fields" | "confirm";
@@ -20,7 +21,7 @@ const RARITY_OPTIONS: { value: RarityLevel; label: string }[] = [
   { value: "unicorn", label: "Unicorn — near impossible" },
 ];
 
-export default function SubmissionModal({ onClose }: Props) {
+export default function SubmissionModal({ onClose, userId }: Props) {
   const [step, setStep] = useState<Step>("type");
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -79,6 +80,7 @@ export default function SubmissionModal({ onClose }: Props) {
           type: "brand",
           data: { brandName, brandRegion, brandIsNDP: isNDP },
           sessionId,
+          userId,
         });
       } else if (entryType === "sub_brand") {
         const brand = allBrands.find((b) => b.id === parentBrandId);
@@ -88,6 +90,7 @@ export default function SubmissionModal({ onClose }: Props) {
           parentId: parentBrandId || undefined,
           parentName: brand?.name ?? parentBrandName,
           sessionId,
+          userId,
         });
       } else {
         const subBrand = allSubBrands.find((sb) => sb.id === parentSubBrandId);
@@ -105,6 +108,7 @@ export default function SubmissionModal({ onClose }: Props) {
           parentId: parentSubBrandId || undefined,
           parentName: subBrand ? `${subBrand.brandName} / ${subBrand.name}` : parentSubBrandName,
           sessionId,
+          userId,
         });
       }
       setSubmitted(true);

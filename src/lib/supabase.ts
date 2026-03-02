@@ -146,6 +146,7 @@ export async function submitEntry(payload: {
   parentId?: string;
   parentName?: string;
   sessionId: string;
+  userId?: string;
 }) {
   const client = getClient();
   if (!client) throw new Error("Supabase is not configured. Add credentials to .env.local");
@@ -155,6 +156,7 @@ export async function submitEntry(payload: {
     parent_id: payload.parentId ?? null,
     parent_name: payload.parentName ?? null,
     session_id: payload.sessionId,
+    user_id: payload.userId ?? null,
   });
   if (error) throw error;
 }

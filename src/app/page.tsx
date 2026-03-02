@@ -586,7 +586,7 @@ export default function Home() {
       )}
 
       {/* Submission Modal */}
-      {showSubmit && <SubmissionModal onClose={() => setShowSubmit(false)} />}
+      {showSubmit && <SubmissionModal onClose={() => setShowSubmit(false)} userId={user?.id} />}
 
       {/* Auth Modal */}
       {showAuth && (

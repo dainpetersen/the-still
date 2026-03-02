@@ -200,9 +200,9 @@ export default function Home() {
         setProfile(null);
       }
     });
-    // Seed initial session
-    supabase.auth.getUser().then(({ data }) => {
-      const u = data.user ?? null;
+    // Seed initial session from localStorage (no network call — avoids race with getUser())
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      const u = session?.user ?? null;
       setUser(u);
       if (u) fetchProfile(u.id).then(setProfile);
     });

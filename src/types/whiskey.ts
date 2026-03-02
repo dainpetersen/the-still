@@ -2,7 +2,7 @@ export type RarityLevel = "common" | "limited" | "rare" | "allocated" | "unicorn
 export type ColorMode = "price" | "rating" | "rarity";
 export type DataSource = "official" | "community";
 export type AvailabilityStatus = "current" | "limited_release" | "discontinued";
-export type SubmissionType = "brand" | "sub_brand" | "bottle";
+export type SubmissionType = "brand" | "sub_brand" | "bottle" | "correction";
 export type SubmissionStatus = "pending" | "approved" | "rejected";
 
 // Whiskey style taxonomy for Group By feature

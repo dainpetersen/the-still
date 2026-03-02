@@ -181,6 +181,14 @@ alter table public.ratings add column if not exists user_id uuid references auth
 alter table public.submissions add column if not exists user_id uuid references auth.users(id) on delete set null;
 
 
+-- ── Error report (correction) migration ──────────────────────────
+-- Adds 'correction' as a valid submission type so users can flag
+-- incorrect bottle data from the rating modal.
+alter table public.submissions drop constraint if exists submissions_type_check;
+alter table public.submissions add constraint submissions_type_check
+  check (type in ('brand', 'sub_brand', 'bottle', 'correction'));
+
+
 -- ── Group By feature migrations ───────────────────────────────────
 -- Add style column to bottles (whiskey style taxonomy)
 alter table public.bottles add column if not exists style text

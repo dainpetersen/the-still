@@ -47,6 +47,7 @@ import GroupControl from "@/components/GroupControl";
 import RatingModal from "@/components/RatingModal";
 import SubmissionModal from "@/components/SubmissionModal";
 import AuthModal from "@/components/AuthModal";
+import FlagModal from "@/components/FlagModal";
 import TopRatedSection from "@/components/TopRatedSection";
 import AboutSection from "@/components/AboutSection";
 import Logo from "@/components/Logo";
@@ -71,6 +72,7 @@ export default function Home() {
   const [viewMode,  setViewMode]    = useState<"treemap" | "bubbles">("treemap");
   const [sizeMode,  setSizeMode]    = useState<BubbleSizeMode>("price");
   const [selectedBottle, setSelectedBottle] = useState<BottleNode | null>(null);
+  const [flaggedBottle, setFlaggedBottle] = useState<{ id: string; name: string } | null>(null);
   const [showSubmit, setShowSubmit] = useState(false);
   const [showAuth, setShowAuth] = useState(false);
   const [ratings, setRatings] = useState<Record<string, { avg: number; count: number }>>({});
@@ -198,9 +200,9 @@ export default function Home() {
         setProfile(null);
       }
     });
-    // Seed initial session
-    supabase.auth.getUser().then(({ data }) => {
-      const u = data.user ?? null;
+    // Seed initial session from localStorage (no network call — avoids race with getUser())
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      const u = session?.user ?? null;
       setUser(u);
       if (u) fetchProfile(u.id).then(setProfile);
     });
@@ -421,6 +423,7 @@ export default function Home() {
                 if (!user) { setShowAuth(true); return; }
                 setSelectedBottle(node as BottleNode);
               }}
+              onBottleFlag={(id, name) => setFlaggedBottle({ id, name })}
               ratings={ratings}
               onBrandClick={groupMode === "distillery" ? handleBrandClick : undefined}
               onSubBrandClick={groupMode === "distillery" ? handleSubBrandClick : undefined}
@@ -435,6 +438,7 @@ export default function Home() {
                 if (!user) { setShowAuth(true); return; }
                 setSelectedBottle(node as unknown as BottleNode);
               }}
+              onBottleFlag={(id, name) => setFlaggedBottle({ id, name })}
               ratings={ratings}
             />
           )}
@@ -445,6 +449,21 @@ export default function Home() {
           className="w-56 flex-shrink-0 p-4 flex flex-col gap-4 overflow-y-auto"
           style={{ borderLeft: "1px solid rgba(245,158,11,0.15)" }}
         >
+          {/* How to use — at top so users see it first */}
+          <div
+            className="rounded-xl p-3 text-xs text-gray-600"
+            style={{ border: "1px solid rgba(255,255,255,0.05)" }}
+          >
+            <p className="font-semibold text-gray-500 mb-1">How to use</p>
+            <p>
+              {filterSubBrand
+                ? "Click any bottle to rate it. Hover a bottle to report an error."
+                : filterBrand
+                ? "Click a sub-brand label to drill in, or a bottle to rate it."
+                : "Click a brand label to filter. Click a bottle to rate it. Hover any bottle for a ⚑ error-report icon."}
+            </p>
+          </div>
+
           <GroupControl groupMode={groupMode} onChange={handleGroupModeChange} />
 
           {/* Size By — only shown in bubble view */}
@@ -618,21 +637,6 @@ export default function Home() {
             </div>
           )}
 
-          {/* Hint */}
-          <div
-            className="rounded-xl p-3 text-xs text-gray-600"
-            style={{ border: "1px solid rgba(255,255,255,0.05)" }}
-          >
-            <p className="font-semibold text-gray-500 mb-1">How to use</p>
-            <p>
-              {filterSubBrand
-                ? "Click any bottle to rate it."
-                : filterBrand
-                ? "Click a sub-brand label to drill in, or a bottle to rate it."
-                : "Click a brand label to filter. Click a bottle to rate it. Switch color modes to explore."}
-            </p>
-          </div>
-
           {/* Availability filter */}
           <div
             className="rounded-xl p-3"
@@ -743,6 +747,14 @@ export default function Home() {
         <AuthModal
           onSuccess={() => { setShowAuth(false); }}
           onClose={() => setShowAuth(false)}
+        />
+      )}
+
+      {/* Flag / Report Error Modal */}
+      {flaggedBottle && (
+        <FlagModal
+          bottle={flaggedBottle}
+          onClose={() => setFlaggedBottle(null)}
         />
       )}
     </main>

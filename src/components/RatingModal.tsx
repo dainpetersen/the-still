@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { submitRating, fetchBottleRatings, submitCorrection } from "@/lib/supabase";
-import { getSessionId } from "@/lib/session";
+import { submitRating, fetchBottleRatings } from "@/lib/supabase";
 
 interface BottleInfo {
   id: string;
@@ -41,11 +40,6 @@ export default function RatingModal({ bottle, onClose, onRatingSubmitted, userId
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Error report state
-  const [showFlagForm, setShowFlagForm] = useState(false);
-  const [flagNote, setFlagNote] = useState("");
-  const [flagSubmitting, setFlagSubmitting] = useState(false);
-  const [flagSubmitted, setFlagSubmitted] = useState(false);
   const [reviews, setReviews] = useState<ReviewEntry[]>([]);
   const [loadingReviews, setLoadingReviews] = useState(false);
 

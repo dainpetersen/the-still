@@ -177,6 +177,26 @@ export async function fetchApprovedSubmissions(): Promise<Submission[]> {
   return (data ?? []).map(rowToSubmission);
 }
 
+export async function submitCorrection(payload: {
+  bottleId: string;
+  bottleName: string;
+  note: string;
+  sessionId: string;
+  userId?: string;
+}) {
+  const client = getClient();
+  if (!client) throw new Error("Supabase is not configured. Add credentials to .env.local");
+  const { error } = await client.from("submissions").insert({
+    type: "correction",
+    data: { bottleDescription: payload.note },
+    parent_id: payload.bottleId,
+    parent_name: payload.bottleName,
+    session_id: payload.sessionId,
+    user_id: payload.userId ?? null,
+  });
+  if (error) throw error;
+}
+
 // ── Admin functions (use service role client) ─────────────────────────────────
 
 export async function fetchPendingSubmissions(): Promise<Submission[]> {

@@ -16,6 +16,7 @@ function submissionTitle(s: Submission): string {
   const d = s.data as SubmissionData;
   if (s.type === "brand") return d.brandName ?? "Unnamed Brand";
   if (s.type === "sub_brand") return d.subBrandName ?? "Unnamed Sub-Brand";
+  if (s.type === "correction") return s.parentName ?? "Unknown Bottle";
   return d.bottleName ?? "Unnamed Bottle";
 }
 
@@ -27,6 +28,8 @@ function submissionDetail(s: Submission): string[] {
     if (d.brandIsNDP) lines.push("NDP: Yes");
   } else if (s.type === "sub_brand") {
     if (s.parentName) lines.push(`Brand: ${s.parentName}`);
+  } else if (s.type === "correction") {
+    if (d.bottleDescription) lines.push(`"${d.bottleDescription.slice(0, 120)}${d.bottleDescription.length > 120 ? "…" : ""}"`);
   } else {
     if (s.parentName) lines.push(`Sub-Brand: ${s.parentName}`);
     if (d.bottleAbv) lines.push(`ABV: ${d.bottleAbv}%`);
@@ -43,11 +46,13 @@ const TYPE_COLORS: Record<string, string> = {
   brand: "rgba(245,158,11,0.2)",
   sub_brand: "rgba(59,130,246,0.2)",
   bottle: "rgba(34,197,94,0.2)",
+  correction: "rgba(239,68,68,0.15)",
 };
 const TYPE_TEXT: Record<string, string> = {
   brand: "#f59e0b",
   sub_brand: "#60a5fa",
   bottle: "#4ade80",
+  correction: "#f87171",
 };
 
 function TypeBadge({ type }: { type: string }) {
@@ -95,9 +100,9 @@ export default async function AdminPage() {
         style={{ borderBottom: "1px solid rgba(245,158,11,0.2)" }}
       >
         <div className="flex flex-col leading-none select-none">
-          <span style={{ fontSize: "9px", color: "rgba(245,158,11,0.7)", letterSpacing: "0.25em" }}>THE</span>
+          <span style={{ fontSize: "9px", color: "rgba(245,158,11,0.7)", letterSpacing: "0.25em" }}>COMMON</span>
           <div style={{ height: "1px", background: "rgba(245,158,11,0.4)", margin: "2px 0" }} />
-          <span className="font-bold uppercase" style={{ fontSize: "18px", color: "#f5f5f5", letterSpacing: "0.12em" }}>STILL</span>
+          <span className="font-bold uppercase" style={{ fontSize: "18px", color: "#f5f5f5", letterSpacing: "0.12em" }}>CASK</span>
         </div>
         <span className="text-xs" style={{ color: "rgba(245,158,11,0.5)" }}>Admin Dashboard</span>
         <div className="ml-auto flex items-center gap-3">

@@ -1,4 +1,5 @@
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
+import { createBrowserClient } from "@supabase/ssr";
 import { Brand, Bottle, SubBrand, Submission, SubmissionData, SubmissionType, Profile, WhiskeyStyle } from "@/types/whiskey";
 
 // ── Browser (public anon) client ──────────────────────────────────────────────
@@ -10,7 +11,7 @@ function getClient(): SupabaseClient | null {
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!url || !key || url === "your-project-url" || key === "your-anon-key") return null;
   try {
-    _client = createClient(url, key);
+    _client = createBrowserClient(url, key);
     return _client;
   } catch {
     return null;

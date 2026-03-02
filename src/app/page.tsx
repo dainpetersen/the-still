@@ -13,7 +13,7 @@ import {
   signOut,
 } from "@/lib/supabase";
 import { mergeApprovedSubmissions } from "@/lib/mergeSubmissions";
-import { Brand, ColorMode, GroupMode, Profile, WhiskeyStyle } from "@/types/whiskey";
+import { Brand, ColorMode, GroupMode, BubbleSizeMode, Profile, WhiskeyStyle } from "@/types/whiskey";
 
 /**
  * When the Supabase catalog predates the style/state columns, fill in those
@@ -52,6 +52,7 @@ import AboutSection from "@/components/AboutSection";
 import Logo from "@/components/Logo";
 
 const WhiskeyTreemap = dynamic(() => import("@/components/WhiskeyTreemap"), { ssr: false });
+const BubbleChart    = dynamic(() => import("@/components/BubbleChart"),    { ssr: false });
 
 interface BottleNode {
   id?: string;
@@ -67,6 +68,8 @@ interface BottleNode {
 export default function Home() {
   const [colorMode, setColorMode]   = useState<ColorMode>("price");
   const [groupMode, setGroupMode]   = useState<GroupMode>("distillery");
+  const [viewMode,  setViewMode]    = useState<"treemap" | "bubbles">("treemap");
+  const [sizeMode,  setSizeMode]    = useState<BubbleSizeMode>("price");
   const [selectedBottle, setSelectedBottle] = useState<BottleNode | null>(null);
   const [showSubmit, setShowSubmit] = useState(false);
   const [showAuth, setShowAuth] = useState(false);
@@ -260,6 +263,52 @@ export default function Home() {
         )}
 
         <div className="ml-auto flex items-center gap-3">
+          {/* View mode toggle */}
+          <div
+            className="flex rounded-lg overflow-hidden"
+            style={{ border: "1px solid rgba(245,158,11,0.25)" }}
+          >
+            {([
+              { mode: "treemap" as const, title: "Treemap view",
+                icon: (
+                  <svg width="15" height="15" viewBox="0 0 15 15" fill="currentColor">
+                    <rect x="0" y="0" width="6" height="6" rx="1"/>
+                    <rect x="8" y="0" width="7" height="6" rx="1"/>
+                    <rect x="0" y="8" width="4" height="7" rx="1"/>
+                    <rect x="6" y="8" width="9" height="7" rx="1"/>
+                  </svg>
+                ),
+              },
+              { mode: "bubbles" as const, title: "Bubble chart view",
+                icon: (
+                  <svg width="15" height="15" viewBox="0 0 15 15" fill="currentColor">
+                    <circle cx="4.5" cy="4.5" r="3.5"/>
+                    <circle cx="11" cy="4" r="2.5"/>
+                    <circle cx="3.5" cy="11.5" r="2"/>
+                    <circle cx="10" cy="11" r="3"/>
+                  </svg>
+                ),
+              },
+            ] as const).map(({ mode, title, icon }) => {
+              const active = viewMode === mode;
+              return (
+                <button
+                  key={mode}
+                  title={title}
+                  onClick={() => setViewMode(mode)}
+                  className="px-2.5 py-1.5 transition-all"
+                  style={{
+                    background: active ? "rgba(245,158,11,0.18)" : "transparent",
+                    color: active ? "#f59e0b" : "rgba(255,255,255,0.3)",
+                    borderRight: mode === "treemap" ? "1px solid rgba(245,158,11,0.25)" : undefined,
+                  }}
+                >
+                  {icon}
+                </button>
+              );
+            })}
+          </div>
+
           <span className="text-xs text-gray-600 hidden md:block">
             {filterBrand ? "Click a sub-brand to drill in" : "Click any bottle to rate it"}
           </span>
@@ -357,20 +406,34 @@ export default function Home() {
 
       {/* Hero layout — fills viewport height */}
       <div className="flex" style={{ height: "100vh" }}>
-        {/* Treemap */}
+        {/* Visualization */}
         <div className="flex-1 relative min-h-0">
-          <WhiskeyTreemap
-            data={displayData}
-            colorMode={colorMode}
-            groupMode={groupMode}
-            onBottleClick={(node) => {
-              if (!user) { setShowAuth(true); return; }
-              setSelectedBottle(node as BottleNode);
-            }}
-            ratings={ratings}
-            onBrandClick={groupMode === "distillery" ? handleBrandClick : undefined}
-            onSubBrandClick={groupMode === "distillery" ? handleSubBrandClick : undefined}
-          />
+          {viewMode === "treemap" ? (
+            <WhiskeyTreemap
+              data={displayData}
+              colorMode={colorMode}
+              groupMode={groupMode}
+              onBottleClick={(node) => {
+                if (!user) { setShowAuth(true); return; }
+                setSelectedBottle(node as BottleNode);
+              }}
+              ratings={ratings}
+              onBrandClick={groupMode === "distillery" ? handleBrandClick : undefined}
+              onSubBrandClick={groupMode === "distillery" ? handleSubBrandClick : undefined}
+            />
+          ) : (
+            <BubbleChart
+              brands={displayBrands}
+              colorMode={colorMode}
+              groupMode={groupMode}
+              sizeMode={sizeMode}
+              onBottleClick={(node) => {
+                if (!user) { setShowAuth(true); return; }
+                setSelectedBottle(node as unknown as BottleNode);
+              }}
+              ratings={ratings}
+            />
+          )}
         </div>
 
         {/* Sidebar */}
@@ -379,6 +442,42 @@ export default function Home() {
           style={{ borderLeft: "1px solid rgba(245,158,11,0.15)" }}
         >
           <GroupControl groupMode={groupMode} onChange={handleGroupModeChange} />
+
+          {/* Size By — only shown in bubble view */}
+          {viewMode === "bubbles" && (
+            <div
+              className="rounded-xl p-3"
+              style={{
+                background: "rgba(10,10,20,0.85)",
+                border: "1px solid rgba(245,158,11,0.15)",
+              }}
+            >
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
+                Size By
+              </p>
+              <div
+                className="flex rounded-lg overflow-hidden text-xs"
+                style={{ border: "1px solid rgba(245,158,11,0.2)" }}
+              >
+                {(["price", "rating", "uniform"] as BubbleSizeMode[]).map((m) => (
+                  <button
+                    key={m}
+                    onClick={() => setSizeMode(m)}
+                    className="flex-1 py-1.5 transition-colors"
+                    style={{
+                      background: sizeMode === m ? "rgba(245,158,11,0.18)" : "transparent",
+                      color: sizeMode === m ? "#f59e0b" : "rgba(255,255,255,0.35)",
+                      fontWeight: sizeMode === m ? "600" : "400",
+                      borderRight: m !== "uniform" ? "1px solid rgba(245,158,11,0.2)" : undefined,
+                    }}
+                  >
+                    {m === "price" ? "Price" : m === "rating" ? "Rating" : "Equal"}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           <ColorLegend colorMode={colorMode} onColorModeChange={setColorMode} />
 
           {/* Stats / Filter panel */}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import dynamic from "next/dynamic";
 import type { User } from "@supabase/supabase-js";
 import { WHISKEY_DATA, buildTreemapData, buildGroupedData } from "@/data/whiskeys";
@@ -159,13 +159,36 @@ export default function Home() {
   }, [displayBrands, filterBrand, mergedBrands]);
 
   // ── Data loading ──────────────────────────────────────────────────────────
+  // Each call gets a monotonically-increasing ID. If a newer call starts while
+  // an older one is still in-flight, the older one discards its results so it
+  // can't overwrite fresher data (fixes the INITIAL_SESSION / TOKEN_REFRESHED
+  // race that wiped ratings on every 2nd refresh).
+  const loadIdRef = useRef(0);
+
   const loadData = useCallback(async () => {
+    const thisLoadId = ++loadIdRef.current;
+
+    // Refresh the session token before hitting the database.
+    // PostgREST validates the JWT *before* applying RLS, so an expired token
+    // causes a 401 on public tables — getSession() silently refreshes if needed.
+    const supabase = getAuthClient();
+    if (supabase) {
+      await supabase.auth.getSession();
+    }
+
+    // If a newer loadData() call started while we were awaiting, abort.
+    if (thisLoadId !== loadIdRef.current) return;
+
     try {
       const [ratingsData, approvedSubs, catalogData] = await Promise.all([
         fetchAllAverageRatings(),
         fetchApprovedSubmissions(),
         fetchCatalog(),
       ]);
+
+      // Abort again if something newer beat us to the finish line.
+      if (thisLoadId !== loadIdRef.current) return;
+
       setRatings(ratingsData);
 
       // Use Supabase catalog if available (enriched with static style/state),
@@ -185,21 +208,18 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
+    // Always load data immediately on mount. loadData() calls getSession()
+    // internally to refresh an expired token before querying, so it's safe
+    // to run before the onAuthStateChange listener is established.
+    loadData();
+
     const supabase = getAuthClient();
+    if (!supabase) return;
 
-    // No Supabase configured — load data immediately and return
-    if (!supabase) {
-      loadData();
-      return;
-    }
-
-    // onAuthStateChange is the single source of truth for auth state in Supabase v2.
-    // INITIAL_SESSION fires on every page load with whatever is in localStorage
-    // (valid session, expired session awaiting refresh, or null).
-    // TOKEN_REFRESHED fires when the client silently renews an expired token.
-    // SIGNED_IN fires after an explicit login.
-    // Using this as the sole auth + data trigger removes the getSession() race condition
-    // that caused user state to be lost on the 2nd+ page refresh in Safari.
+    // onAuthStateChange tracks who is signed in — it does NOT drive data loading
+    // (that's handled by the loadData() call above and the SIGNED_IN / TOKEN_REFRESHED
+    // cases below). Keeping INITIAL_SESSION out of here avoids a duplicate
+    // loadData() call that could race with the one above.
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       const u = session?.user ?? null;
       setUser(u);
@@ -209,11 +229,9 @@ export default function Home() {
       } else {
         setProfile(null);
       }
-      // Load data on every meaningful auth event.
-      // INITIAL_SESSION covers cold page loads (signed in or not).
-      // TOKEN_REFRESHED covers expired-token refreshes.
-      // SIGNED_IN covers explicit logins.
-      if (event === "INITIAL_SESSION" || event === "TOKEN_REFRESHED" || event === "SIGNED_IN") {
+      // Reload data after an explicit sign-in or a token refresh so the
+      // freshly-authenticated requests pick up any user-specific data.
+      if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
         loadData();
       }
     });

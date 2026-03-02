@@ -1523,7 +1523,7 @@ export function buildTreemapData(brands: Brand[]) {
 
 // ── Age / Price tier helpers ──────────────────────────────────────────────────
 
-function getAgeTier(age?: number): string {
+export function getAgeTier(age?: number): string {
   if (age === undefined || age === null) return "NAS";
   if (age <= 7) return "Young (1–7yr)";
   if (age <= 12) return "Standard (8–12yr)";
@@ -1531,7 +1531,7 @@ function getAgeTier(age?: number): string {
   return "Very Old (18+yr)";
 }
 
-function getPriceTier(price: number): string {
+export function getPriceTier(price: number): string {
   if (price < 50) return "Under $50";
   if (price < 100) return "$50–100";
   if (price < 250) return "$100–250";

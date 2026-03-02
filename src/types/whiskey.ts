@@ -18,6 +18,9 @@ export type WhiskeyStyle =
 // Treemap grouping modes
 export type GroupMode = "distillery" | "style" | "state" | "ageTier" | "priceTier";
 
+// Bubble chart size encoding modes
+export type BubbleSizeMode = "price" | "rating" | "uniform";
+
 export interface Bottle {
   id: string;
   name: string;

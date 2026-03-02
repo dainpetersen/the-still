@@ -1,4 +1,4 @@
-import { Brand } from "@/types/whiskey";
+import { Brand, GroupMode, WhiskeyStyle } from "@/types/whiskey";
 
 export const WHISKEY_DATA: Brand[] = [
 
@@ -8,6 +8,7 @@ export const WHISKEY_DATA: Brand[] = [
     name: "Buffalo Trace Distillery",
     country: "USA",
     region: "Frankfort, KY",
+    state: "Kentucky",
     subBrands: [
       {
         id: "buffalo-trace",
@@ -22,6 +23,7 @@ export const WHISKEY_DATA: Brand[] = [
             price: 30,
             rarity: "common",
             rarityScore: 10,
+            style: "Bourbon",
             description: "The flagship expression. Gentle vanilla, caramel, and a touch of spice.",
           },
           {
@@ -32,6 +34,7 @@ export const WHISKEY_DATA: Brand[] = [
             price: 45,
             rarity: "limited",
             rarityScore: 38,
+            style: "Wheated Bourbon",
             description: "Kosher-certified wheated mash. Soft, sweet, and elegant.",
           },
         ],
@@ -50,6 +53,7 @@ export const WHISKEY_DATA: Brand[] = [
             price: 40,
             rarity: "limited",
             rarityScore: 42,
+            style: "Bourbon",
             description: "Bold and complex with a dry, lingering finish. Toffee and oak.",
           },
           {
@@ -61,6 +65,7 @@ export const WHISKEY_DATA: Brand[] = [
             price: 400,
             rarity: "allocated",
             rarityScore: 88,
+            style: "Bourbon",
             description: "Annual BTAC release. Deep oak, toffee, and leather.",
           },
         ],
@@ -79,6 +84,7 @@ export const WHISKEY_DATA: Brand[] = [
             price: 130,
             rarity: "allocated",
             rarityScore: 82,
+            style: "Wheated Bourbon",
             description: "Entry point to the Van Winkle family. Rich and bold at cask strength.",
           },
           {
@@ -90,6 +96,7 @@ export const WHISKEY_DATA: Brand[] = [
             price: 150,
             rarity: "allocated",
             rarityScore: 84,
+            style: "Wheated Bourbon",
             description: "Lot B. Honeyed and approachable for a Van Winkle.",
           },
           {
@@ -101,6 +108,7 @@ export const WHISKEY_DATA: Brand[] = [
             price: 800,
             rarity: "unicorn",
             rarityScore: 96,
+            style: "Wheated Bourbon",
             description: "The holy grail of American whiskey. Rich, thick, and otherworldly.",
           },
           {
@@ -112,6 +120,7 @@ export const WHISKEY_DATA: Brand[] = [
             price: 1200,
             rarity: "unicorn",
             rarityScore: 98,
+            style: "Wheated Bourbon",
             description: "Two decades of patience. Dried fruit, tobacco, and ancient oak.",
           },
           {
@@ -123,6 +132,7 @@ export const WHISKEY_DATA: Brand[] = [
             price: 2000,
             rarity: "unicorn",
             rarityScore: 99,
+            style: "Wheated Bourbon",
             description: "The crown jewel. Dense, complex, and nearly impossible to find.",
           },
           {
@@ -134,6 +144,7 @@ export const WHISKEY_DATA: Brand[] = [
             price: 450,
             rarity: "unicorn",
             rarityScore: 92,
+            style: "Rye Whiskey",
             description: "Rare allocated rye. Mint, dill, and spiced fruit.",
           },
         ],
@@ -151,6 +162,7 @@ export const WHISKEY_DATA: Brand[] = [
             price: 25,
             rarity: "limited",
             rarityScore: 45,
+            style: "Wheated Bourbon",
             description: "Wheated bourbon. Soft, sweet, and deceptively complex.",
           },
           {
@@ -161,6 +173,7 @@ export const WHISKEY_DATA: Brand[] = [
             price: 30,
             rarity: "limited",
             rarityScore: 50,
+            style: "Wheated Bourbon",
             description: "High proof wheater. Bold and spicy for the price.",
           },
           {
@@ -172,6 +185,7 @@ export const WHISKEY_DATA: Brand[] = [
             price: 60,
             rarity: "allocated",
             rarityScore: 78,
+            style: "Wheated Bourbon",
             description: "The affordable antidote to Pappy. Vanilla-forward with honeyed finish.",
           },
           {
@@ -182,6 +196,7 @@ export const WHISKEY_DATA: Brand[] = [
             price: 70,
             rarity: "allocated",
             rarityScore: 80,
+            style: "Wheated Bourbon",
             description: "Bottled at entry proof. Rich and warming.",
           },
           {
@@ -192,6 +207,7 @@ export const WHISKEY_DATA: Brand[] = [
             price: 100,
             rarity: "allocated",
             rarityScore: 82,
+            style: "Wheated Bourbon",
             description: "Barrel-strength single cask expression. Caramel and baking spice.",
           },
           {
@@ -202,6 +218,7 @@ export const WHISKEY_DATA: Brand[] = [
             price: 400,
             rarity: "unicorn",
             rarityScore: 90,
+            style: "Wheated Bourbon",
             description: "Limited distillery-only release. Among the most sought wheated bourbons.",
           },
         ],
@@ -219,6 +236,7 @@ export const WHISKEY_DATA: Brand[] = [
             price: 500,
             rarity: "allocated",
             rarityScore: 90,
+            style: "Bourbon",
             description: "Uncut, unfiltered. A monster of a bourbon — one of the best made.",
           },
           {
@@ -229,6 +247,7 @@ export const WHISKEY_DATA: Brand[] = [
             price: 60,
             rarity: "limited",
             rarityScore: 55,
+            style: "Bourbon",
             description: "Mini-Stagg energy. High proof, raw, and delicious.",
           },
         ],
@@ -247,6 +266,7 @@ export const WHISKEY_DATA: Brand[] = [
             price: 35,
             rarity: "common",
             rarityScore: 15,
+            style: "Rye Whiskey",
             description: "Classic cocktail rye. Pepper, mint, and clove.",
           },
           {
@@ -257,6 +277,7 @@ export const WHISKEY_DATA: Brand[] = [
             price: 500,
             rarity: "allocated",
             rarityScore: 89,
+            style: "Rye Whiskey",
             description: "Uncut BTAC rye. Spicy and massive, a rye benchmark.",
           },
         ],
@@ -270,6 +291,7 @@ export const WHISKEY_DATA: Brand[] = [
     name: "Heaven Hill Distillery",
     country: "USA",
     region: "Bardstown, KY",
+    state: "Kentucky",
     subBrands: [
       {
         id: "elijah-craig",
@@ -284,6 +306,7 @@ export const WHISKEY_DATA: Brand[] = [
             price: 35,
             rarity: "common",
             rarityScore: 12,
+            style: "Bourbon",
             description: "Approachable and reliable. Caramel, vanilla, oak.",
           },
           {
@@ -295,6 +318,7 @@ export const WHISKEY_DATA: Brand[] = [
             price: 65,
             rarity: "limited",
             rarityScore: 55,
+            style: "Bourbon",
             description: "Uncut 12-year. One of the best values in bourbon.",
           },
           {
@@ -306,6 +330,7 @@ export const WHISKEY_DATA: Brand[] = [
             price: 125,
             rarity: "rare",
             rarityScore: 72,
+            style: "Bourbon",
             description: "Well-aged and refined. Rich caramel and dried fruit.",
           },
           {
@@ -317,6 +342,7 @@ export const WHISKEY_DATA: Brand[] = [
             price: 350,
             rarity: "allocated",
             rarityScore: 85,
+            style: "Bourbon",
             description: "Ancient oak-forward. Rare annual release.",
           },
         ],
@@ -334,6 +360,7 @@ export const WHISKEY_DATA: Brand[] = [
             price: 200,
             rarity: "rare",
             rarityScore: 75,
+            style: "Wheated Bourbon",
             description: "Annual charity release. Wheated mash, rich and full.",
           },
           {
@@ -344,6 +371,7 @@ export const WHISKEY_DATA: Brand[] = [
             price: 250,
             rarity: "rare",
             rarityScore: 78,
+            style: "Bourbon",
             description: "Heavy char barrel maturation yields intense oak and caramel.",
           },
         ],
@@ -362,6 +390,7 @@ export const WHISKEY_DATA: Brand[] = [
             price: 35,
             rarity: "common",
             rarityScore: 15,
+            style: "Wheat Whiskey",
             description: "America's only straight wheat whiskey. Sweet and silky.",
           },
         ],
@@ -379,6 +408,7 @@ export const WHISKEY_DATA: Brand[] = [
             price: 30,
             rarity: "common",
             rarityScore: 12,
+            style: "Wheated Bourbon",
             description: "Wheated bourbon at a great price. Honey and soft spice.",
           },
           {
@@ -389,6 +419,7 @@ export const WHISKEY_DATA: Brand[] = [
             price: 50,
             rarity: "limited",
             rarityScore: 48,
+            style: "Wheated Bourbon",
             description: "Quarterly barrel proof releases. Big, bold wheated punch.",
           },
         ],
@@ -407,6 +438,7 @@ export const WHISKEY_DATA: Brand[] = [
             price: 30,
             rarity: "limited",
             rarityScore: 35,
+            style: "Bourbon",
             description: "Classic BIB bourbon. Earthy, corny, with good structure.",
           },
         ],
@@ -420,6 +452,7 @@ export const WHISKEY_DATA: Brand[] = [
     name: "Wild Turkey Distillery",
     country: "USA",
     region: "Lawrenceburg, KY",
+    state: "Kentucky",
     subBrands: [
       {
         id: "wild-turkey-core",
@@ -434,6 +467,7 @@ export const WHISKEY_DATA: Brand[] = [
             price: 28,
             rarity: "common",
             rarityScore: 8,
+            style: "Bourbon",
             description: "The classic high-rye, high-proof benchmark. Spicy and bold.",
           },
           {
@@ -444,6 +478,7 @@ export const WHISKEY_DATA: Brand[] = [
             price: 45,
             rarity: "common",
             rarityScore: 15,
+            style: "Bourbon",
             description: "Barrel proof blend. Rich, full, and undeniably Wild Turkey.",
           },
           {
@@ -454,6 +489,7 @@ export const WHISKEY_DATA: Brand[] = [
             price: 40,
             rarity: "common",
             rarityScore: 12,
+            style: "Bourbon",
             description: "Matthew McConaughey collab. Refined with oak and mesquite charcoal.",
           },
           {
@@ -464,6 +500,7 @@ export const WHISKEY_DATA: Brand[] = [
             price: 250,
             rarity: "rare",
             rarityScore: 75,
+            style: "Bourbon",
             description: "Commemorative release by master distiller Eddie Russell.",
           },
         ],
@@ -482,6 +519,7 @@ export const WHISKEY_DATA: Brand[] = [
             price: 45,
             rarity: "common",
             rarityScore: 18,
+            style: "Bourbon",
             description: "Jimmy Russell's signature expression. Smooth, rich, and balanced.",
           },
           {
@@ -493,6 +531,7 @@ export const WHISKEY_DATA: Brand[] = [
             price: 55,
             rarity: "common",
             rarityScore: 20,
+            style: "Rye Whiskey",
             description: "Aged rye with great structure. Pepper, fruit, and herbal notes.",
           },
           {
@@ -503,6 +542,7 @@ export const WHISKEY_DATA: Brand[] = [
             price: 70,
             rarity: "limited",
             rarityScore: 45,
+            style: "Bourbon",
             description: "Single cask at cask strength. Each release tells a different story.",
           },
           {
@@ -514,6 +554,7 @@ export const WHISKEY_DATA: Brand[] = [
             price: 500,
             rarity: "unicorn",
             rarityScore: 93,
+            style: "Bourbon",
             description: "Rare vintage bottling. Deep caramel, leather, and ancient spice.",
           },
         ],
@@ -527,6 +568,7 @@ export const WHISKEY_DATA: Brand[] = [
     name: "Four Roses Distillery",
     country: "USA",
     region: "Lawrenceburg, KY",
+    state: "Kentucky",
     subBrands: [
       {
         id: "four-roses-core",
@@ -541,6 +583,7 @@ export const WHISKEY_DATA: Brand[] = [
             price: 25,
             rarity: "common",
             rarityScore: 8,
+            style: "High Rye Bourbon",
             description: "Accessible blend of all 10 Four Roses recipes. Floral and fruity.",
           },
           {
@@ -551,6 +594,7 @@ export const WHISKEY_DATA: Brand[] = [
             price: 40,
             rarity: "common",
             rarityScore: 12,
+            style: "High Rye Bourbon",
             description: "Four-recipe blend. More complexity and depth than Yellow Label.",
           },
           {
@@ -561,6 +605,7 @@ export const WHISKEY_DATA: Brand[] = [
             price: 60,
             rarity: "common",
             rarityScore: 18,
+            style: "High Rye Bourbon",
             description: "Six-recipe, non-chill filtered. Fruit-forward and spicy.",
           },
           {
@@ -571,6 +616,7 @@ export const WHISKEY_DATA: Brand[] = [
             price: 55,
             rarity: "common",
             rarityScore: 16,
+            style: "High Rye Bourbon",
             description: "OBSV recipe only. Rich fruit, spice, and full body.",
           },
         ],
@@ -588,6 +634,7 @@ export const WHISKEY_DATA: Brand[] = [
             price: 250,
             rarity: "allocated",
             rarityScore: 84,
+            style: "High Rye Bourbon",
             description: "Annual single barrel LE. One of the most anticipated releases.",
           },
           {
@@ -598,6 +645,7 @@ export const WHISKEY_DATA: Brand[] = [
             price: 200,
             rarity: "rare",
             rarityScore: 76,
+            style: "High Rye Bourbon",
             description: "Annual limited release blending aged, select recipes.",
           },
           {
@@ -608,6 +656,7 @@ export const WHISKEY_DATA: Brand[] = [
             price: 350,
             rarity: "allocated",
             rarityScore: 87,
+            style: "High Rye Bourbon",
             description: "Commemorative blend. Exceptional depth and complexity.",
           },
         ],
@@ -621,6 +670,7 @@ export const WHISKEY_DATA: Brand[] = [
     name: "Brown-Forman",
     country: "USA",
     region: "Louisville, KY",
+    state: "Kentucky",
     subBrands: [
       {
         id: "woodford-reserve",
@@ -635,6 +685,7 @@ export const WHISKEY_DATA: Brand[] = [
             price: 38,
             rarity: "common",
             rarityScore: 10,
+            style: "Bourbon",
             description: "The quintessential sipping bourbon. Over 200 flavor notes.",
           },
           {
@@ -645,6 +696,7 @@ export const WHISKEY_DATA: Brand[] = [
             price: 55,
             rarity: "common",
             rarityScore: 15,
+            style: "Bourbon",
             description: "Finished in toasted new oak. Deeply sweet and vanilla-rich.",
           },
           {
@@ -655,6 +707,7 @@ export const WHISKEY_DATA: Brand[] = [
             price: 120,
             rarity: "limited",
             rarityScore: 55,
+            style: "Bourbon",
             description: "Biannual uncut release. Full, luxurious, and complex.",
           },
           {
@@ -665,6 +718,7 @@ export const WHISKEY_DATA: Brand[] = [
             price: 200,
             rarity: "rare",
             rarityScore: 72,
+            style: "Bourbon",
             description: "Annual Masters Collection. Experimental grain bills and finishes.",
           },
         ],
@@ -682,6 +736,7 @@ export const WHISKEY_DATA: Brand[] = [
             price: 25,
             rarity: "common",
             rarityScore: 8,
+            style: "Bourbon",
             description: "Extra proof and more flavor. A bartender's staple.",
           },
           {
@@ -692,6 +747,7 @@ export const WHISKEY_DATA: Brand[] = [
             price: 45,
             rarity: "common",
             rarityScore: 12,
+            style: "Bourbon",
             description: "Three-warehouse blend evoking the original 1870 recipe.",
           },
           {
@@ -702,6 +758,7 @@ export const WHISKEY_DATA: Brand[] = [
             price: 60,
             rarity: "common",
             rarityScore: 16,
+            style: "Bourbon",
             description: "High proof, high flavor. A modern classic.",
           },
           {
@@ -712,6 +769,7 @@ export const WHISKEY_DATA: Brand[] = [
             price: 200,
             rarity: "allocated",
             rarityScore: 82,
+            style: "Bourbon",
             description: "Annual September release. One of Kentucky's most coveted annual bottlings.",
           },
           {
@@ -722,6 +780,7 @@ export const WHISKEY_DATA: Brand[] = [
             price: 500,
             rarity: "unicorn",
             rarityScore: 93,
+            style: "Bourbon",
             description: "Distillery-only single barrel. The pinnacle of Old Forester.",
           },
         ],
@@ -739,6 +798,7 @@ export const WHISKEY_DATA: Brand[] = [
             price: 28,
             rarity: "common",
             rarityScore: 5,
+            style: "Tennessee Whiskey",
             description: "The world's best-selling American whiskey. Charcoal-mellowed Tennessee style.",
           },
           {
@@ -749,6 +809,7 @@ export const WHISKEY_DATA: Brand[] = [
             price: 35,
             rarity: "common",
             rarityScore: 6,
+            style: "Tennessee Whiskey",
             description: "Double charcoal mellowed. Smoother and more refined.",
           },
           {
@@ -759,6 +820,7 @@ export const WHISKEY_DATA: Brand[] = [
             price: 55,
             rarity: "common",
             rarityScore: 12,
+            style: "Tennessee Whiskey",
             description: "Top-shelf barrels from the highest reaches of the rickhouse.",
           },
           {
@@ -770,6 +832,7 @@ export const WHISKEY_DATA: Brand[] = [
             price: 70,
             rarity: "limited",
             rarityScore: 45,
+            style: "Tennessee Whiskey",
             description: "First decade-aged Jack. Rich, full-bodied, and complex.",
           },
           {
@@ -780,6 +843,7 @@ export const WHISKEY_DATA: Brand[] = [
             price: 200,
             rarity: "rare",
             rarityScore: 70,
+            style: "Tennessee Whiskey",
             description: "Commemorative release celebrating 150 years of the distillery.",
           },
         ],
@@ -793,6 +857,7 @@ export const WHISKEY_DATA: Brand[] = [
     name: "Beam Suntory",
     country: "USA",
     region: "Clermont, KY",
+    state: "Kentucky",
     subBrands: [
       {
         id: "knob-creek",
@@ -808,6 +873,7 @@ export const WHISKEY_DATA: Brand[] = [
             price: 40,
             rarity: "common",
             rarityScore: 10,
+            style: "Bourbon",
             description: "Full-bodied small batch. Deep oak, caramel, and vanilla.",
           },
           {
@@ -819,6 +885,7 @@ export const WHISKEY_DATA: Brand[] = [
             price: 60,
             rarity: "limited",
             rarityScore: 38,
+            style: "Bourbon",
             description: "Extra age brings dark fruit and more complex oak.",
           },
           {
@@ -829,6 +896,7 @@ export const WHISKEY_DATA: Brand[] = [
             price: 60,
             rarity: "common",
             rarityScore: 18,
+            style: "Bourbon",
             description: "Barrel strength single cask. Intense and rewarding.",
           },
           {
@@ -839,6 +907,7 @@ export const WHISKEY_DATA: Brand[] = [
             price: 300,
             rarity: "rare",
             rarityScore: 78,
+            style: "Bourbon",
             description: "Commemorative release. One of the richest Knob Creeks ever made.",
           },
         ],
@@ -857,6 +926,7 @@ export const WHISKEY_DATA: Brand[] = [
             price: 90,
             rarity: "common",
             rarityScore: 20,
+            style: "Bourbon",
             description: "Uncut, unfiltered, aged 6–8 years. Booker Noe's legacy.",
           },
           {
@@ -867,6 +937,7 @@ export const WHISKEY_DATA: Brand[] = [
             price: 400,
             rarity: "allocated",
             rarityScore: 87,
+            style: "Bourbon",
             description: "Commemorative Booker's. Exceptional even by its high standards.",
           },
         ],
@@ -885,6 +956,7 @@ export const WHISKEY_DATA: Brand[] = [
             price: 45,
             rarity: "common",
             rarityScore: 10,
+            style: "High Rye Bourbon",
             description: "High-rye, low-proof. Light and approachable for a small-batch bourbon.",
           },
           {
@@ -896,6 +968,7 @@ export const WHISKEY_DATA: Brand[] = [
             price: 70,
             rarity: "limited",
             rarityScore: 40,
+            style: "High Rye Bourbon",
             description: "Extra age adds depth to the high-rye signature.",
           },
           {
@@ -906,6 +979,7 @@ export const WHISKEY_DATA: Brand[] = [
             price: 50,
             rarity: "common",
             rarityScore: 12,
+            style: "Rye Whiskey",
             description: "Rye-port wine blend. Sweet, fruity, and unique.",
           },
         ],
@@ -924,6 +998,7 @@ export const WHISKEY_DATA: Brand[] = [
             price: 65,
             rarity: "limited",
             rarityScore: 35,
+            style: "Bourbon",
             description: "Named for Baker Beam. Rich and robust single barrel small batch.",
           },
         ],
@@ -937,6 +1012,7 @@ export const WHISKEY_DATA: Brand[] = [
     name: "Michter's Distillery",
     country: "USA",
     region: "Louisville, KY",
+    state: "Kentucky",
     subBrands: [
       {
         id: "michters-us1",
@@ -951,6 +1027,7 @@ export const WHISKEY_DATA: Brand[] = [
             price: 50,
             rarity: "limited",
             rarityScore: 35,
+            style: "Bourbon",
             description: "Toasted barrel finish. Sweet, balanced, and refined.",
           },
           {
@@ -961,6 +1038,7 @@ export const WHISKEY_DATA: Brand[] = [
             price: 50,
             rarity: "limited",
             rarityScore: 35,
+            style: "Rye Whiskey",
             description: "Approachable rye with notes of vanilla, caramel, and light spice.",
           },
           {
@@ -971,6 +1049,7 @@ export const WHISKEY_DATA: Brand[] = [
             price: 45,
             rarity: "limited",
             rarityScore: 30,
+            style: "Blended American",
             description: "Not bound to a single category. Smooth and light with caramel notes.",
           },
           {
@@ -981,6 +1060,7 @@ export const WHISKEY_DATA: Brand[] = [
             price: 50,
             rarity: "limited",
             rarityScore: 35,
+            style: "Bourbon",
             description: "Single barrel sour mash. Sweet and easy-sipping.",
           },
         ],
@@ -999,6 +1079,7 @@ export const WHISKEY_DATA: Brand[] = [
             price: 175,
             rarity: "rare",
             rarityScore: 72,
+            style: "Bourbon",
             description: "Discontinued when stock runs out each year. Rich and velvety.",
           },
           {
@@ -1010,6 +1091,7 @@ export const WHISKEY_DATA: Brand[] = [
             price: 175,
             rarity: "rare",
             rarityScore: 73,
+            style: "Rye Whiskey",
             description: "Complex aged rye. One of the best American ryes available.",
           },
           {
@@ -1021,6 +1103,7 @@ export const WHISKEY_DATA: Brand[] = [
             price: 1200,
             rarity: "unicorn",
             rarityScore: 97,
+            style: "Bourbon",
             description: "Released when ready — not by year. An extraordinarily rare bottling.",
           },
           {
@@ -1032,6 +1115,7 @@ export const WHISKEY_DATA: Brand[] = [
             price: 4000,
             rarity: "unicorn",
             rarityScore: 99,
+            style: "Bourbon",
             description: "The most expensive regularly-produced American bourbon. Extraordinary.",
           },
         ],
@@ -1049,6 +1133,7 @@ export const WHISKEY_DATA: Brand[] = [
             price: 90,
             rarity: "rare",
             rarityScore: 68,
+            style: "Bourbon",
             description: "US*1 finished in toasted barrels. Deeper vanilla and baking spice.",
           },
           {
@@ -1059,6 +1144,7 @@ export const WHISKEY_DATA: Brand[] = [
             price: 90,
             rarity: "rare",
             rarityScore: 68,
+            style: "Bourbon",
             description: "Unique toasted finish on the sour mash base. Sweet and spiced.",
           },
         ],
@@ -1072,6 +1158,7 @@ export const WHISKEY_DATA: Brand[] = [
     name: "High West Distillery",
     country: "USA",
     region: "Park City, UT",
+    state: "Utah",
     isNDP: true,
     subBrands: [
       {
@@ -1087,6 +1174,7 @@ export const WHISKEY_DATA: Brand[] = [
             price: 45,
             rarity: "common",
             rarityScore: 12,
+            style: "Bourbon",
             description: "Blend of MGP and Wyoming distillate. Sweet, smooth, and approachable.",
           },
           {
@@ -1097,6 +1185,7 @@ export const WHISKEY_DATA: Brand[] = [
             price: 45,
             rarity: "common",
             rarityScore: 12,
+            style: "Rye Whiskey",
             description: "Two rye mash bills blended. Spicy, herbal, and great in cocktails.",
           },
           {
@@ -1107,6 +1196,7 @@ export const WHISKEY_DATA: Brand[] = [
             price: 60,
             rarity: "limited",
             rarityScore: 40,
+            style: "Rye Whiskey",
             description: "Classic Utah rye blend. Complex and cocktail-friendly.",
           },
           {
@@ -1117,6 +1207,7 @@ export const WHISKEY_DATA: Brand[] = [
             price: 65,
             rarity: "limited",
             rarityScore: 42,
+            style: "Blended American",
             description: "Blend of bourbon, rye, and blended Scotch. Smoked caramel and fruit.",
           },
         ],
@@ -1134,6 +1225,7 @@ export const WHISKEY_DATA: Brand[] = [
             price: 120,
             rarity: "rare",
             rarityScore: 70,
+            style: "Blended American",
             description: "Highly allocated blend of bourbon and rye. Sweet spice and fruit.",
           },
           {
@@ -1144,6 +1236,7 @@ export const WHISKEY_DATA: Brand[] = [
             price: 150,
             rarity: "rare",
             rarityScore: 73,
+            style: "Rye Whiskey",
             description: "Port and French oak finished rye. Rich and wintery.",
           },
         ],
@@ -1157,6 +1250,7 @@ export const WHISKEY_DATA: Brand[] = [
     name: "Willett Distillery",
     country: "USA",
     region: "Bardstown, KY",
+    state: "Kentucky",
     subBrands: [
       {
         id: "willett-pot-still",
@@ -1171,6 +1265,7 @@ export const WHISKEY_DATA: Brand[] = [
             price: 45,
             rarity: "common",
             rarityScore: 14,
+            style: "Bourbon",
             description: "Iconic bottle shape. Honey, butterscotch, and gentle rye spice.",
           },
         ],
@@ -1189,6 +1284,7 @@ export const WHISKEY_DATA: Brand[] = [
             price: 70,
             rarity: "limited",
             rarityScore: 48,
+            style: "Rye Whiskey",
             description: "Young and fiery. Mint, pepper, and raw grain.",
           },
           {
@@ -1200,6 +1296,7 @@ export const WHISKEY_DATA: Brand[] = [
             price: 75,
             rarity: "limited",
             rarityScore: 50,
+            style: "Bourbon",
             description: "Younger single barrel bourbon. Bright and energetic.",
           },
           {
@@ -1211,6 +1308,7 @@ export const WHISKEY_DATA: Brand[] = [
             price: 200,
             rarity: "rare",
             rarityScore: 78,
+            style: "Bourbon",
             description: "Well-aged Willett single barrel. Developed oak and rich caramel.",
           },
         ],
@@ -1228,6 +1326,7 @@ export const WHISKEY_DATA: Brand[] = [
             price: 35,
             rarity: "limited",
             rarityScore: 30,
+            style: "Bourbon",
             description: "Underrated Willett sourced bourbon. Rich and spicy.",
           },
         ],
@@ -1241,6 +1340,7 @@ export const WHISKEY_DATA: Brand[] = [
     name: "Angel's Envy Distillery",
     country: "USA",
     region: "Louisville, KY",
+    state: "Kentucky",
     isNDP: true,
     subBrands: [
       {
@@ -1256,6 +1356,7 @@ export const WHISKEY_DATA: Brand[] = [
             price: 50,
             rarity: "common",
             rarityScore: 14,
+            style: "Bourbon",
             description: "Port wine cask finish. Plum, vanilla, and gentle sweetness.",
           },
           {
@@ -1266,6 +1367,7 @@ export const WHISKEY_DATA: Brand[] = [
             price: 90,
             rarity: "limited",
             rarityScore: 52,
+            style: "Rye Whiskey",
             description: "Caribbean rum cask finished rye. Tropical fruit and spice.",
           },
           {
@@ -1276,6 +1378,7 @@ export const WHISKEY_DATA: Brand[] = [
             price: 250,
             rarity: "allocated",
             rarityScore: 83,
+            style: "Bourbon",
             description: "Annual limited release. Port-finished at full proof — phenomenal.",
           },
           {
@@ -1286,6 +1389,7 @@ export const WHISKEY_DATA: Brand[] = [
             price: 300,
             rarity: "rare",
             rarityScore: 80,
+            style: "Bourbon",
             description: "Finished in rare Oloroso sherry casks. Rich, complex, and limited.",
           },
         ],
@@ -1299,6 +1403,7 @@ export const WHISKEY_DATA: Brand[] = [
     name: "Bardstown Bourbon Company",
     country: "USA",
     region: "Bardstown, KY",
+    state: "Kentucky",
     isNDP: true,
     subBrands: [
       {
@@ -1314,6 +1419,7 @@ export const WHISKEY_DATA: Brand[] = [
             price: 65,
             rarity: "limited",
             rarityScore: 45,
+            style: "Bourbon",
             description: "Oregon beer-cask finished bourbon. Creative and fruit-forward.",
           },
           {
@@ -1324,6 +1430,7 @@ export const WHISKEY_DATA: Brand[] = [
             price: 75,
             rarity: "limited",
             rarityScore: 47,
+            style: "Bourbon",
             description: "Texas single malt whiskey-cask finished bourbon. Bold and smoky.",
           },
           {
@@ -1334,6 +1441,7 @@ export const WHISKEY_DATA: Brand[] = [
             price: 80,
             rarity: "limited",
             rarityScore: 48,
+            style: "Bourbon",
             description: "Red wine cask finished. Deep fruit and rich vanilla.",
           },
         ],
@@ -1352,6 +1460,7 @@ export const WHISKEY_DATA: Brand[] = [
             price: 55,
             rarity: "limited",
             rarityScore: 42,
+            style: "Bourbon",
             description: "BBC's house distillate at age. Bright and grain-forward.",
           },
           {
@@ -1362,6 +1471,7 @@ export const WHISKEY_DATA: Brand[] = [
             price: 70,
             rarity: "limited",
             rarityScore: 45,
+            style: "Bourbon",
             description: "Blend of young house bourbon and older sourced whiskey.",
           },
         ],
@@ -1381,10 +1491,13 @@ export function buildTreemapData(brands: Brand[]) {
       id: brand.id,
       country: brand.country,
       region: brand.region,
+      isNDP: brand.isNDP,
+      source: brand.source,
       children: brand.subBrands.map((sub) => ({
         name: sub.name,
         type: "subBrand" as const,
         id: sub.id,
+        source: sub.source,
         children: sub.bottles.map((bottle) => ({
           name: bottle.name,
           type: "bottle" as const,
@@ -1398,11 +1511,142 @@ export function buildTreemapData(brands: Brand[]) {
           abv: bottle.abv,
           age: bottle.age,
           description: bottle.description,
+          isNDP: brand.isNDP,
           source: bottle.source,
           sourceDistillery: bottle.sourceDistillery,
           availability: bottle.availability ?? "current",
         })),
       })),
     })),
+  };
+}
+
+// ── Age / Price tier helpers ──────────────────────────────────────────────────
+
+function getAgeTier(age?: number): string {
+  if (age === undefined || age === null) return "NAS";
+  if (age <= 7) return "Young (1–7yr)";
+  if (age <= 12) return "Standard (8–12yr)";
+  if (age <= 17) return "Aged (13–17yr)";
+  return "Very Old (18+yr)";
+}
+
+function getPriceTier(price: number): string {
+  if (price < 50) return "Under $50";
+  if (price < 100) return "$50–100";
+  if (price < 250) return "$100–250";
+  return "$250+";
+}
+
+const STYLE_ORDER: WhiskeyStyle[] = [
+  "Bourbon",
+  "Wheated Bourbon",
+  "High Rye Bourbon",
+  "Rye Whiskey",
+  "Wheat Whiskey",
+  "Tennessee Whiskey",
+  "Blended American",
+];
+const AGE_ORDER = ["NAS", "Young (1–7yr)", "Standard (8–12yr)", "Aged (13–17yr)", "Very Old (18+yr)"];
+const PRICE_ORDER = ["Under $50", "$50–100", "$100–250", "$250+"];
+
+// ── buildGroupedData ──────────────────────────────────────────────────────────
+// Produces Root → Group → Brand → Bottle hierarchy for non-distillery group modes.
+// The hierarchy depth is the same as distillery mode (4 levels) so the D3 layout
+// code in WhiskeyTreemap does not need structural changes.
+
+export function buildGroupedData(
+  brands: Brand[],
+  mode: Exclude<GroupMode, "distillery">
+) {
+  // Map<groupName, Map<brandId, {brand, bottles[]}>>
+  const groupMap = new Map<string, Map<string, { brand: Brand; bottles: import("@/types/whiskey").Bottle[] }>>();
+
+  for (const brand of brands) {
+    for (const subBrand of brand.subBrands) {
+      for (const bottle of subBrand.bottles) {
+        let groupKey: string;
+        switch (mode) {
+          case "style":
+            groupKey = (bottle.style as string) ?? "Unknown";
+            break;
+          case "state":
+            groupKey = brand.state ?? "Unknown";
+            break;
+          case "ageTier":
+            groupKey = getAgeTier(bottle.age);
+            break;
+          case "priceTier":
+            groupKey = getPriceTier(bottle.price);
+            break;
+        }
+
+        if (!groupMap.has(groupKey)) groupMap.set(groupKey, new Map());
+        const brandMap = groupMap.get(groupKey)!;
+        if (!brandMap.has(brand.id)) {
+          brandMap.set(brand.id, { brand, bottles: [] });
+        }
+        brandMap.get(brand.id)!.bottles.push(bottle);
+      }
+    }
+  }
+
+  // Sort groups in canonical order
+  const allKeys = [...groupMap.keys()];
+  let sortedKeys: string[];
+  if (mode === "style") {
+    sortedKeys = [
+      ...STYLE_ORDER.filter((k) => allKeys.includes(k)),
+      ...allKeys.filter((k) => !STYLE_ORDER.includes(k as WhiskeyStyle)),
+    ];
+  } else if (mode === "ageTier") {
+    sortedKeys = AGE_ORDER.filter((k) => allKeys.includes(k));
+  } else if (mode === "priceTier") {
+    sortedKeys = PRICE_ORDER.filter((k) => allKeys.includes(k));
+  } else {
+    sortedKeys = allKeys.sort();
+  }
+
+  const children = sortedKeys.map((groupName) => {
+    const brandMap = groupMap.get(groupName)!;
+    const brandChildren = [...brandMap.values()].map(({ brand, bottles }) => ({
+      name: brand.name,
+      type: "brand" as const,
+      id: brand.id,
+      isNDP: brand.isNDP,
+      source: brand.source,
+      children: bottles.map((bt) => ({
+        name: bt.name,
+        type: "bottle" as const,
+        id: bt.id,
+        value: 1 as const,
+        price: bt.price,
+        rarityScore: bt.rarityScore,
+        rarity: bt.rarity,
+        avgRating: bt.avgRating,
+        ratingCount: bt.ratingCount,
+        abv: bt.abv,
+        age: bt.age,
+        description: bt.description,
+        isNDP: brand.isNDP,
+        source: bt.source,
+        sourceDistillery: bt.sourceDistillery,
+        availability: bt.availability,
+        style: bt.style,
+      })),
+    }));
+
+    return {
+      name: groupName,
+      type: "group" as const,
+      children: brandChildren,
+    };
+  });
+
+  return {
+    name: "root",
+    type: "brand" as const,
+    groupMode: mode,
+    children,
   };
 }

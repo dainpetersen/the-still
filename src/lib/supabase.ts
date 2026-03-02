@@ -1,5 +1,5 @@
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
-import { Brand, Bottle, SubBrand, Submission, SubmissionData, SubmissionType, Profile } from "@/types/whiskey";
+import { Brand, Bottle, SubBrand, Submission, SubmissionData, SubmissionType, Profile, WhiskeyStyle } from "@/types/whiskey";
 
 // ── Browser (public anon) client ──────────────────────────────────────────────
 let _client: SupabaseClient | null = null;
@@ -71,6 +71,7 @@ export async function fetchCatalog(): Promise<Brand[] | null> {
             sourceDistillery: bt.source_distillery ?? undefined,
             source: (bt.entry_source as "official" | "community") ?? "official",
             availability: (bt.availability as "current" | "limited_release" | "discontinued") ?? "current",
+            style: bt.style ? (bt.style as WhiskeyStyle) : undefined,
           })),
       })),
   }));

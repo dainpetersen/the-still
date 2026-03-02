@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import dynamic from "next/dynamic";
 import type { User } from "@supabase/supabase-js";
-import { WHISKEY_DATA, buildTreemapData } from "@/data/whiskeys";
+import { WHISKEY_DATA, buildTreemapData, buildGroupedData } from "@/data/whiskeys";
 import {
   fetchAllAverageRatings,
   fetchApprovedSubmissions,
@@ -13,8 +13,37 @@ import {
   signOut,
 } from "@/lib/supabase";
 import { mergeApprovedSubmissions } from "@/lib/mergeSubmissions";
-import { Brand, ColorMode, Profile } from "@/types/whiskey";
+import { Brand, ColorMode, GroupMode, Profile, WhiskeyStyle } from "@/types/whiskey";
+
+/**
+ * When the Supabase catalog predates the style/state columns, fill in those
+ * fields from the static WHISKEY_DATA so Group By modes work correctly.
+ */
+function enrichCatalogStyles(catalog: Brand[]): Brand[] {
+  const styleMap = new Map<string, WhiskeyStyle>();
+  const stateMap = new Map<string, string>();
+  for (const brand of WHISKEY_DATA) {
+    if (brand.state) stateMap.set(brand.id, brand.state);
+    for (const sb of brand.subBrands) {
+      for (const bt of sb.bottles) {
+        if (bt.style) styleMap.set(bt.id, bt.style);
+      }
+    }
+  }
+  return catalog.map((brand) => ({
+    ...brand,
+    state: brand.state ?? stateMap.get(brand.id),
+    subBrands: brand.subBrands.map((sb) => ({
+      ...sb,
+      bottles: sb.bottles.map((bt) => ({
+        ...bt,
+        style: bt.style ?? styleMap.get(bt.id),
+      })),
+    })),
+  }));
+}
 import ColorLegend from "@/components/ColorLegend";
+import GroupControl from "@/components/GroupControl";
 import RatingModal from "@/components/RatingModal";
 import SubmissionModal from "@/components/SubmissionModal";
 import AuthModal from "@/components/AuthModal";
@@ -36,7 +65,8 @@ interface BottleNode {
 }
 
 export default function Home() {
-  const [colorMode, setColorMode] = useState<ColorMode>("price");
+  const [colorMode, setColorMode]   = useState<ColorMode>("price");
+  const [groupMode, setGroupMode]   = useState<GroupMode>("distillery");
   const [selectedBottle, setSelectedBottle] = useState<BottleNode | null>(null);
   const [showSubmit, setShowSubmit] = useState(false);
   const [showAuth, setShowAuth] = useState(false);
@@ -53,6 +83,14 @@ export default function Home() {
   const [filterBrand, setFilterBrand] = useState<string | null>(null);
   const [filterSubBrand, setFilterSubBrand] = useState<string | null>(null);
   const [showDiscontinued, setShowDiscontinued] = useState(true);
+
+  const handleGroupModeChange = useCallback((mode: GroupMode) => {
+    setGroupMode(mode);
+    if (mode !== "distillery") {
+      setFilterBrand(null);
+      setFilterSubBrand(null);
+    }
+  }, []);
 
   const handleBrandClick = useCallback((brandName: string) => {
     setFilterBrand(brandName);
@@ -93,7 +131,13 @@ export default function Home() {
     return [{ ...brand, subBrands: brand.subBrands.filter((sb) => sb.name === filterSubBrand) }];
   }, [mergedBrands, filterBrand, filterSubBrand, showDiscontinued]);
 
-  const displayData = useMemo(() => buildTreemapData(displayBrands), [displayBrands]);
+  const displayData = useMemo(
+    () =>
+      groupMode === "distillery"
+        ? buildTreemapData(displayBrands)
+        : buildGroupedData(displayBrands, groupMode),
+    [displayBrands, groupMode]
+  );
 
   // ── Stats for current view ────────────────────────────────────────────────
   const viewStats = useMemo(() => {
@@ -119,8 +163,9 @@ export default function Home() {
       ]);
       setRatings(ratingsData);
 
-      // Use Supabase catalog if available, otherwise fall back to static data
-      const baseData = catalogData ?? WHISKEY_DATA;
+      // Use Supabase catalog if available (enriched with static style/state),
+      // otherwise fall back to static data
+      const baseData = catalogData ? enrichCatalogStyles(catalogData) : WHISKEY_DATA;
 
       if (approvedSubs.length > 0) {
         const merged = mergeApprovedSubmissions(baseData, approvedSubs);
@@ -181,8 +226,8 @@ export default function Home() {
           Common Cask — Explore &amp; Rate
         </span>
 
-        {/* Breadcrumb */}
-        {filterBrand && (
+        {/* Breadcrumb — only in distillery mode */}
+        {groupMode === "distillery" && filterBrand && (
           <div className="flex items-center gap-2 text-xs ml-2">
             <button
               onClick={clearFilter}
@@ -317,13 +362,14 @@ export default function Home() {
           <WhiskeyTreemap
             data={displayData}
             colorMode={colorMode}
+            groupMode={groupMode}
             onBottleClick={(node) => {
               if (!user) { setShowAuth(true); return; }
               setSelectedBottle(node as BottleNode);
             }}
             ratings={ratings}
-            onBrandClick={handleBrandClick}
-            onSubBrandClick={handleSubBrandClick}
+            onBrandClick={groupMode === "distillery" ? handleBrandClick : undefined}
+            onSubBrandClick={groupMode === "distillery" ? handleSubBrandClick : undefined}
           />
         </div>
 
@@ -332,6 +378,7 @@ export default function Home() {
           className="w-56 flex-shrink-0 p-4 flex flex-col gap-4 overflow-y-auto"
           style={{ borderLeft: "1px solid rgba(245,158,11,0.15)" }}
         >
+          <GroupControl groupMode={groupMode} onChange={handleGroupModeChange} />
           <ColorLegend colorMode={colorMode} onColorModeChange={setColorMode} />
 
           {/* Stats / Filter panel */}
@@ -448,8 +495,8 @@ export default function Home() {
             )}
           </div>
 
-          {/* Regions (only in full view) */}
-          {!filterBrand && (
+          {/* Regions (only in distillery full view) */}
+          {groupMode === "distillery" && !filterBrand && (
             <div
               className="rounded-xl p-4"
               style={{

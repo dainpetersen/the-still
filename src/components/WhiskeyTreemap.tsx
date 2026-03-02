@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useCallback } from "react";
 import * as d3 from "d3";
-import { ColorMode } from "@/types/whiskey";
+import { ColorMode, GroupMode } from "@/types/whiskey";
 
 interface TreemapNode {
   name: string;
@@ -21,19 +21,23 @@ interface TreemapNode {
   source?: "official" | "community";
   sourceDistillery?: string;
   availability?: "current" | "limited_release" | "discontinued";
-  country?: string;
-  region?: string;
   children?: TreemapNode[];
 }
 
 interface Props {
   data: TreemapNode;
   colorMode: ColorMode;
+  groupMode: GroupMode;
   onBottleClick: (node: TreemapNode) => void;
   ratings: Record<string, { avg: number; count: number }>;
   onBrandClick?: (brandName: string) => void;
   onSubBrandClick?: (subBrandName: string, brandName: string) => void;
 }
+
+type HRNode = d3.HierarchyRectangularNode<TreemapNode>;
+type Tooltip = d3.Selection<HTMLDivElement, null, HTMLElement, unknown>;
+
+// ── Color helpers ─────────────────────────────────────────────────────────────
 
 function getColorScale(colorMode: ColorMode) {
   switch (colorMode) {
@@ -47,23 +51,19 @@ function getColorScale(colorMode: ColorMode) {
 }
 
 function getNodeValue(
-  node: d3.HierarchyRectangularNode<TreemapNode>,
+  node: HRNode,
   colorMode: ColorMode,
   ratings: Record<string, { avg: number; count: number }>
 ): number | null {
   const d = node.data;
   if (d.type !== "bottle") return null;
   switch (colorMode) {
-    case "price": return d.price ?? null;
-    case "rating": {
-      const r = d.id ? ratings[d.id] : null;
-      return r ? r.avg : null;
-    }
-    case "rarity": return d.rarityScore ?? null;
+    case "price":   return d.price ?? null;
+    case "rating":  return d.id ? (ratings[d.id]?.avg ?? null) : null;
+    case "rarity":  return d.rarityScore ?? null;
   }
 }
 
-/** WCAG relative luminance → dark or light text */
 function getContrastColor(fill: string): string {
   const c = d3.color(fill);
   if (!c) return "#ffffff";
@@ -75,6 +75,8 @@ function getContrastColor(fill: string): string {
   const L = 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
   return L > 0.35 ? "#0f172a" : "#ffffff";
 }
+
+// ── Text helpers ──────────────────────────────────────────────────────────────
 
 const CHAR_W = 0.57;
 
@@ -102,51 +104,37 @@ function wrapTextToLines(
   return lines.slice(0, maxLines);
 }
 
+// ── Component ─────────────────────────────────────────────────────────────────
+
 export default function WhiskeyTreemap({
   data,
   colorMode,
+  groupMode,
   onBottleClick,
   ratings,
   onBrandClick,
   onSubBrandClick,
 }: Props) {
-  const svgRef = useRef<SVGSVGElement>(null);
+  const svgRef      = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  // Track previous groupMode to decide whether to animate
+  const prevGroupModeRef = useRef<GroupMode | null>(null);
+  // Snapshot of bottle positions from last render (for FLIP)
+  const prevPositionsRef = useRef<Map<string, { x0: number; y0: number; x1: number; y1: number }>>(new Map());
 
-  const draw = useCallback(() => {
-    if (!svgRef.current || !containerRef.current) return;
-
-    const width = containerRef.current.clientWidth;
-    const height = containerRef.current.clientHeight;
-
-    const svg = d3.select(svgRef.current);
-    svg.selectAll("*").remove();
-    svg.attr("width", width).attr("height", height);
-
-    const defs = svg.append("defs");
-    const colorScale = getColorScale(colorMode);
-    const unratedColor = "#1f2937";
-
+  // ── Build D3 treemap layout ──────────────────────────────────────────────
+  function buildLayout(width: number, height: number): HRNode {
     const root = d3
       .hierarchy<TreemapNode>(data)
-      // Only count leaf nodes (bottles) so parent nodes don't consume space.
-      // If we used () => 1, every brand/sub-brand node would claim 1 extra unit
-      // of area, causing treemapSlice to leave a proportional gap at the bottom
-      // of each sub-brand container.
       .sum((d) => (d.children && d.children.length > 0 ? 0 : 1))
       .sort((a, b) => (b.value ?? 0) - (a.value ?? 0));
 
-    const treemap = d3
+    const laid = d3
       .treemap<TreemapNode>()
       .size([width, height])
       .paddingOuter(2)
-      // Only brand level gets a reserved strip for its label.
-      // Sub-brand labels float as overlay pills → zero wasted space.
       .paddingTop((d) => (d.depth === 1 ? 16 : 0))
       .paddingInner(1)
-      // At the sub-brand level (depth=2), use treemapSlice so bottles always
-      // stack top-to-bottom and fill 100% of the sub-brand area.  At every
-      // other level keep the default squarify aesthetic.
       .tile((node, x0, y0, x1, y1) => {
         if (node.depth === 2) {
           d3.treemapSlice(node, x0, y0, x1, y1);
@@ -154,97 +142,52 @@ export default function WhiskeyTreemap({
           d3.treemapSquarify(node, x0, y0, x1, y1);
         }
       })
-      .round(true);
+      .round(true)(root);
 
-    treemap(root);
+    return laid as HRNode;
+  }
 
-    // ── Tooltip ───────────────────────────────────────────────────────────────
-    const tooltip = d3
-      .select("body")
-      .selectAll<HTMLDivElement, null>(".treemap-tooltip")
-      .data([null])
-      .join("div")
-      .attr("class", "treemap-tooltip")
-      .style("position", "fixed")
-      .style("pointer-events", "none")
-      .style("background", "rgba(15,15,20,0.95)")
-      .style("border", "1px solid rgba(245,158,11,0.4)")
-      .style("border-radius", "8px")
-      .style("padding", "10px 14px")
-      .style("font-family", "system-ui, sans-serif")
-      .style("font-size", "13px")
-      .style("color", "#f5f5f5")
-      .style("max-width", "230px")
-      .style("line-height", "1.5")
-      .style("z-index", "9999")
-      .style("opacity", "0")
-      .style("transition", "opacity 0.15s");
+  // ── Render a single bottle's rect + labels + events ──────────────────────
+  function applyBottleContent(
+    g: d3.Selection<SVGGElement, unknown, null, undefined>,
+    d: HRNode,
+    w: number,
+    h: number,
+    colorScale: ReturnType<typeof getColorScale>,
+    tooltip: Tooltip,
+    showLabels: boolean
+  ) {
+    const unratedColor = "#1f2937";
+    const val = getNodeValue(d, colorMode, ratings);
+    const fillColor = val !== null ? colorScale(val) : unratedColor;
+    const textColor = getContrastColor(fillColor);
+    const mutedColor = textColor === "#0f172a" ? "rgba(15,23,42,0.55)" : "rgba(255,255,255,0.55)";
+    const isCommunity = d.data.source === "community";
 
-    // ── Node groups ───────────────────────────────────────────────────────────
-    const nodes = svg
-      .selectAll<SVGGElement, d3.HierarchyRectangularNode<TreemapNode>>("g.node")
-      .data(root.descendants() as d3.HierarchyRectangularNode<TreemapNode>[])
-      .join("g")
-      .attr("class", "node")
-      .attr("transform", (d) => `translate(${d.x0},${d.y0})`)
-      // Dim discontinued bottles at the group level so both rect + text fade
-      .style("opacity", (d) =>
-        d.data.type === "bottle" && d.data.availability === "discontinued" ? 0.35 : 1
-      );
-
-    nodes.each(function (d, i) {
-      const clipId = `clip-${i}`;
-      defs
-        .append("clipPath")
-        .attr("id", clipId)
-        .append("rect")
-        .attr("width", Math.max(0, d.x1 - d.x0))
-        .attr("height", Math.max(0, d.y1 - d.y0));
-      d3.select(this).attr("clip-path", `url(#${clipId})`);
-    });
-
-    // ── Rectangles ────────────────────────────────────────────────────────────
-    nodes
-      .append("rect")
-      .attr("width", (d) => Math.max(0, d.x1 - d.x0))
-      .attr("height", (d) => Math.max(0, d.y1 - d.y0))
+    g.append("rect")
+      .attr("width", w)
+      .attr("height", h)
       .attr("rx", 3)
       .attr("ry", 3)
-      .attr("fill", (d) => {
-        if (d.data.type === "bottle") {
-          const val = getNodeValue(d, colorMode, ratings);
-          return val !== null ? colorScale(val) : unratedColor;
-        }
-        if (d.data.type === "subBrand") return "rgba(30,30,40,0.25)";
-        if (d.data.type === "brand") return "rgba(15,15,25,0.85)";
-        return "transparent";
-      })
-      .attr("stroke", (d) => {
-        if (d.data.source === "community") return "rgba(139,92,246,0.75)";
-        if (d.data.type === "brand") return "rgba(245,158,11,0.5)";
-        if (d.data.type === "subBrand") return "rgba(245,158,11,0.2)";
-        return "rgba(255,255,255,0.08)";
-      })
-      .attr("stroke-width", (d) => {
-        if (d.data.source === "community") return 1.5;
-        if (d.data.type === "brand") return 1.5;
-        return 1;
-      })
-      .attr("stroke-dasharray", (d) => (d.data.source === "community" ? "5,3" : null))
-      .style("cursor", (d) => (d.data.type === "bottle" ? "pointer" : "default"))
-      .on("mouseover", function (event, d) {
-        if (d.data.type !== "bottle") return;
-        d3.select(this).attr("stroke", "#f59e0b").attr("stroke-width", 2).attr("stroke-dasharray", null);
+      .attr("fill", fillColor)
+      .attr("stroke", isCommunity ? "rgba(139,92,246,0.75)" : "rgba(255,255,255,0.08)")
+      .attr("stroke-width", isCommunity ? 1.5 : 1)
+      .attr("stroke-dasharray", isCommunity ? "5,3" : null)
+      .style("cursor", "pointer")
+      .on("mouseover", function (event: MouseEvent) {
+        d3.select(this)
+          .attr("stroke", "#f59e0b")
+          .attr("stroke-width", 2)
+          .attr("stroke-dasharray", null);
 
         const ratingInfo = d.data.id ? ratings[d.data.id] : null;
         const rarityLabel = d.data.rarity
           ? d.data.rarity.charAt(0).toUpperCase() + d.data.rarity.slice(1)
           : "Unknown";
-        const communityBadge =
-          d.data.source === "community"
-            ? `<div style="margin-top:4px;font-size:10px;color:rgba(196,181,253,0.9);background:rgba(139,92,246,0.15);padding:2px 6px;border-radius:4px;display:inline-block">★ Community entry</div>`
-            : "";
-        const availabilityBadge =
+        const communityBadge = isCommunity
+          ? `<div style="margin-top:4px;font-size:10px;color:rgba(196,181,253,0.9);background:rgba(139,92,246,0.15);padding:2px 6px;border-radius:4px;display:inline-block">★ Community entry</div>`
+          : "";
+        const availBadge =
           d.data.availability === "discontinued"
             ? `<div style="margin-top:4px;font-size:10px;color:rgba(156,163,175,0.9);background:rgba(75,85,99,0.25);padding:2px 6px;border-radius:4px;display:inline-block">⛔ Discontinued</div>`
             : d.data.availability === "limited_release"
@@ -261,157 +204,155 @@ export default function WhiskeyTreemap({
              <div>🔥 ${d.data.abv}% ABV${d.data.age ? ` · ${d.data.age} Year` : " · NAS"}</div>
              <div>⚗️ Rarity: ${rarityLabel}</div>
              ${sourceLine}
-             ${ratingInfo ? `<div>⭐ ${ratingInfo.avg}/10 (${ratingInfo.count} rating${ratingInfo.count !== 1 ? "s" : ""})</div>` : "<div style='color:#6b7280'>No ratings yet</div>"}
+             ${ratingInfo
+               ? `<div>⭐ ${ratingInfo.avg}/10 (${ratingInfo.count} rating${ratingInfo.count !== 1 ? "s" : ""})</div>`
+               : "<div style='color:#6b7280'>No ratings yet</div>"
+             }
              <div style="margin-top:6px;font-size:11px;color:#9ca3af;font-style:italic">${d.data.description ?? ""}</div>
-             ${communityBadge}${availabilityBadge}
+             ${communityBadge}${availBadge}
              <div style="margin-top:6px;font-size:11px;color:#f59e0b">Click to rate</div>`
           )
           .style("opacity", "1");
       })
-      .on("mousemove", function (event) {
-        const tooltipEl = tooltip.node();
-        if (!tooltipEl) return;
-        const tw = tooltipEl.offsetWidth;
-        const th = tooltipEl.offsetHeight;
+      .on("mousemove", function (event: MouseEvent) {
+        const el = tooltip.node();
+        if (!el) return;
+        const tw = el.offsetWidth;
+        const th = el.offsetHeight;
         tooltip
           .style("left", `${Math.min(event.clientX + 12, window.innerWidth - tw - 10)}px`)
-          .style("top", `${Math.min(event.clientY + 12, window.innerHeight - th - 10)}px`);
+          .style("top",  `${Math.min(event.clientY + 12, window.innerHeight - th - 10)}px`);
       })
-      .on("mouseout", function (event, d) {
-        if (d.data.type !== "bottle") return;
-        const isCommunity = d.data.source === "community";
+      .on("mouseout", function () {
         d3.select(this)
           .attr("stroke", isCommunity ? "rgba(139,92,246,0.75)" : "rgba(255,255,255,0.08)")
           .attr("stroke-width", isCommunity ? 1.5 : 1)
           .attr("stroke-dasharray", isCommunity ? "5,3" : null);
         tooltip.style("opacity", "0");
       })
-      .on("click", (event, d) => {
-        if (d.data.type === "bottle") {
-          event.stopPropagation();
-          onBottleClick(d.data);
-        }
+      .on("click", (event: MouseEvent) => {
+        event.stopPropagation();
+        onBottleClick(d.data);
       });
 
-    // ── Bottle labels: dynamic contrast + word-wrap ───────────────────────────
-    const FONT = 10;
-    const LINE = 13;
-    const PAD  = 4;
-    const SUB  = 9;
+    if (!showLabels || w < 30 || h < 20) return;
 
-    nodes
-      .filter((d) => d.data.type === "bottle")
-      .each(function (d) {
-        const g = d3.select<SVGGElement, d3.HierarchyRectangularNode<TreemapNode>>(this);
-        const w = d.x1 - d.x0;
-        const h = d.y1 - d.y0;
-        if (w < 30 || h < 20) return;
+    const FONT = 10, LINE = 13, PAD = 4, SUB = 9;
+    const showSub = h >= 44;
+    const subBlockH = showSub ? SUB + 3 : 0;
+    const maxLines = Math.max(1, Math.floor((h - PAD * 2 - subBlockH) / LINE));
+    const lines = wrapTextToLines(d.data.name, w - PAD * 2, maxLines, FONT);
+    const nameH = lines.length * LINE;
+    const blockTop = (h - nameH - subBlockH) / 2;
 
-        const val = getNodeValue(d, colorMode, ratings);
-        const fillHex = val !== null ? colorScale(val) : unratedColor;
-        const textColor = getContrastColor(fillHex);
-        const mutedColor =
-          textColor === "#0f172a" ? "rgba(15,23,42,0.55)" : "rgba(255,255,255,0.55)";
+    const nameEl = g
+      .append("text")
+      .attr("fill", textColor)
+      .attr("font-size", `${FONT}px`)
+      .attr("font-weight", "500")
+      .attr("font-family", "system-ui, sans-serif")
+      .attr("text-anchor", "middle")
+      .style("pointer-events", "none");
 
-        const showSub = h >= 44;
-        const subBlockH = showSub ? SUB + 3 : 0;
-        const availH = h - PAD * 2 - subBlockH;
-        const availW = w - PAD * 2;
-        const maxLines = Math.max(1, Math.floor(availH / LINE));
+    lines.forEach((line, i) => {
+      nameEl
+        .append("tspan")
+        .attr("x", w / 2)
+        .attr("y", blockTop + i * LINE + FONT)
+        .text(line);
+    });
 
-        const lines = wrapTextToLines(d.data.name, availW, maxLines, FONT);
-        const nameH = lines.length * LINE;
-        const blockTop = (h - nameH - subBlockH) / 2;
-
-        const nameEl = g
-          .append("text")
-          .attr("fill", textColor)
-          .attr("font-size", `${FONT}px`)
-          .attr("font-weight", "500")
-          .attr("font-family", "system-ui, sans-serif")
+    if (showSub) {
+      let sublabel = "";
+      if (colorMode === "price")       sublabel = `$${d.data.price?.toLocaleString() ?? ""}`;
+      else if (colorMode === "rating") sublabel = d.data.id && ratings[d.data.id] ? `★ ${ratings[d.data.id].avg}` : "unrated";
+      else if (colorMode === "rarity") sublabel = d.data.rarity ?? "";
+      if (sublabel) {
+        g.append("text")
+          .attr("x", w / 2)
+          .attr("y", blockTop + nameH + SUB + 1)
+          .attr("fill", mutedColor)
+          .attr("font-size", `${SUB}px`)
           .attr("text-anchor", "middle")
-          .style("pointer-events", "none");
+          .style("pointer-events", "none")
+          .text(sublabel);
+      }
+    }
+  }
 
-        lines.forEach((line, i) => {
-          nameEl
-            .append("tspan")
-            .attr("x", w / 2)
-            .attr("y", blockTop + i * LINE + FONT)
-            .text(line);
-        });
+  // ── Render container layer (brand/group/subBrand background rects) ────────
+  function renderContainerLayer(
+    layer: d3.Selection<SVGGElement, unknown, null, undefined>,
+    containerNodes: HRNode[]
+  ) {
+    containerNodes.forEach((d) => {
+      const w = d.x1 - d.x0;
+      const h = d.y1 - d.y0;
+      if (w <= 0 || h <= 0) return;
 
-        if (showSub) {
-          let sublabel = "";
-          if (colorMode === "price")
-            sublabel = `$${d.data.price?.toLocaleString() ?? ""}`;
-          else if (colorMode === "rating") {
-            const r = d.data.id ? ratings[d.data.id] : null;
-            sublabel = r ? `★ ${r.avg}` : "unrated";
-          } else if (colorMode === "rarity") {
-            sublabel = d.data.rarity ?? "";
-          }
-          if (sublabel) {
-            g.append("text")
-              .attr("x", w / 2)
-              .attr("y", blockTop + nameH + SUB + 1)
-              .attr("fill", mutedColor)
-              .attr("font-size", `${SUB}px`)
-              .attr("text-anchor", "middle")
-              .style("pointer-events", "none")
-              .text(sublabel);
-          }
-        }
-      });
+      // depth=1: brand (distillery) or group (other modes)
+      // depth=2: subBrand (distillery) or brand-within-group (other modes)
+      const isTopLevel = d.depth === 1;
+      const isSubLevel = d.depth === 2;
 
-    // ── Overlay label layer — rendered last so it sits above all cell content ─
-    //
-    // Brand labels live in their 16px paddingTop strip (no overlap with cells).
-    // Sub-brand labels float as small pills over the top-left of their cell area.
-    //
-    const labelLayer = svg.append("g").attr("class", "label-overlay");
+      layer
+        .append("g")
+        .attr("transform", `translate(${d.x0},${d.y0})`)
+        .append("rect")
+        .attr("width", w)
+        .attr("height", h)
+        .attr("rx", 3)
+        .attr("ry", 3)
+        .attr("fill", isTopLevel ? "rgba(15,15,25,0.85)" : isSubLevel ? "rgba(30,30,40,0.25)" : "transparent")
+        .attr("stroke", () => {
+          if (d.data.source === "community") return "rgba(139,92,246,0.75)";
+          if (isTopLevel) return "rgba(245,158,11,0.5)";
+          if (isSubLevel) return "rgba(245,158,11,0.2)";
+          return "none";
+        })
+        .attr("stroke-width", isTopLevel ? 1.5 : 1)
+        .attr("stroke-dasharray", d.data.source === "community" ? "5,3" : null);
+    });
+  }
 
-    // Brand labels (in the dedicated 16px strip)
-    (root.descendants() as d3.HierarchyRectangularNode<TreemapNode>[])
-      .filter((d) => d.data.type === "brand")
+  // ── Render label overlay ──────────────────────────────────────────────────
+  function renderLabelLayer(
+    layer: d3.Selection<SVGGElement, unknown, null, undefined>,
+    root: HRNode,
+    currentGroupMode: GroupMode,
+    brandClickFn?: (name: string) => void,
+    subBrandClickFn?: (sub: string, brand: string) => void
+  ) {
+    const allNodes = root.descendants() as HRNode[];
+
+    // Depth-1: amber strip labels (brand in distillery, group name otherwise)
+    allNodes
+      .filter((d) => d.depth === 1)
       .forEach((d) => {
-        const x = d.x0;
-        const y = d.y0;
-        const w = d.x1 - d.x0;
+        const x = d.x0, y = d.y0, w = d.x1 - d.x0;
         if (w < 24) return;
 
         const name = w > 90 ? d.data.name : d.data.name.substring(0, Math.floor(w / 8));
         if (!name) return;
 
-        const isClickable = !!onBrandClick;
-
-        const g = labelLayer
-          .append("g")
-          .style("cursor", isClickable ? "pointer" : "default");
+        const isClickable = currentGroupMode === "distillery" && !!brandClickFn;
+        const g = layer.append("g").style("cursor", isClickable ? "pointer" : "default");
 
         if (isClickable) {
-          // Invisible hit-area covering the full brand strip
           g.append("rect")
-            .attr("x", x)
-            .attr("y", y)
-            .attr("width", w)
-            .attr("height", 16)
+            .attr("x", x).attr("y", y)
+            .attr("width", w).attr("height", 16)
             .attr("fill", "transparent")
-            .on("click", () => onBrandClick!(d.data.name))
-            .on("mouseover", function () {
-              labelText.attr("fill", "#fbbf24");
-            })
-            .on("mouseout", function () {
-              labelText.attr("fill", "#f59e0b");
-            });
+            .on("click",     () => brandClickFn!(d.data.name))
+            .on("mouseover", () => labelText.attr("fill", "#fbbf24"))
+            .on("mouseout",  () => labelText.attr("fill", "#f59e0b"));
         }
 
         const labelText = g
           .append("text")
-          .attr("x", x + 6)
-          .attr("y", y + 11)
+          .attr("x", x + 6).attr("y", y + 11)
           .attr("fill", "#f59e0b")
-          .attr("font-size", "11px")
-          .attr("font-weight", "700")
+          .attr("font-size", "11px").attr("font-weight", "700")
           .attr("font-family", "system-ui, sans-serif")
           .attr("text-anchor", "start")
           .style("pointer-events", "none")
@@ -419,87 +360,262 @@ export default function WhiskeyTreemap({
 
         if (d.data.isNDP && w > 70) {
           g.append("text")
-            .attr("x", x + 6 + name.length * 6.8 + 5)
-            .attr("y", y + 10)
+            .attr("x", x + 6 + name.length * 6.8 + 5).attr("y", y + 10)
             .attr("fill", "rgba(245,158,11,0.45)")
-            .attr("font-size", "8px")
-            .attr("font-weight", "700")
+            .attr("font-size", "8px").attr("font-weight", "700")
             .attr("font-family", "system-ui, sans-serif")
             .style("pointer-events", "none")
             .text("NDP");
         }
 
-        // Chevron hint when clickable
         if (isClickable && w > 100) {
           g.append("text")
-            .attr("x", x + w - 8)
-            .attr("y", y + 11)
+            .attr("x", x + w - 8).attr("y", y + 11)
             .attr("fill", "rgba(245,158,11,0.3)")
-            .attr("font-size", "9px")
-            .attr("text-anchor", "end")
+            .attr("font-size", "9px").attr("text-anchor", "end")
             .style("pointer-events", "none")
             .text("›");
         }
       });
 
-    // Sub-brand labels (floating pill over top-left of sub-brand area)
-    (root.descendants() as d3.HierarchyRectangularNode<TreemapNode>[])
-      .filter((d) => d.data.type === "subBrand")
+    // Depth-2: floating pill labels (subBrand in distillery, brand-within-group otherwise)
+    allNodes
+      .filter((d) => d.depth === 2)
       .forEach((d) => {
-        const x = d.x0;
-        const y = d.y0;
-        const w = d.x1 - d.x0;
-        const h = d.y1 - d.y0;
+        const x = d.x0, y = d.y0;
+        const w = d.x1 - d.x0, h = d.y1 - d.y0;
         if (w < 40 || h < 16) return;
 
         const name = d.data.name;
         const isCommunity = d.data.source === "community";
-        const isClickable = !!onSubBrandClick;
+        const isClickable =
+          currentGroupMode === "distillery" && !!subBrandClickFn && d.data.type === "subBrand";
 
         const PILL_H = 14;
         const pillW = Math.min(name.length * 5.8 + 10, w - 4);
 
-        const g = labelLayer
-          .append("g")
-          .style("cursor", isClickable ? "pointer" : "default");
+        const g = layer.append("g").style("cursor", isClickable ? "pointer" : "default");
 
-        // Pill background
         const pill = g
           .append("rect")
-          .attr("x", x + 2)
-          .attr("y", y + 1)
-          .attr("width", pillW)
-          .attr("height", PILL_H)
+          .attr("x", x + 2).attr("y", y + 1)
+          .attr("width", pillW).attr("height", PILL_H)
           .attr("rx", 3)
           .attr("fill", "rgba(8,8,18,0.82)");
 
         g.append("text")
-          .attr("x", x + 6)
-          .attr("y", y + 10)
+          .attr("x", x + 6).attr("y", y + 10)
           .attr("fill", isCommunity ? "rgba(196,181,253,0.9)" : "rgba(245,158,11,0.8)")
-          .attr("font-size", "10px")
-          .attr("font-weight", "600")
+          .attr("font-size", "10px").attr("font-weight", "600")
           .attr("font-family", "system-ui, sans-serif")
           .style("pointer-events", "none")
           .text(name);
 
         if (isClickable) {
-          const parentBrand = (d as d3.HierarchyRectangularNode<TreemapNode> & {
-            parent?: d3.HierarchyNode<TreemapNode>;
-          }).parent?.data.name ?? "";
-
-          g.on("click", () => onSubBrandClick!(name, parentBrand))
-            .on("mouseover", () =>
-              pill.attr("fill", isCommunity ? "rgba(139,92,246,0.25)" : "rgba(245,158,11,0.18)")
-            )
-            .on("mouseout", () => pill.attr("fill", "rgba(8,8,18,0.82)"));
+          const parentName =
+            (d as HRNode & { parent?: d3.HierarchyNode<TreemapNode> }).parent?.data.name ?? "";
+          g.on("click",     () => subBrandClickFn!(name, parentName))
+           .on("mouseover", () => pill.attr("fill", isCommunity ? "rgba(139,92,246,0.25)" : "rgba(245,158,11,0.18)"))
+           .on("mouseout",  () => pill.attr("fill", "rgba(8,8,18,0.82)"));
         }
       });
-  }, [data, colorMode, onBottleClick, ratings, onBrandClick, onSubBrandClick]);
+  }
+
+  // ── Main draw function ────────────────────────────────────────────────────
+  const draw = useCallback(
+    (animate: boolean) => {
+      if (!svgRef.current || !containerRef.current) return;
+
+      const width  = containerRef.current.clientWidth;
+      const height = containerRef.current.clientHeight;
+      if (!width || !height) return;
+
+      const svg = d3.select(svgRef.current);
+      svg.attr("width", width).attr("height", height);
+
+      // Shared tooltip (single DOM node, reused across renders)
+      const tooltip = d3
+        .select("body")
+        .selectAll<HTMLDivElement, null>(".treemap-tooltip")
+        .data([null])
+        .join("div")
+        .attr("class", "treemap-tooltip")
+        .style("position",       "fixed")
+        .style("pointer-events", "none")
+        .style("background",     "rgba(15,15,20,0.95)")
+        .style("border",         "1px solid rgba(245,158,11,0.4)")
+        .style("border-radius",  "8px")
+        .style("padding",        "10px 14px")
+        .style("font-family",    "system-ui, sans-serif")
+        .style("font-size",      "13px")
+        .style("color",          "#f5f5f5")
+        .style("max-width",      "230px")
+        .style("line-height",    "1.5")
+        .style("z-index",        "9999")
+        .style("opacity",        "0")
+        .style("transition",     "opacity 0.15s");
+
+      const root         = buildLayout(width, height);
+      const allNodes     = root.descendants() as HRNode[];
+      const bottleNodes  = allNodes.filter((d) => d.data.type === "bottle");
+      const containerNodes = allNodes.filter((d) => d.data.type !== "bottle");
+      const colorScale   = getColorScale(colorMode);
+
+      const hasExistingBottleLayer = !svg.select("g.bottle-layer").empty();
+
+      if (animate && hasExistingBottleLayer) {
+        // ══ FLIP ANIMATION ═══════════════════════════════════════════════════
+        const prevPos = prevPositionsRef.current;
+
+        // Fade out container + label layers
+        svg.select("g.container-layer")
+          .transition().duration(200).style("opacity", "0")
+          .on("end", function () { d3.select(this).remove(); });
+        svg.select("g.label-overlay")
+          .transition().duration(200).style("opacity", "0")
+          .on("end", function () { d3.select(this).remove(); });
+
+        const bottleLayer = svg.select<SVGGElement>("g.bottle-layer");
+
+        const join = bottleLayer
+          .selectAll<SVGGElement, HRNode>("g.bottle-node")
+          .data(bottleNodes, (d) => d.data.id ?? d.data.name);
+
+        // EXIT: fade out removed bottles
+        join.exit()
+          .transition().duration(300)
+          .style("opacity", "0")
+          .remove();
+
+        // ENTER: position at previous location (or fade in if new)
+        const entered = join
+          .enter()
+          .append("g")
+          .attr("class", "bottle-node")
+          .each(function (d) {
+            const prev = prevPos.get(d.data.id ?? "");
+            const g = d3.select<SVGGElement, HRNode>(this);
+            if (prev) {
+              // Start at old position with old size; transition to new
+              g.attr("transform", `translate(${prev.x0},${prev.y0})`);
+              applyBottleContent(
+                g as unknown as d3.Selection<SVGGElement, unknown, null, undefined>,
+                d, prev.x1 - prev.x0, prev.y1 - prev.y0,
+                colorScale, tooltip, false
+              );
+            } else {
+              // New bottle: fade in at destination
+              g.attr("transform", `translate(${d.x0},${d.y0})`).style("opacity", "0");
+              applyBottleContent(
+                g as unknown as d3.Selection<SVGGElement, unknown, null, undefined>,
+                d, d.x1 - d.x0, d.y1 - d.y0,
+                colorScale, tooltip, false
+              );
+            }
+          });
+
+        const allBottleGroups = entered.merge(
+          join as d3.Selection<SVGGElement, HRNode, SVGGElement, unknown>
+        );
+
+        // Hide any existing text during motion (will be rebuilt after)
+        allBottleGroups.selectAll("text").style("opacity", "0");
+
+        // Transition all bottles to new positions + sizes
+        allBottleGroups.each(function (d) {
+          const g = d3.select<SVGGElement, HRNode>(this);
+          g.transition()
+            .duration(650)
+            .ease(d3.easeCubicInOut)
+            .attr("transform", `translate(${d.x0},${d.y0})`)
+            .style("opacity", String(d.data.availability === "discontinued" ? 0.35 : 1));
+          g.select("rect")
+            .transition()
+            .duration(650)
+            .ease(d3.easeCubicInOut)
+            .attr("width",  d.x1 - d.x0)
+            .attr("height", d.y1 - d.y0);
+        });
+
+        // After transition: re-render fills + labels, rebuild container/label layers
+        setTimeout(() => {
+          bottleLayer
+            .selectAll<SVGGElement, HRNode>("g.bottle-node")
+            .each(function (d) {
+              const g = d3.select<SVGGElement, HRNode>(this);
+              g.selectAll("*").remove();
+              applyBottleContent(
+                g as unknown as d3.Selection<SVGGElement, unknown, null, undefined>,
+                d, d.x1 - d.x0, d.y1 - d.y0,
+                colorScale, tooltip, true
+              );
+            });
+
+          // Insert container layer BEFORE bottle layer
+          svg.select("g.container-layer").remove();
+          const newCL = svg.insert("g", "g.bottle-layer")
+            .attr("class", "container-layer")
+            .style("opacity", "0");
+          renderContainerLayer(newCL, containerNodes);
+          newCL.transition().duration(250).style("opacity", "1");
+
+          // Append label layer AFTER bottle layer
+          svg.select("g.label-overlay").remove();
+          const newLL = svg.append("g")
+            .attr("class", "label-overlay")
+            .style("opacity", "0");
+          renderLabelLayer(newLL, root, groupMode, onBrandClick, onSubBrandClick);
+          newLL.transition().duration(250).style("opacity", "1");
+        }, 720); // slightly after the 650ms bottle transition
+
+      } else {
+        // ══ HARD REBUILD ═════════════════════════════════════════════════════
+        svg.selectAll("*").remove();
+
+        const containerLayer = svg.append("g").attr("class", "container-layer");
+        const bottleLayer    = svg.append("g").attr("class", "bottle-layer");
+        const labelOverlay   = svg.append("g").attr("class", "label-overlay");
+
+        renderContainerLayer(containerLayer, containerNodes);
+
+        bottleNodes.forEach((d) => {
+          const g = bottleLayer
+            .append("g")
+            .attr("class", "bottle-node")
+            .datum(d)
+            .attr("transform", `translate(${d.x0},${d.y0})`)
+            .style("opacity", d.data.availability === "discontinued" ? "0.35" : "1");
+
+          applyBottleContent(
+            g as unknown as d3.Selection<SVGGElement, unknown, null, undefined>,
+            d, d.x1 - d.x0, d.y1 - d.y0,
+            colorScale, tooltip, true
+          );
+        });
+
+        renderLabelLayer(labelOverlay, root, groupMode, onBrandClick, onSubBrandClick);
+      }
+
+      // Save current bottle positions for next FLIP
+      const newPos = new Map<string, { x0: number; y0: number; x1: number; y1: number }>();
+      bottleNodes.forEach((d) => {
+        if (d.data.id) {
+          newPos.set(d.data.id, { x0: d.x0, y0: d.y0, x1: d.x1, y1: d.y1 });
+        }
+      });
+      prevPositionsRef.current = newPos;
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [data, colorMode, groupMode, onBottleClick, ratings, onBrandClick, onSubBrandClick]
+  );
 
   useEffect(() => {
-    draw();
-    const observer = new ResizeObserver(draw);
+    const shouldAnimate =
+      prevGroupModeRef.current !== null && prevGroupModeRef.current !== groupMode;
+    prevGroupModeRef.current = groupMode;
+    draw(shouldAnimate);
+
+    const observer = new ResizeObserver(() => draw(false));
     if (containerRef.current) observer.observe(containerRef.current);
     return () => observer.disconnect();
   }, [draw]);

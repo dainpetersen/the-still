@@ -181,6 +181,18 @@ alter table public.ratings add column if not exists user_id uuid references auth
 alter table public.submissions add column if not exists user_id uuid references auth.users(id) on delete set null;
 
 
+-- ── Group By feature migrations ───────────────────────────────────
+-- Add style column to bottles (whiskey style taxonomy)
+alter table public.bottles add column if not exists style text
+  check (style in (
+    'Bourbon', 'Wheated Bourbon', 'High Rye Bourbon',
+    'Rye Whiskey', 'Wheat Whiskey', 'Tennessee Whiskey', 'Blended American'
+  ));
+
+-- Add state column to brands (US state for State grouping mode)
+alter table public.brands add column if not exists state text;
+
+
 -- ── Supabase Auth — Site URL config ──────────────────────────────
 -- In your Supabase dashboard → Authentication → URL Configuration:
 --   Site URL:        http://localhost:3000 (or your prod URL)

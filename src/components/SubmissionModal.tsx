@@ -4,7 +4,7 @@ import { useState } from "react";
 import { WHISKEY_DATA } from "@/data/whiskeys";
 import { submitEntry } from "@/lib/supabase";
 import { getSessionId } from "@/lib/session";
-import { RarityLevel, SubmissionType } from "@/types/whiskey";
+import { RarityLevel, SubmissionType, WhiskeyStyle } from "@/types/whiskey";
 
 interface Props {
   onClose: () => void;
@@ -45,9 +45,10 @@ export default function SubmissionModal({ onClose, userId }: Props) {
   const [bottleAbv, setBottleAbv] = useState("");
   const [bottlePrice, setBottlePrice] = useState("");
   const [bottleAge, setBottleAge] = useState("");
-  const [bottleRarity, setBottleRarity] = useState<RarityLevel>("limited");
-  const [bottleDesc, setBottleDesc] = useState("");
-  const [bottleSource, setBottleSource] = useState("");
+  const [bottleRarity, setBottleRarity]   = useState<RarityLevel>("limited");
+  const [bottleStyle, setBottleStyle]     = useState<WhiskeyStyle | "">("");
+  const [bottleDesc, setBottleDesc]       = useState("");
+  const [bottleSource, setBottleSource]   = useState("");
   const [parentSubBrandId, setParentSubBrandId] = useState("");
   const [parentSubBrandName, setParentSubBrandName] = useState("");
 
@@ -102,6 +103,7 @@ export default function SubmissionModal({ onClose, userId }: Props) {
             bottlePrice: parseFloat(bottlePrice),
             bottleAge: bottleAge ? parseInt(bottleAge) : undefined,
             bottleRarity,
+            bottleStyle: bottleStyle || undefined,
             bottleDescription: bottleDesc,
             bottleSourceDistillery: bottleSource || undefined,
           },
@@ -296,6 +298,15 @@ export default function SubmissionModal({ onClose, userId }: Props) {
                     <input className={inputCls} type="number" value={bottleAge} onChange={(e) => setBottleAge(e.target.value)} placeholder="Leave blank for NAS" />
                   </div>
                   <div>
+                    <label className={labelCls}>Whiskey Style</label>
+                    <select className={inputCls} value={bottleStyle} onChange={(e) => setBottleStyle(e.target.value as WhiskeyStyle | "")}>
+                      <option value="">— select style (optional) —</option>
+                      {(["Bourbon","Wheated Bourbon","High Rye Bourbon","Rye Whiskey","Wheat Whiskey","Tennessee Whiskey","Blended American"] as WhiskeyStyle[]).map((s) => (
+                        <option key={s} value={s}>{s}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
                     <label className={labelCls}>Rarity</label>
                     <select className={inputCls} value={bottleRarity} onChange={(e) => setBottleRarity(e.target.value as RarityLevel)}>
                       {RARITY_OPTIONS.map((o) => (
@@ -344,6 +355,7 @@ export default function SubmissionModal({ onClose, userId }: Props) {
                     <Row label="ABV" value={`${bottleAbv}%`} />
                     <Row label="Price" value={`$${bottlePrice}`} />
                     {bottleAge && <Row label="Age" value={`${bottleAge} Year`} />}
+                    {bottleStyle && <Row label="Style" value={bottleStyle} />}
                     <Row label="Rarity" value={bottleRarity} />
                     {bottleSource && <Row label="Source" value={bottleSource} />}
                   </>

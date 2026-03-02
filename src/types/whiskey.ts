@@ -5,6 +5,19 @@ export type AvailabilityStatus = "current" | "limited_release" | "discontinued";
 export type SubmissionType = "brand" | "sub_brand" | "bottle";
 export type SubmissionStatus = "pending" | "approved" | "rejected";
 
+// Whiskey style taxonomy for Group By feature
+export type WhiskeyStyle =
+  | "Bourbon"
+  | "Wheated Bourbon"
+  | "High Rye Bourbon"
+  | "Rye Whiskey"
+  | "Wheat Whiskey"
+  | "Tennessee Whiskey"
+  | "Blended American";
+
+// Treemap grouping modes
+export type GroupMode = "distillery" | "style" | "state" | "ageTier" | "priceTier";
+
 export interface Bottle {
   id: string;
   name: string;
@@ -18,6 +31,7 @@ export interface Bottle {
   sourceDistillery?: string; // for NDP bottles, e.g. "MGP" or "Undisclosed"
   source?: DataSource;     // "official" | "community"
   availability?: AvailabilityStatus; // "current" | "limited_release" | "discontinued"
+  style?: WhiskeyStyle;    // whiskey style for Group By feature
   // Populated from Supabase at runtime
   avgRating?: number;
   ratingCount?: number;
@@ -36,6 +50,7 @@ export interface Brand {
   name: string;
   country: string;
   region: string;
+  state?: string;          // US state for Group By feature, e.g. "Kentucky"
   subBrands: SubBrand[];
   isNDP?: boolean;         // Non-Distilling Producer
   source?: DataSource;
@@ -44,7 +59,7 @@ export interface Brand {
 // D3 hierarchy node shapes
 export interface TreemapDatum {
   name: string;
-  type: "brand" | "subBrand" | "bottle";
+  type: "brand" | "subBrand" | "bottle" | "group";
   id?: string;
   value?: number;          // leaf value (drives rectangle size)
   price?: number;
@@ -88,6 +103,7 @@ export interface SubmissionData {
   bottleRarityScore?: number;
   bottleDescription?: string;
   bottleSourceDistillery?: string;
+  bottleStyle?: WhiskeyStyle;
 }
 
 export interface Submission {

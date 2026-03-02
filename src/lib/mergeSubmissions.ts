@@ -1,4 +1,4 @@
-import { Brand, SubBrand, Bottle, Submission, RarityLevel } from "@/types/whiskey";
+import { Brand, SubBrand, Bottle, Submission, RarityLevel, WhiskeyStyle } from "@/types/whiskey";
 
 /**
  * Merges admin-approved community submissions into the static brand data.
@@ -88,6 +88,7 @@ export function mergeApprovedSubmissions(
           rarityScore: d.bottleRarityScore ?? rarityToScore(d.bottleRarity),
           description: d.bottleDescription ?? "",
           sourceDistillery: d.bottleSourceDistillery,
+          style: d.bottleStyle ? (d.bottleStyle as WhiskeyStyle) : undefined,
           source: "community",
         };
         parentSubBrand.bottles.push(newBottle);

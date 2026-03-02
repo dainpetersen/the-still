@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { submitRating, fetchBottleRatings } from "@/lib/supabase";
+import { getSessionId } from "@/lib/session";
 
 interface BottleInfo {
   id: string;
@@ -52,9 +53,6 @@ export default function RatingModal({ bottle, onClose, onRatingSubmitted, userId
     setFinish("");
     setSubmitted(false);
     setError(null);
-    setShowFlagForm(false);
-    setFlagNote("");
-    setFlagSubmitted(false);
     setLoadingReviews(true);
 
     fetchBottleRatings(bottle.id)
@@ -94,24 +92,6 @@ export default function RatingModal({ bottle, onClose, onRatingSubmitted, userId
       setError("Failed to submit rating. Please try again.");
     } finally {
       setSubmitting(false);
-    }
-  }
-
-  async function handleFlagSubmit() {
-    if (!flagNote.trim()) return;
-    setFlagSubmitting(true);
-    try {
-      await submitCorrection({
-        bottleId: bottle!.id,
-        bottleName: bottle!.name,
-        note: flagNote.trim(),
-        sessionId: getSessionId(),
-      });
-      setFlagSubmitted(true);
-    } catch {
-      // silently fail — the report is best-effort
-    } finally {
-      setFlagSubmitting(false);
     }
   }
 
@@ -295,58 +275,6 @@ export default function RatingModal({ bottle, onClose, onRatingSubmitted, userId
             )}
           </div>
         )}
-        {/* Flag an error */}
-        <div
-          className="px-6 pb-5"
-          style={{ borderTop: "1px solid rgba(255,255,255,0.05)", paddingTop: "12px" }}
-        >
-          {flagSubmitted ? (
-            <p className="text-xs text-center" style={{ color: "rgba(245,158,11,0.6)" }}>
-              Thanks — we&apos;ll look into it.
-            </p>
-          ) : showFlagForm ? (
-            <div className="space-y-2">
-              <p className="text-xs text-gray-500">What&apos;s incorrect about this listing?</p>
-              <textarea
-                value={flagNote}
-                onChange={(e) => setFlagNote(e.target.value)}
-                placeholder="e.g. Wrong price, incorrect ABV, wrong age statement…"
-                rows={2}
-                className="w-full bg-gray-900 border border-gray-700 rounded px-3 py-1.5 text-xs text-gray-200 placeholder-gray-600 focus:outline-none focus:border-amber-500 resize-none"
-              />
-              <div className="flex gap-2">
-                <button
-                  onClick={handleFlagSubmit}
-                  disabled={!flagNote.trim() || flagSubmitting}
-                  className="px-3 py-1 rounded text-xs font-semibold transition-colors"
-                  style={{
-                    background: flagNote.trim() ? "rgba(245,158,11,0.15)" : "transparent",
-                    color: flagNote.trim() ? "#f59e0b" : "rgba(255,255,255,0.2)",
-                    border: "1px solid rgba(245,158,11,0.25)",
-                  }}
-                >
-                  {flagSubmitting ? "Sending…" : "Send report"}
-                </button>
-                <button
-                  onClick={() => setShowFlagForm(false)}
-                  className="px-3 py-1 rounded text-xs text-gray-600 hover:text-gray-400 transition-colors"
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          ) : (
-            <button
-              onClick={() => setShowFlagForm(true)}
-              className="text-xs transition-colors"
-              style={{ color: "rgba(255,255,255,0.2)" }}
-              onMouseEnter={(e) => (e.currentTarget.style.color = "rgba(255,255,255,0.45)")}
-              onMouseLeave={(e) => (e.currentTarget.style.color = "rgba(255,255,255,0.2)")}
-            >
-              Flag an error in this listing
-            </button>
-          )}
-        </div>
       </div>
     </div>
   );

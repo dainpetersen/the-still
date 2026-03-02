@@ -267,7 +267,7 @@ export default function Home() {
                     Edit Profile
                   </button>
                   <button
-                    onClick={async () => { setShowUserMenu(false); await signOut(); setUser(null); setProfile(null); }}
+                    onClick={async () => { setShowUserMenu(false); try { await signOut(); } finally { setUser(null); setProfile(null); } }}
                     className="w-full text-left px-4 py-2 text-sm transition-colors"
                     style={{ color: "rgba(239,68,68,0.7)" }}
                     onMouseEnter={(e) => (e.currentTarget.style.color = "rgba(239,68,68,1)")}

@@ -267,7 +267,7 @@ export default function Home() {
                     Edit Profile
                   </button>
                   <button
-                    onClick={async () => { setShowUserMenu(false); await signOut(); }}
+                    onClick={async () => { setShowUserMenu(false); try { await signOut(); } finally { setUser(null); setProfile(null); } }}
                     className="w-full text-left px-4 py-2 text-sm transition-colors"
                     style={{ color: "rgba(239,68,68,0.7)" }}
                     onMouseEnter={(e) => (e.currentTarget.style.color = "rgba(239,68,68,1)")}
@@ -586,7 +586,7 @@ export default function Home() {
       )}
 
       {/* Submission Modal */}
-      {showSubmit && <SubmissionModal onClose={() => setShowSubmit(false)} />}
+      {showSubmit && <SubmissionModal onClose={() => setShowSubmit(false)} userId={user?.id} />}
 
       {/* Auth Modal */}
       {showAuth && (

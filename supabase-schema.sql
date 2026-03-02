@@ -177,6 +177,9 @@ create trigger on_auth_user_created
 -- Link ratings to users (nullable — keeps existing anonymous ratings intact)
 alter table public.ratings add column if not exists user_id uuid references auth.users(id);
 
+-- Link submissions to users (nullable — keeps backward-compat; submissions are auth-gated in the UI)
+alter table public.submissions add column if not exists user_id uuid references auth.users(id) on delete set null;
+
 
 -- ── Supabase Auth — Site URL config ──────────────────────────────
 -- In your Supabase dashboard → Authentication → URL Configuration:

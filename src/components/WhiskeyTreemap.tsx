@@ -29,13 +29,15 @@ interface Props {
   colorMode: ColorMode;
   groupMode: GroupMode;
   onBottleClick: (node: TreemapNode) => void;
+  onBottleFlag?: (id: string, name: string) => void;
   ratings: Record<string, { avg: number; count: number }>;
   onBrandClick?: (brandName: string) => void;
   onSubBrandClick?: (subBrandName: string, brandName: string) => void;
 }
 
 type HRNode = d3.HierarchyRectangularNode<TreemapNode>;
-type Tooltip = d3.Selection<HTMLDivElement, null, HTMLElement, unknown>;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Tooltip = d3.Selection<HTMLDivElement, null, any, any>;
 
 // ── Color helpers ─────────────────────────────────────────────────────────────
 
@@ -111,6 +113,7 @@ export default function WhiskeyTreemap({
   colorMode,
   groupMode,
   onBottleClick,
+  onBottleFlag,
   ratings,
   onBrandClick,
   onSubBrandClick,
@@ -234,6 +237,38 @@ export default function WhiskeyTreemap({
         event.stopPropagation();
         onBottleClick(d.data);
       });
+
+    // ── Flag icon (report error) — appears on tile hover ──────────────────
+    if (onBottleFlag && d.data.id && w >= 22 && h >= 18) {
+      const flagEl = g
+        .append("text")
+        .attr("x", w - 4)
+        .attr("y", 12)
+        .attr("fill", "rgba(255,255,255,0.4)")
+        .attr("font-size", "11px")
+        .attr("text-anchor", "end")
+        .attr("font-family", "system-ui, sans-serif")
+        .style("pointer-events", "all")
+        .style("cursor", "pointer")
+        .style("user-select", "none")
+        .attr("opacity", 0)
+        .text("⚑");
+
+      g.on("mouseenter.flag", () => flagEl.attr("opacity", 0.7))
+       .on("mouseleave.flag", () => flagEl.attr("opacity", 0));
+
+      flagEl
+        .on("click", (event: MouseEvent) => {
+          event.stopPropagation();
+          onBottleFlag(d.data.id!, d.data.name);
+        })
+        .on("mouseover", function () {
+          d3.select(this).attr("fill", "#f59e0b").attr("opacity", 1);
+        })
+        .on("mouseout", function () {
+          d3.select(this).attr("fill", "rgba(255,255,255,0.4)").attr("opacity", 0.7);
+        });
+    }
 
     if (!showLabels || w < 30 || h < 20) return;
 
@@ -606,7 +641,7 @@ export default function WhiskeyTreemap({
       prevPositionsRef.current = newPos;
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [data, colorMode, groupMode, onBottleClick, ratings, onBrandClick, onSubBrandClick]
+    [data, colorMode, groupMode, onBottleClick, onBottleFlag, ratings, onBrandClick, onSubBrandClick]
   );
 
   useEffect(() => {

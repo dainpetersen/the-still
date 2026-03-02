@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { submitRating, fetchBottleRatings } from "@/lib/supabase";
-import { getSessionId } from "@/lib/session";
 
 interface BottleInfo {
   id: string;
@@ -40,6 +39,7 @@ export default function RatingModal({ bottle, onClose, onRatingSubmitted, userId
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
   const [reviews, setReviews] = useState<ReviewEntry[]>([]);
   const [loadingReviews, setLoadingReviews] = useState(false);
 

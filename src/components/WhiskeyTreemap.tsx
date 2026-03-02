@@ -35,7 +35,8 @@ interface Props {
 }
 
 type HRNode = d3.HierarchyRectangularNode<TreemapNode>;
-type Tooltip = d3.Selection<HTMLDivElement, null, HTMLElement, unknown>;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Tooltip = d3.Selection<HTMLDivElement, null, any, any>;
 
 // ── Color helpers ─────────────────────────────────────────────────────────────
 

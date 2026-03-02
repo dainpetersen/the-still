@@ -180,7 +180,7 @@ export async function fetchApprovedSubmissions(): Promise<Submission[]> {
 
 export async function fetchPendingSubmissions(): Promise<Submission[]> {
   const client = getServiceClient();
-  if (!client) return [];
+  if (!client) throw new Error("SUPABASE_SERVICE_ROLE_KEY is not configured");
   const { data, error } = await client
     .from("submissions")
     .select("*")
@@ -192,7 +192,7 @@ export async function fetchPendingSubmissions(): Promise<Submission[]> {
 
 export async function fetchReviewedSubmissions(): Promise<Submission[]> {
   const client = getServiceClient();
-  if (!client) return [];
+  if (!client) throw new Error("SUPABASE_SERVICE_ROLE_KEY is not configured");
   const { data, error } = await client
     .from("submissions")
     .select("*")

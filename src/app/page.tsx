@@ -185,11 +185,21 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    loadData();
-
-    // Auth listener
     const supabase = getAuthClient();
-    if (!supabase) return;
+
+    // No Supabase configured — load data immediately and return
+    if (!supabase) {
+      loadData();
+      return;
+    }
+
+    // onAuthStateChange is the single source of truth for auth state in Supabase v2.
+    // INITIAL_SESSION fires on every page load with whatever is in localStorage
+    // (valid session, expired session awaiting refresh, or null).
+    // TOKEN_REFRESHED fires when the client silently renews an expired token.
+    // SIGNED_IN fires after an explicit login.
+    // Using this as the sole auth + data trigger removes the getSession() race condition
+    // that caused user state to be lost on the 2nd+ page refresh in Safari.
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       const u = session?.user ?? null;
       setUser(u);
@@ -199,20 +209,15 @@ export default function Home() {
       } else {
         setProfile(null);
       }
-      // Re-fetch ratings once the token has been refreshed or a new sign-in completes.
-      // On a cold refresh with an expired token, the initial loadData() returns empty
-      // ratings because PostgREST rejects expired JWTs. TOKEN_REFRESHED fires once the
-      // client silently renews the token (~seconds after page load).
-      if (event === "TOKEN_REFRESHED" || event === "SIGNED_IN") {
+      // Load data on every meaningful auth event.
+      // INITIAL_SESSION covers cold page loads (signed in or not).
+      // TOKEN_REFRESHED covers expired-token refreshes.
+      // SIGNED_IN covers explicit logins.
+      if (event === "INITIAL_SESSION" || event === "TOKEN_REFRESHED" || event === "SIGNED_IN") {
         loadData();
       }
     });
-    // Seed initial session from localStorage (no network call — avoids race with getUser())
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      const u = session?.user ?? null;
-      setUser(u);
-      if (u) fetchProfile(u.id).then(setProfile);
-    });
+
     return () => subscription.unsubscribe();
   }, [loadData]);
 

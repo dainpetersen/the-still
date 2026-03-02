@@ -1,13 +1,18 @@
 "use client";
 
 import { useState } from "react";
-import { createClient } from "@supabase/supabase-js";
+import { createBrowserClient } from "@supabase/ssr";
 
+// Use createBrowserClient (from @supabase/ssr) instead of createClient.
+// createBrowserClient stores the PKCE code verifier in cookies, so the
+// server-side /admin/callback route (which also uses cookies) can find it
+// and complete the code exchange. Using plain createClient would put the
+// verifier in localStorage, invisible to the server route → auth_failed.
 function getBrowserClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!url || !key || url === "your-project-url") return null;
-  return createClient(url, key);
+  return createBrowserClient(url, key);
 }
 
 export default function AdminLoginPage() {

@@ -351,7 +351,14 @@ export default function Home() {
                     Edit Profile
                   </button>
                   <button
-                    onClick={async () => { setShowUserMenu(false); try { await signOut(); } finally { setUser(null); setProfile(null); } }}
+                    onClick={() => {
+                      setShowUserMenu(false);
+                      // Clear local state immediately so the UI reacts instantly,
+                      // then fire the network sign-out in the background.
+                      setUser(null);
+                      setProfile(null);
+                      signOut().catch(() => {});
+                    }}
                     className="w-full text-left px-4 py-2 text-sm transition-colors"
                     style={{ color: "rgba(239,68,68,0.7)" }}
                     onMouseEnter={(e) => (e.currentTarget.style.color = "rgba(239,68,68,1)")}

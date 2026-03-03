@@ -23,11 +23,15 @@ export function mergeApprovedSubmissions(
       if (sub.type === "brand") {
         const d = sub.data;
         if (!d.brandName) continue;
-        // Avoid duplicates by id / name
-        const alreadyExists = brands.some(
+        // Dedup by id or name — but allow a bundled submission to replace an
+        // empty brand-only stub (old format that was approved before bundling existed).
+        const existingIdx = brands.findIndex(
           (b) => b.id === sub.id || b.name.toLowerCase() === d.brandName!.toLowerCase()
         );
-        if (alreadyExists) continue;
+        if (existingIdx >= 0) {
+          if (brands[existingIdx].subBrands.length > 0) continue; // true duplicate — skip
+          brands.splice(existingIdx, 1); // empty stub — remove so bundled version replaces it
+        }
         const newBrand: Brand = {
           id: sub.id,
           name: d.brandName,

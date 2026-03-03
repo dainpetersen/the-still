@@ -90,14 +90,35 @@ export interface UserRating {
 }
 
 // Submission types
+
+// Used in bundled "New Distillery" submissions to carry bottle data inline
+export interface BundledBottleData {
+  name: string;
+  abv: number;
+  price: number;
+  age?: number;
+  rarity: RarityLevel;
+  style?: WhiskeyStyle;
+  description?: string;
+  sourceDistillery?: string;
+}
+
+// Used in bundled "New Distillery" submissions to carry sub-brand + bottles inline
+export interface BundledSubBrandData {
+  name: string;
+  bottles: BundledBottleData[];
+}
+
 export interface SubmissionData {
   // Brand fields
   brandName?: string;
   brandRegion?: string;
   brandIsNDP?: boolean;
-  // Sub-brand fields
+  // Bundled sub-brands + bottles (new distillery path)
+  bundledSubBrands?: BundledSubBrandData[];
+  // Sub-brand fields (legacy separate submission)
   subBrandName?: string;
-  // Bottle fields
+  // Bottle fields (legacy separate submission)
   bottleName?: string;
   bottleAbv?: number;
   bottlePrice?: number;

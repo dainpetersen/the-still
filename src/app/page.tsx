@@ -407,17 +407,17 @@ export default function Home() {
         <div className="flex-1 relative min-h-0">
           {/* View mode toggle — floats over chart */}
           <div
-            className="absolute top-3 right-3 z-10 flex rounded-lg overflow-hidden"
+            className="absolute top-3 right-3 z-10 flex rounded-xl overflow-hidden"
             style={{
-              border: "1px solid rgba(245,158,11,0.25)",
-              background: "rgba(10,6,8,0.75)",
-              backdropFilter: "blur(6px)",
+              border: "1px solid rgba(245,158,11,0.35)",
+              background: "rgba(10,6,8,0.88)",
+              backdropFilter: "blur(8px)",
             }}
           >
             {([
-              { mode: "treemap" as const, title: "Treemap view",
+              { mode: "treemap" as const, label: "Treemap",
                 icon: (
-                  <svg width="15" height="15" viewBox="0 0 15 15" fill="currentColor">
+                  <svg width="14" height="14" viewBox="0 0 15 15" fill="currentColor">
                     <rect x="0" y="0" width="6" height="6" rx="1"/>
                     <rect x="8" y="0" width="7" height="6" rx="1"/>
                     <rect x="0" y="8" width="4" height="7" rx="1"/>
@@ -425,9 +425,9 @@ export default function Home() {
                   </svg>
                 ),
               },
-              { mode: "bubbles" as const, title: "Bubble chart view",
+              { mode: "bubbles" as const, label: "Bubbles",
                 icon: (
-                  <svg width="15" height="15" viewBox="0 0 15 15" fill="currentColor">
+                  <svg width="14" height="14" viewBox="0 0 15 15" fill="currentColor">
                     <circle cx="4.5" cy="4.5" r="3.5"/>
                     <circle cx="11" cy="4" r="2.5"/>
                     <circle cx="3.5" cy="11.5" r="2"/>
@@ -435,21 +435,21 @@ export default function Home() {
                   </svg>
                 ),
               },
-            ] as const).map(({ mode, title, icon }) => {
+            ] as const).map(({ mode, label, icon }) => {
               const active = viewMode === mode;
               return (
                 <button
                   key={mode}
-                  title={title}
                   onClick={() => setViewMode(mode)}
-                  className="px-2.5 py-1.5 transition-all"
+                  className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium transition-all"
                   style={{
-                    background: active ? "rgba(245,158,11,0.18)" : "transparent",
-                    color: active ? "#f59e0b" : "rgba(255,255,255,0.3)",
+                    background: active ? "rgba(245,158,11,0.2)" : "transparent",
+                    color: active ? "#fff" : "rgba(255,255,255,0.35)",
                     borderRight: mode === "treemap" ? "1px solid rgba(245,158,11,0.25)" : undefined,
                   }}
                 >
                   {icon}
+                  {label}
                 </button>
               );
             })}

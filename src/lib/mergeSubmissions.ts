@@ -102,6 +102,30 @@ export function mergeApprovedSubmissions(
             b.subBrands.find((sb) => sb.name.toLowerCase() === sub.parentName?.toLowerCase());
           if (parentSubBrand) break;
         }
+        // Legacy fallback: bottles submitted with parentId === "__new__" used the old
+        // pre-bundled form where the user typed the brand name as the parent.
+        // Find the brand by name and auto-create a default sub-brand under it.
+        if (!parentSubBrand && sub.parentId === "__new__" && sub.parentName) {
+          const parentBrand = brands.find(
+            (b) => b.name.toLowerCase() === sub.parentName!.toLowerCase()
+          );
+          if (parentBrand) {
+            const autoSbId = `${parentBrand.id}-auto`;
+            let autoSb = parentBrand.subBrands.find((sb) => sb.id === autoSbId);
+            if (!autoSb) {
+              autoSb = {
+                id: autoSbId,
+                name: parentBrand.name,
+                brandId: parentBrand.id,
+                source: "community" as DataSource,
+                bottles: [],
+              };
+              parentBrand.subBrands.push(autoSb);
+            }
+            parentSubBrand = autoSb;
+          }
+        }
+
         if (!parentSubBrand) {
           console.warn("[mergeSubmissions] parent sub-brand not found for bottle", sub.id);
           continue;

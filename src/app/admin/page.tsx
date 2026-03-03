@@ -14,7 +14,11 @@ function formatDate(iso: string) {
 
 function submissionTitle(s: Submission): string {
   const d = s.data as SubmissionData;
-  if (s.type === "brand") return d.brandName ?? "Unnamed Brand";
+  if (s.type === "brand") {
+    const bottleCount = d.bundledSubBrands?.flatMap((sb) => sb.bottles).length ?? 0;
+    const suffix = bottleCount > 0 ? ` (${bottleCount} bottle${bottleCount > 1 ? "s" : ""})` : "";
+    return (d.brandName ?? "Unnamed Brand") + suffix;
+  }
   if (s.type === "sub_brand") return d.subBrandName ?? "Unnamed Sub-Brand";
   if (s.type === "correction") return s.parentName ?? "Unknown Bottle";
   return d.bottleName ?? "Unnamed Bottle";
@@ -26,6 +30,13 @@ function submissionDetail(s: Submission): string[] {
   if (s.type === "brand") {
     if (d.brandRegion) lines.push(`Region: ${d.brandRegion}`);
     if (d.brandIsNDP) lines.push("NDP: Yes");
+    // Show bundled sub-brands and bottles
+    d.bundledSubBrands?.forEach((sb) => {
+      lines.push(`Sub-brand: ${sb.name}`);
+      sb.bottles.forEach((bt) => {
+        lines.push(`  · ${bt.name} — ${bt.abv}% ABV, $${bt.price}${bt.age ? `, ${bt.age}yr` : ""}${bt.style ? `, ${bt.style}` : ""}`);
+      });
+    });
   } else if (s.type === "sub_brand") {
     if (s.parentName) lines.push(`Brand: ${s.parentName}`);
   } else if (s.type === "correction") {

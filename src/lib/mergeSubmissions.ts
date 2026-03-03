@@ -1,4 +1,4 @@
-import { Brand, SubBrand, Bottle, Submission, RarityLevel, WhiskeyStyle } from "@/types/whiskey";
+import { Brand, SubBrand, Bottle, Submission, RarityLevel, WhiskeyStyle, DataSource } from "@/types/whiskey";
 
 /**
  * Merges admin-approved community submissions into the static brand data.
@@ -37,6 +37,35 @@ export function mergeApprovedSubmissions(
           source: "community",
           subBrands: [],
         };
+
+        // Unpack bundled sub-brands and bottles (new distillery submission path)
+        if (d.bundledSubBrands?.length) {
+          newBrand.subBrands = d.bundledSubBrands.map((sb) => {
+            const sbId = `${sub.id}-${sb.name}`;
+            const newSubBrand: SubBrand = {
+              id: sbId,
+              name: sb.name,
+              brandId: sub.id,
+              source: "community" as DataSource,
+              bottles: sb.bottles.map((bt, i): Bottle => ({
+                id: `${sbId}-${i}`,
+                name: bt.name,
+                subBrandId: sbId,
+                abv: bt.abv,
+                price: bt.price,
+                age: bt.age,
+                rarity: bt.rarity,
+                rarityScore: rarityToScore(bt.rarity),
+                description: bt.description ?? "",
+                sourceDistillery: bt.sourceDistillery,
+                style: bt.style ? (bt.style as WhiskeyStyle) : undefined,
+                source: "community" as DataSource,
+              })),
+            };
+            return newSubBrand;
+          });
+        }
+
         brands.push(newBrand);
       } else if (sub.type === "sub_brand") {
         const d = sub.data;
@@ -98,8 +127,7 @@ export function mergeApprovedSubmissions(
     }
   }
 
-  // Filter out brands that ended up with no sub-brands (shouldn't happen, but safety)
-  return brands.filter((b) => b.subBrands.length > 0);
+  return brands;
 }
 
 function rarityToScore(rarity?: string): number {

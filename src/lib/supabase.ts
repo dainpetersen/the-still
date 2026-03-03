@@ -1,12 +1,9 @@
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import { Brand, Bottle, SubBrand, Submission, SubmissionData, SubmissionType, Profile, WhiskeyStyle } from "@/types/whiskey";
 
-// ── Browser (public anon) client ──────────────────────────────────────────────
-// Uses the standard createClient (localStorage-based, self-contained auto-refresh).
-// NOTE: Do NOT switch to createBrowserClient from @supabase/ssr — that stores
-// sessions in cookies and requires server middleware to refresh tokens on every
-// request. Our middleware only handles /admin/*, so the main page would get
-// stale cookies, breaking sign-out and losing sessions on refresh.
+// ── Browser (authenticated) client ────────────────────────────────────────────
+// Full auth client for sign-in/sign-out and authenticated writes (submitRating,
+// submitEntry, upsertProfile, etc.).  Uses localStorage for session persistence.
 let _client: SupabaseClient | null = null;
 
 function getClient(): SupabaseClient | null {
@@ -17,6 +14,29 @@ function getClient(): SupabaseClient | null {
   try {
     _client = createClient(url, key);
     return _client;
+  } catch {
+    return null;
+  }
+}
+
+// ── Anonymous read-only client ────────────────────────────────────────────────
+// PostgREST validates the JWT *before* applying RLS policies.  Even a table with
+// `using (true)` returns 401 when the request carries an expired bearer token.
+// To guarantee public reads always succeed, this client has NO session — it never
+// sends an Authorization header.  PostgREST falls through to the `anon` role,
+// which satisfies all our `using (true)` SELECT policies.
+let _anonClient: SupabaseClient | null = null;
+
+function getAnonClient(): SupabaseClient | null {
+  if (_anonClient) return _anonClient;
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!url || !key || url === "your-project-url" || key === "your-anon-key") return null;
+  try {
+    _anonClient = createClient(url, key, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+    return _anonClient;
   } catch {
     return null;
   }
@@ -37,7 +57,7 @@ export function getServiceClient(): SupabaseClient | null {
 // ── Catalog ───────────────────────────────────────────────────────────────────
 // Returns null if Supabase is not configured or tables are empty (caller falls back to static data)
 export async function fetchCatalog(): Promise<Brand[] | null> {
-  const client = getClient();
+  const client = getAnonClient();
   if (!client) return null;
 
   const [{ data: brandsData, error: be }, { data: subData, error: se }, { data: bottleData, error: bte }] =
@@ -85,7 +105,7 @@ export async function fetchCatalog(): Promise<Brand[] | null> {
 // ── Ratings ───────────────────────────────────────────────────────────────────
 
 export async function fetchBottleRatings(bottleId: string) {
-  const client = getClient();
+  const client = getAnonClient();
   if (!client) return [];
   const { data, error } = await client
     .from("ratings")
@@ -99,7 +119,7 @@ export async function fetchBottleRatings(bottleId: string) {
 export async function fetchAllAverageRatings(): Promise<
   Record<string, { avg: number; count: number }>
 > {
-  const client = getClient();
+  const client = getAnonClient();
   if (!client) return {};
   const { data, error } = await client.from("ratings").select("bottle_id, rating");
   // Don't throw — an expired JWT causes PostgREST to reject even public-table reads.
@@ -170,7 +190,7 @@ export async function submitEntry(payload: {
 }
 
 export async function fetchApprovedSubmissions(): Promise<Submission[]> {
-  const client = getClient();
+  const client = getAnonClient();
   if (!client) return [];
   const { data, error } = await client
     .from("submissions")
@@ -289,7 +309,7 @@ export function getAuthClient() {
 // ── Profiles ──────────────────────────────────────────────────────────────────
 
 export async function fetchProfile(userId: string): Promise<Profile | null> {
-  const client = getClient();
+  const client = getAnonClient();
   if (!client) return null;
   const { data, error } = await client
     .from("profiles")

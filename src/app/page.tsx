@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import dynamic from "next/dynamic";
 import type { User } from "@supabase/supabase-js";
 import { WHISKEY_DATA, buildTreemapData, buildGroupedData } from "@/data/whiskeys";
@@ -159,35 +159,16 @@ export default function Home() {
   }, [displayBrands, filterBrand, mergedBrands]);
 
   // ── Data loading ──────────────────────────────────────────────────────────
-  // Each call gets a monotonically-increasing ID. If a newer call starts while
-  // an older one is still in-flight, the older one discards its results so it
-  // can't overwrite fresher data (fixes the INITIAL_SESSION / TOKEN_REFRESHED
-  // race that wiped ratings on every 2nd refresh).
-  const loadIdRef = useRef(0);
-
+  // Public reads now go through a dedicated anonymous Supabase client that
+  // never carries a session token.  This sidesteps the PostgREST 401 that
+  // occurred when an expired JWT was sent on a table with `using (true)` RLS.
   const loadData = useCallback(async () => {
-    const thisLoadId = ++loadIdRef.current;
-
-    // Refresh the session token before hitting the database.
-    // PostgREST validates the JWT *before* applying RLS, so an expired token
-    // causes a 401 on public tables — getSession() silently refreshes if needed.
-    const supabase = getAuthClient();
-    if (supabase) {
-      await supabase.auth.getSession();
-    }
-
-    // If a newer loadData() call started while we were awaiting, abort.
-    if (thisLoadId !== loadIdRef.current) return;
-
     try {
       const [ratingsData, approvedSubs, catalogData] = await Promise.all([
         fetchAllAverageRatings(),
         fetchApprovedSubmissions(),
         fetchCatalog(),
       ]);
-
-      // Abort again if something newer beat us to the finish line.
-      if (thisLoadId !== loadIdRef.current) return;
 
       setRatings(ratingsData);
 
@@ -208,9 +189,8 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    // Always load data immediately on mount. loadData() calls getSession()
-    // internally to refresh an expired token before querying, so it's safe
-    // to run before the onAuthStateChange listener is established.
+    // Load data immediately — the anon client never sends a JWT, so
+    // this always succeeds regardless of auth state.
     loadData();
 
     const supabase = getAuthClient();

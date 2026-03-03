@@ -1,8 +1,12 @@
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
-import { createBrowserClient } from "@supabase/ssr";
 import { Brand, Bottle, SubBrand, Submission, SubmissionData, SubmissionType, Profile, WhiskeyStyle } from "@/types/whiskey";
 
 // ── Browser (public anon) client ──────────────────────────────────────────────
+// Uses the standard createClient (localStorage-based, self-contained auto-refresh).
+// NOTE: Do NOT switch to createBrowserClient from @supabase/ssr — that stores
+// sessions in cookies and requires server middleware to refresh tokens on every
+// request. Our middleware only handles /admin/*, so the main page would get
+// stale cookies, breaking sign-out and losing sessions on refresh.
 let _client: SupabaseClient | null = null;
 
 function getClient(): SupabaseClient | null {
@@ -11,7 +15,7 @@ function getClient(): SupabaseClient | null {
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!url || !key || url === "your-project-url" || key === "your-anon-key") return null;
   try {
-    _client = createBrowserClient(url, key);
+    _client = createClient(url, key);
     return _client;
   } catch {
     return null;

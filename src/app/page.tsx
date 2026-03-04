@@ -318,6 +318,49 @@ export default function Home() {
             searchQuery={searchQuery}
             distilleryColors={distilleryColors}
           />
+
+          {/* Search — centered overlay at top of chart */}
+          <div
+            className="absolute top-5 left-1/2 -translate-x-1/2 z-10"
+            style={{ width: "min(480px, 70%)" }}
+          >
+            <div className="relative">
+              {/* Search icon */}
+              <svg
+                className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"
+                width="14" height="14" viewBox="0 0 16 16" fill="none"
+                style={{ color: searchQuery ? "rgba(245,158,11,0.7)" : "rgba(255,255,255,0.25)" }}
+              >
+                <circle cx="6.5" cy="6.5" r="5" stroke="currentColor" strokeWidth="1.5"/>
+                <path d="M10.5 10.5L14 14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+              </svg>
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search bottles, brands, styles…"
+                className="search-input w-full rounded-full pl-9 pr-9 py-2.5 text-sm outline-none"
+                style={{
+                  background: "rgba(8,8,16,0.82)",
+                  backdropFilter: "blur(12px)",
+                  border: searchQuery
+                    ? "1.5px solid rgba(245,158,11,0.7)"
+                    : "1.5px solid rgba(245,158,11,0.35)",
+                  color: "#f5f5f5",
+                  boxShadow: searchQuery
+                    ? "0 0 0 3px rgba(245,158,11,0.08), 0 4px 20px rgba(0,0,0,0.5)"
+                    : "0 4px 20px rgba(0,0,0,0.4)",
+                }}
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs leading-none"
+                  style={{ color: "rgba(255,255,255,0.4)" }}
+                >✕</button>
+              )}
+            </div>
+          </div>
         </div>
 
         {/* Sidebar */}
@@ -325,25 +368,6 @@ export default function Home() {
           className="w-56 flex-shrink-0 p-4 flex flex-col gap-4 overflow-y-auto"
           style={{ borderLeft: "1px solid rgba(245,158,11,0.15)" }}
         >
-          {/* Search input */}
-          <div className="relative">
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search bottles, brands…"
-              className="search-input w-full rounded-lg px-3 py-2 text-xs bg-transparent outline-none"
-              style={{ border: "1px solid rgba(245,158,11,0.2)", color: "#f5f5f5" }}
-            />
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery("")}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-xs"
-                style={{ color: "rgba(255,255,255,0.35)" }}
-              >✕</button>
-            )}
-          </div>
-
           <GroupControl groupMode={groupMode} onChange={handleGroupModeChange} />
 
           {/* Size By */}

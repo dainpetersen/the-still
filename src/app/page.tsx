@@ -439,41 +439,6 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Distillery color legend (only in distillery mode) */}
-          {groupMode === "distillery" && (
-            <div
-              className="rounded-xl p-4"
-              style={{
-                background: "rgba(10,10,20,0.85)",
-                border: "1px solid rgba(245,158,11,0.15)",
-              }}
-            >
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
-                Distilleries
-              </p>
-              <div className="space-y-1.5 overflow-y-auto" style={{ maxHeight: 220 }}>
-                {[...distilleryColors.entries()].map(([name, color]) => (
-                  <div key={name} className="flex items-center gap-2">
-                    <div
-                      className="flex-shrink-0 rounded-full"
-                      style={{
-                        width: 10,
-                        height: 10,
-                        background: color,
-                        boxShadow: `0 0 6px 2px ${color}55`,
-                      }}
-                    />
-                    <span
-                      className="text-xs truncate"
-                      style={{ color: "rgba(255,255,255,0.55)" }}
-                    >
-                      {name}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
 
           {/* Availability filter */}
           <div

@@ -395,13 +395,13 @@ export default function BubbleChart({
     const distColors = distilleryColors ?? buildDistilleryColors(brands);
     const glowOpacity = isDistilleryMode ? 0.35 : 0;
 
-    // In distillery mode, pull all cluster centers 65% closer to chart center
-    // so all bubbles form one big central cloud with gentle per-distillery drift
+    // In distillery mode, pull all cluster centers very close to chart center
+    // so all bubbles pack into one tight circular cloud (NYT-style)
     if (isDistilleryMode) {
       for (const [key, pos] of centroids) {
         centroids.set(key, {
-          x: W / 2 + (pos.x - W / 2) * 0.35,
-          y: H / 2 + (pos.y - H / 2) * 0.35,
+          x: W / 2 + (pos.x - W / 2) * 0.12,
+          y: H / 2 + (pos.y - H / 2) * 0.12,
         });
       }
     }
@@ -477,8 +477,10 @@ export default function BubbleChart({
             .attr("font-weight", "700")
             .attr("letter-spacing", "0.08em")
             .text((d) => d.key.toUpperCase())
-            .transition().duration(220)
-            .attr("opacity", 0.9);
+            .call((e) => {
+              // In distillery mode the end handler positions + reveals labels
+              if (!isDistilleryMode) e.transition().duration(220).attr("opacity", 0.9);
+            });
         }, 250);
       } else {
         sel.join(
@@ -495,14 +497,16 @@ export default function BubbleChart({
               .attr("font-weight", "700")
               .attr("letter-spacing", "0.08em")
               .text((d) => d.key.toUpperCase())
-              .call((e) => e.transition().duration(300).attr("opacity", 0.9)),
+              .call((e) => {
+                if (!isDistilleryMode) e.transition().duration(300).attr("opacity", 0.9);
+              }),
           (update) =>
             update
               .text((d) => d.key.toUpperCase())
               .attr("fill", (d) => isDistilleryMode ? (distColors.get(d.key) ?? "#f59e0b") : "#f59e0b")
               .attr("x", (d) => d.x)
               .attr("y", (d) => d.y)
-              .attr("opacity", 0.9),
+              .attr("opacity", isDistilleryMode ? 0 : 0.9),
           (exit) => exit.remove()
         );
       }
@@ -566,16 +570,20 @@ export default function BubbleChart({
     nodesRef.current = newNodes;
 
     // ── D3 simulation ─────────────────────────────────────────────────────────
+    // In distillery mode: tighter packing — stronger attraction, lighter repulsion
+    const forceStrength  = isDistilleryMode ? 0.14 : 0.07;
+    const chargeStrength = isDistilleryMode ? -1   : -3;
+
     const simulation = d3.forceSimulation<BubbleNode>(newNodes)
       .force("collide",
-        d3.forceCollide<BubbleNode>((d) => d.r + 1.5).iterations(3)
+        d3.forceCollide<BubbleNode>((d) => d.r + 1).iterations(4)
       )
-      .force("charge", d3.forceManyBody<BubbleNode>().strength(-3))
+      .force("charge", d3.forceManyBody<BubbleNode>().strength(chargeStrength))
       .force("x",
-        d3.forceX<BubbleNode>((d) => centroids.get(d.groupKey)?.x ?? W / 2).strength(0.07)
+        d3.forceX<BubbleNode>((d) => centroids.get(d.groupKey)?.x ?? W / 2).strength(forceStrength)
       )
       .force("y",
-        d3.forceY<BubbleNode>((d) => centroids.get(d.groupKey)?.y ?? H / 2).strength(0.07)
+        d3.forceY<BubbleNode>((d) => centroids.get(d.groupKey)?.y ?? H / 2).strength(forceStrength)
       )
       .alphaDecay(0.015)
       .velocityDecay(0.3);
@@ -779,26 +787,31 @@ export default function BubbleChart({
       }
     });
 
-    // When sim settles, update label positions + draw leader lines
+    // When sim settles, position labels + draw leader lines
     simulation.on("end", () => {
       updateHalos(halosG, newNodes, false);
 
-      // Recompute label Y positions from actual node positions
-      const groupMinY = new Map<string, number>();
-      for (const n of newNodes) {
-        const curr = groupMinY.get(n.groupKey) ?? Infinity;
-        const top  = (n.y ?? 0) - n.r;
-        if (top < curr) groupMinY.set(n.groupKey, top);
-      }
       const labelsLayer = root.select<SVGGElement>("g.labels-layer");
-      labelsLayer
-        .selectAll<SVGTextElement, { key: string; x: number; y: number }>("text.group-label")
-        .attr("y", (d) => (groupMinY.get(d.key) ?? d.y) - 8);
 
-      // ── Leader lines (distillery mode only) ────────────────────────────────
-      if (!isDistilleryMode) return;
+      // ── Non-distillery: simple above-cluster label nudge ──────────────────
+      if (!isDistilleryMode) {
+        const groupMinY = new Map<string, number>();
+        for (const n of newNodes) {
+          const curr = groupMinY.get(n.groupKey) ?? Infinity;
+          const top  = (n.y ?? 0) - n.r;
+          if (top < curr) groupMinY.set(n.groupKey, top);
+        }
+        labelsLayer
+          .selectAll<SVGTextElement, { key: string; x: number; y: number }>("text.group-label")
+          .attr("y", (d) => (groupMinY.get(d.key) ?? d.y) - 8);
+        return;
+      }
 
-      // Compute actual centroid of each distillery's bubbles
+      // ── Distillery: radial edge labels + cluster-edge leader lines ────────
+      const cX = W / 2;
+      const cY = H / 2;
+
+      // Actual centroid of each distillery's settled bubbles
       const sums = new Map<string, { sx: number; sy: number; count: number }>();
       for (const n of newNodes) {
         if (n.x == null || n.y == null) continue;
@@ -811,17 +824,67 @@ export default function BubbleChart({
         actualCentroids.set(g, { cx: s.sx / s.count, cy: s.sy / s.count });
       }
 
+      // Overall cluster bounding radius (farthest bubble edge from chart center)
+      let overallR = 0;
+      for (const n of newNodes) {
+        if (n.x == null || n.y == null) continue;
+        const dist = Math.sqrt((n.x - cX) ** 2 + (n.y - cY) ** 2) + n.r;
+        if (dist > overallR) overallR = dist;
+      }
+
       type LineDatum = { key: string; x1: number; y1: number; x2: number; y2: number };
       const lineData: LineDatum[] = [];
+
+      // ── Pass 1: compute angle for each distillery ──────────────────────────
+      const angleMap = new Map<string, number>();
       labelsLayer
         .selectAll<SVGTextElement, { key: string; x: number; y: number }>("text.group-label")
         .each(function (d) {
-          const labelX = parseFloat(this.getAttribute("x") ?? "0");
-          const labelY = parseFloat(this.getAttribute("y") ?? "0");
-          const clusterTop = groupMinY.get(d.key) ?? labelY + 20;
           const c = actualCentroids.get(d.key);
           if (!c) return;
-          lineData.push({ key: d.key, x1: labelX, y1: labelY + 4, x2: c.cx, y2: clusterTop });
+          angleMap.set(d.key, Math.atan2(c.cy - cY, c.cx - cX));
+        });
+
+      // ── Pass 2: stagger pads so nearby labels alternate inner/outer rings ──
+      // Labels within ~11° of each other would overlap → push every other one
+      // to an outer ring (labelPad 32 → 62).
+      const minAngularGap = 0.20; // radians ≈ 11.5°
+      const padMap = new Map<string, number>();
+      const sortedByAngle = [...angleMap.entries()].sort(([, a], [, b]) => a - b);
+      sortedByAngle.forEach(([key, θ], i) => {
+        const prevθ = i > 0 ? sortedByAngle[i - 1][1] : sortedByAngle[sortedByAngle.length - 1][1] - Math.PI * 2;
+        const crowded = (θ - prevθ) < minAngularGap;
+        const prevPad = i > 0 ? (padMap.get(sortedByAngle[i - 1][0]) ?? 32) : 32;
+        padMap.set(key, crowded ? (prevPad === 32 ? 62 : 32) : 32);
+      });
+
+      // ── Pass 3: apply positions using per-label pad ────────────────────────
+      labelsLayer
+        .selectAll<SVGTextElement, { key: string; x: number; y: number }>("text.group-label")
+        .each(function (d) {
+          const c = actualCentroids.get(d.key);
+          if (!c) return;
+
+          const θ   = angleMap.get(d.key) ?? 0;
+          const pad = padMap.get(d.key) ?? 32;
+          const lx  = cX + (overallR + pad) * Math.cos(θ);
+          const ly  = cY + (overallR + pad) * Math.sin(θ);
+
+          // Text-anchor: right side → "start", left side → "end", top/bottom → "middle"
+          const cosθ = Math.cos(θ);
+          const anchor = cosθ > 0.2 ? "start" : cosθ < -0.2 ? "end" : "middle";
+
+          d3.select(this)
+            .attr("text-anchor", anchor)
+            .transition().duration(350)
+            .attr("x", lx)
+            .attr("y", ly + 4)
+            .attr("opacity", 0.92);
+
+          // Leader line: cluster outer edge → label anchor
+          const ex = cX + overallR * Math.cos(θ);
+          const ey = cY + overallR * Math.sin(θ);
+          lineData.push({ key: d.key, x1: ex, y1: ey, x2: lx, y2: ly });
         });
 
       linesG
@@ -837,7 +900,7 @@ export default function BubbleChart({
               .attr("stroke-dasharray", "3,3")
               .attr("opacity", 0)
               .style("pointer-events", "none")
-              .call((e) => e.transition().duration(300).attr("opacity", 0.4)),
+              .call((e) => e.transition().duration(300).attr("opacity", 0.45)),
           (update) =>
             update
               .attr("x1", (d) => d.x1).attr("y1", (d) => d.y1)
@@ -870,8 +933,8 @@ export default function BubbleChart({
         if (groupMode === "distillery") {
           for (const [key, pos] of centroids) {
             centroids.set(key, {
-              x: W / 2 + (pos.x - W / 2) * 0.35,
-              y: H / 2 + (pos.y - H / 2) * 0.35,
+              x: W / 2 + (pos.x - W / 2) * 0.12,
+              y: H / 2 + (pos.y - H / 2) * 0.12,
             });
           }
         }

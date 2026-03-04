@@ -400,8 +400,8 @@ export default function BubbleChart({
     if (isDistilleryMode) {
       for (const [key, pos] of centroids) {
         centroids.set(key, {
-          x: W / 2 + (pos.x - W / 2) * 0.30,
-          y: H / 2 + (pos.y - H / 2) * 0.30,
+          x: W / 2 + (pos.x - W / 2) * 0.10,
+          y: H / 2 + (pos.y - H / 2) * 0.10,
         });
       }
     }
@@ -581,7 +581,7 @@ export default function BubbleChart({
     // ── D3 simulation ─────────────────────────────────────────────────────────
     // In distillery mode: stronger centroid pull + no charge so same-distillery
     // bubbles pack tight enough for the gooey filter to merge them into clay blobs.
-    const forceStrength  = isDistilleryMode ? 0.28 : 0.07;
+    const forceStrength  = isDistilleryMode ? 0.40 : 0.07;
     const chargeStrength = isDistilleryMode ?  0   : -3;
 
     const simulation = d3.forceSimulation<BubbleNode>(newNodes)

@@ -570,16 +570,20 @@ export default function BubbleChart({
     nodesRef.current = newNodes;
 
     // ── D3 simulation ─────────────────────────────────────────────────────────
+    // In distillery mode: tighter packing — stronger attraction, lighter repulsion
+    const forceStrength  = isDistilleryMode ? 0.14 : 0.07;
+    const chargeStrength = isDistilleryMode ? -1   : -3;
+
     const simulation = d3.forceSimulation<BubbleNode>(newNodes)
       .force("collide",
-        d3.forceCollide<BubbleNode>((d) => d.r + 1.5).iterations(3)
+        d3.forceCollide<BubbleNode>((d) => d.r + 1).iterations(4)
       )
-      .force("charge", d3.forceManyBody<BubbleNode>().strength(-3))
+      .force("charge", d3.forceManyBody<BubbleNode>().strength(chargeStrength))
       .force("x",
-        d3.forceX<BubbleNode>((d) => centroids.get(d.groupKey)?.x ?? W / 2).strength(0.07)
+        d3.forceX<BubbleNode>((d) => centroids.get(d.groupKey)?.x ?? W / 2).strength(forceStrength)
       )
       .force("y",
-        d3.forceY<BubbleNode>((d) => centroids.get(d.groupKey)?.y ?? H / 2).strength(0.07)
+        d3.forceY<BubbleNode>((d) => centroids.get(d.groupKey)?.y ?? H / 2).strength(forceStrength)
       )
       .alphaDecay(0.015)
       .velocityDecay(0.3);
@@ -828,22 +832,43 @@ export default function BubbleChart({
         if (dist > overallR) overallR = dist;
       }
 
-      const labelPad = 32; // gap between cluster edge and label anchor point
-
       type LineDatum = { key: string; x1: number; y1: number; x2: number; y2: number };
       const lineData: LineDatum[] = [];
 
-      // Reposition each label to the radial edge, then record line endpoints
+      // ── Pass 1: compute angle for each distillery ──────────────────────────
+      const angleMap = new Map<string, number>();
+      labelsLayer
+        .selectAll<SVGTextElement, { key: string; x: number; y: number }>("text.group-label")
+        .each(function (d) {
+          const c = actualCentroids.get(d.key);
+          if (!c) return;
+          angleMap.set(d.key, Math.atan2(c.cy - cY, c.cx - cX));
+        });
+
+      // ── Pass 2: stagger pads so nearby labels alternate inner/outer rings ──
+      // Labels within ~11° of each other would overlap → push every other one
+      // to an outer ring (labelPad 32 → 62).
+      const minAngularGap = 0.20; // radians ≈ 11.5°
+      const padMap = new Map<string, number>();
+      const sortedByAngle = [...angleMap.entries()].sort(([, a], [, b]) => a - b);
+      sortedByAngle.forEach(([key, θ], i) => {
+        const prevθ = i > 0 ? sortedByAngle[i - 1][1] : sortedByAngle[sortedByAngle.length - 1][1] - Math.PI * 2;
+        const crowded = (θ - prevθ) < minAngularGap;
+        const prevPad = i > 0 ? (padMap.get(sortedByAngle[i - 1][0]) ?? 32) : 32;
+        padMap.set(key, crowded ? (prevPad === 32 ? 62 : 32) : 32);
+      });
+
+      // ── Pass 3: apply positions using per-label pad ────────────────────────
       labelsLayer
         .selectAll<SVGTextElement, { key: string; x: number; y: number }>("text.group-label")
         .each(function (d) {
           const c = actualCentroids.get(d.key);
           if (!c) return;
 
-          // Angle from chart center toward this distillery's centroid
-          const θ = Math.atan2(c.cy - cY, c.cx - cX);
-          const lx = cX + (overallR + labelPad) * Math.cos(θ);
-          const ly = cY + (overallR + labelPad) * Math.sin(θ);
+          const θ   = angleMap.get(d.key) ?? 0;
+          const pad = padMap.get(d.key) ?? 32;
+          const lx  = cX + (overallR + pad) * Math.cos(θ);
+          const ly  = cY + (overallR + pad) * Math.sin(θ);
 
           // Text-anchor: right side → "start", left side → "end", top/bottom → "middle"
           const cosθ = Math.cos(θ);

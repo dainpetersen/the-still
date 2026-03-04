@@ -300,22 +300,8 @@ export default function Home() {
         </div>
       </header>
 
-      {/* ── Intro row: About (left) + Top Rated panel (right) ──────── */}
-      <div
-        className="flex flex-col lg:flex-row"
-        style={{ borderBottom: "1px solid rgba(245,158,11,0.1)" }}
-      >
-        <AboutSection
-          distilleryCount={mergedBrands.length}
-          bottleCount={mergedBrands.reduce((s, b) => s + b.subBrands.reduce((ss, sb) => ss + sb.bottles.length, 0), 0)}
-          ratingCount={Object.keys(ratings).length}
-          communityCount={communityCount}
-        />
-        <TopRatedSection brands={mergedBrands} ratings={ratings} panel />
-      </div>
-
-      {/* Hero layout — fills viewport height */}
-      <div className="flex" style={{ height: "100vh" }}>
+      {/* Hero layout — fills viewport height, first thing user sees */}
+      <div className="flex" style={{ height: "calc(100vh - 49px)" }}>
         {/* Visualization */}
         <div className="flex-1 relative min-h-0">
           <BubbleChart
@@ -356,15 +342,6 @@ export default function Home() {
                 style={{ color: "rgba(255,255,255,0.35)" }}
               >✕</button>
             )}
-          </div>
-
-          {/* How to use */}
-          <div
-            className="rounded-xl p-3 text-xs text-gray-600"
-            style={{ border: "1px solid rgba(255,255,255,0.05)" }}
-          >
-            <p className="font-semibold text-gray-500 mb-1">How to use</p>
-            <p>Search by bottle, brand, or style. Click any bottle to rate it.</p>
           </div>
 
           <GroupControl groupMode={groupMode} onChange={handleGroupModeChange} />
@@ -487,6 +464,9 @@ export default function Home() {
             + Submit a Bottle
           </button>
 
+          {/* Top Rated — compact sidebar panel */}
+          <TopRatedSection brands={mergedBrands} ratings={ratings} panel />
+
           {/* Legend key */}
           <div className="space-y-1.5 px-1">
             <div className="flex items-center gap-2 text-xs text-gray-600">
@@ -511,7 +491,13 @@ export default function Home() {
         </aside>
       </div>
 
-      {/* ── Scroll indicator ─────────────────────────────────────────── */}
+      {/* ── About strip — below the fold ────────────────────────────── */}
+      <AboutSection
+        distilleryCount={mergedBrands.length}
+        bottleCount={mergedBrands.reduce((s, b) => s + b.subBrands.reduce((ss, sb) => ss + sb.bottles.length, 0), 0)}
+        ratingCount={Object.keys(ratings).length}
+        communityCount={communityCount}
+      />
 
       {/* Footer */}
       <footer

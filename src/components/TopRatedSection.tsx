@@ -55,17 +55,16 @@ export default function TopRatedSection({ brands, ratings, panel = false }: Prop
   if (panel) {
     return (
       <div
-        className="flex flex-col px-6 py-10 lg:w-80 xl:w-96 flex-shrink-0"
-        style={{ borderLeft: "1px solid rgba(245,158,11,0.1)" }}
+        className="flex flex-col rounded-xl p-4"
+        style={{
+          background: "rgba(10,10,20,0.85)",
+          border: "1px solid rgba(245,158,11,0.15)",
+        }}
       >
         {/* Heading */}
-        <p
-          className="text-xs uppercase tracking-[0.25em] mb-2"
-          style={{ color: "rgba(245,158,11,0.6)" }}
-        >
-          Community Scores
+        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
+          Top Rated
         </p>
-        <h3 className="text-lg font-bold text-white mb-4">Top Rated Bottles</h3>
 
         {ranked.length === 0 ? (
           <div

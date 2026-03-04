@@ -14,18 +14,13 @@ export default function AboutSection({
   communityCount,
 }: Props) {
   return (
-    <div className="flex-1 min-w-0 px-6 py-10 md:px-10 lg:px-14">
-      {/* Label */}
-      <p
-        className="text-xs uppercase tracking-[0.25em] mb-2"
-        style={{ color: "rgba(245,158,11,0.6)" }}
-      >
-        About
-      </p>
-
+    <div
+      className="px-8 py-8 md:px-14"
+      style={{ borderBottom: "1px solid rgba(245,158,11,0.08)" }}
+    >
       {/* Heading + inline stats */}
-      <div className="flex flex-wrap items-baseline gap-x-5 gap-y-2 mb-6">
-        <h2 className="text-2xl font-bold text-white">What is Common Cask?</h2>
+      <div className="flex flex-wrap items-baseline gap-x-5 gap-y-1 mb-3">
+        <h2 className="text-lg font-bold text-white">What is Common Cask?</h2>
         <div className="flex items-center gap-3 flex-wrap">
           {[
             [distilleryCount, "distilleries"],
@@ -41,21 +36,13 @@ export default function AboutSection({
         </div>
       </div>
 
-      {/* Body */}
-      <div className="space-y-3 text-sm leading-relaxed" style={{ color: "rgba(255,255,255,0.55)" }}>
-        <p>
-          Common Cask is a community-driven catalog of American whiskey — built to map the landscape
-          of domestic distilleries, sub-brands, and bottles in one interactive view. The treemap
-          below lets you navigate from distillery down to individual bottles, color-coded by price,
-          rarity, or community rating.
-        </p>
-        <p>
-          Every rating comes from real people who have tried the bottle. No sponsored placements,
-          no paid rankings — just honest community scores. Think something is missing or mislabeled?
-          Hit <span style={{ color: "rgba(245,158,11,0.85)" }}>Submit a Bottle</span> to suggest
-          an addition. We&apos;re building this together.
-        </p>
-      </div>
+      {/* Body — single compact paragraph */}
+      <p className="text-sm leading-relaxed max-w-2xl" style={{ color: "rgba(255,255,255,0.45)" }}>
+        A community-driven catalog of American whiskey — {distilleryCount} distilleries, {bottleCount} bottles,
+        color-coded by price, rarity, or community rating. No sponsored placements, no paid rankings.
+        Think something&apos;s missing?{" "}
+        <span style={{ color: "rgba(245,158,11,0.75)" }}>Submit a Bottle</span> and we&apos;ll review it.
+      </p>
     </div>
   );
 }

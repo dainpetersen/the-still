@@ -400,8 +400,8 @@ export default function BubbleChart({
     if (isDistilleryMode) {
       for (const [key, pos] of centroids) {
         centroids.set(key, {
-          x: W / 2 + (pos.x - W / 2) * 0.12,
-          y: H / 2 + (pos.y - H / 2) * 0.12,
+          x: W / 2 + (pos.x - W / 2) * 0.30,
+          y: H / 2 + (pos.y - H / 2) * 0.30,
         });
       }
     }
@@ -545,7 +545,7 @@ export default function BubbleChart({
               .attr("r", (d) => d.r);
           });
         // Update collision force + reheat
-        (sim.force("collide") as d3.ForceCollide<BubbleNode>).radius((d) => d.r + 1.5);
+        (sim.force("collide") as d3.ForceCollide<BubbleNode>).radius((d) => d.r + 0.5);
         sim.alpha(0.5).restart();
       }
       return;
@@ -579,13 +579,14 @@ export default function BubbleChart({
     nodesRef.current = newNodes;
 
     // ── D3 simulation ─────────────────────────────────────────────────────────
-    // In distillery mode: tighter packing — stronger attraction, lighter repulsion
-    const forceStrength  = isDistilleryMode ? 0.14 : 0.07;
-    const chargeStrength = isDistilleryMode ? -1   : -3;
+    // In distillery mode: stronger centroid pull + no charge so same-distillery
+    // bubbles pack tight enough for the gooey filter to merge them into clay blobs.
+    const forceStrength  = isDistilleryMode ? 0.28 : 0.07;
+    const chargeStrength = isDistilleryMode ?  0   : -3;
 
     const simulation = d3.forceSimulation<BubbleNode>(newNodes)
       .force("collide",
-        d3.forceCollide<BubbleNode>((d) => d.r + 1).iterations(4)
+        d3.forceCollide<BubbleNode>((d) => d.r + 0.5).iterations(5)
       )
       .force("charge", d3.forceManyBody<BubbleNode>().strength(chargeStrength))
       .force("x",

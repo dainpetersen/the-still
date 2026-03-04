@@ -471,14 +471,14 @@ export default function BubbleChart({
             .attr("x", (d) => d.x)
             .attr("y", (d) => d.y)
             .attr("text-anchor", "middle")
-            .attr("fill", "#f59e0b")
+            .attr("fill", (d) => isDistilleryMode ? (distColors.get(d.key) ?? "#f59e0b") : "#f59e0b")
             .attr("opacity", 0)
             .attr("font-size", "11px")
             .attr("font-weight", "700")
             .attr("letter-spacing", "0.08em")
             .text((d) => d.key.toUpperCase())
             .transition().duration(220)
-            .attr("opacity", 0.85);
+            .attr("opacity", 0.9);
         }, 250);
       } else {
         sel.join(
@@ -489,19 +489,20 @@ export default function BubbleChart({
               .attr("x", (d) => d.x)
               .attr("y", (d) => d.y)
               .attr("text-anchor", "middle")
-              .attr("fill", "#f59e0b")
+              .attr("fill", (d) => isDistilleryMode ? (distColors.get(d.key) ?? "#f59e0b") : "#f59e0b")
               .attr("opacity", 0)
               .attr("font-size", "11px")
               .attr("font-weight", "700")
               .attr("letter-spacing", "0.08em")
               .text((d) => d.key.toUpperCase())
-              .call((e) => e.transition().duration(300).attr("opacity", 0.85)),
+              .call((e) => e.transition().duration(300).attr("opacity", 0.9)),
           (update) =>
             update
               .text((d) => d.key.toUpperCase())
+              .attr("fill", (d) => isDistilleryMode ? (distColors.get(d.key) ?? "#f59e0b") : "#f59e0b")
               .attr("x", (d) => d.x)
               .attr("y", (d) => d.y)
-              .attr("opacity", 0.85),
+              .attr("opacity", 0.9),
           (exit) => exit.remove()
         );
       }
@@ -606,6 +607,16 @@ export default function BubbleChart({
     let flagsG = root.select<SVGGElement>("g.flags-layer");
     if (flagsG.empty()) {
       flagsG = root.append("g").attr("class", "flags-layer");
+    }
+
+    // ── Lines layer (leader lines from labels to clusters, distillery mode) ───
+    let linesG = root.select<SVGGElement>("g.lines-layer");
+    if (linesG.empty()) {
+      linesG = root.append("g").attr("class", "lines-layer");
+    }
+    // Clear lines immediately when leaving distillery mode
+    if (!isDistilleryMode) {
+      linesG.selectAll("line.leader").remove();
     }
 
     const circles = bubblesG
@@ -737,11 +748,12 @@ export default function BubbleChart({
         onBottleClickRef.current(d);
       });
 
-    // Enforce layer order: halos (back) → glow → bubbles → flags → labels (front)
+    // Enforce layer order: halos (back) → glow → bubbles → flags → lines → labels (front)
     root.select("g.halos-layer").lower();
     root.select("g.glow-layer").raise();
     root.select("g.bubbles-layer").raise();
     root.select("g.flags-layer").raise();
+    root.select("g.lines-layer").raise();
     root.select("g.labels-layer").raise();
 
     // Render labels
@@ -762,16 +774,14 @@ export default function BubbleChart({
         .selectAll<SVGTextElement, BubbleNode>("text.flag-btn")
         .attr("x", (d) => (d.x ?? 0) + d.r * 0.45)
         .attr("y", (d) => (d.y ?? 0) - d.r * 0.5);
-      // Update halos every 5 ticks (distillery mode only)
       if (++tickN % 5 === 0) {
-        updateHalos(halosG, newNodes, isDistilleryMode, distColors);
+        updateHalos(halosG, newNodes, false);
       }
     });
 
-    // When sim settles, update halos + label positions (more accurate centroid)
+    // When sim settles, update label positions + draw leader lines
     simulation.on("end", () => {
-      // Final halo update with settled positions
-      updateHalos(halosG, newNodes, isDistilleryMode, distColors);
+      updateHalos(halosG, newNodes, false);
 
       // Recompute label Y positions from actual node positions
       const groupMinY = new Map<string, number>();
@@ -780,9 +790,60 @@ export default function BubbleChart({
         const top  = (n.y ?? 0) - n.r;
         if (top < curr) groupMinY.set(n.groupKey, top);
       }
-      root.select<SVGGElement>("g.labels-layer")
+      const labelsLayer = root.select<SVGGElement>("g.labels-layer");
+      labelsLayer
         .selectAll<SVGTextElement, { key: string; x: number; y: number }>("text.group-label")
         .attr("y", (d) => (groupMinY.get(d.key) ?? d.y) - 8);
+
+      // ── Leader lines (distillery mode only) ────────────────────────────────
+      if (!isDistilleryMode) return;
+
+      // Compute actual centroid of each distillery's bubbles
+      const sums = new Map<string, { sx: number; sy: number; count: number }>();
+      for (const n of newNodes) {
+        if (n.x == null || n.y == null) continue;
+        const s = sums.get(n.groupKey) ?? { sx: 0, sy: 0, count: 0 };
+        s.sx += n.x; s.sy += n.y; s.count++;
+        sums.set(n.groupKey, s);
+      }
+      const actualCentroids = new Map<string, { cx: number; cy: number }>();
+      for (const [g, s] of sums) {
+        actualCentroids.set(g, { cx: s.sx / s.count, cy: s.sy / s.count });
+      }
+
+      type LineDatum = { key: string; x1: number; y1: number; x2: number; y2: number };
+      const lineData: LineDatum[] = [];
+      labelsLayer
+        .selectAll<SVGTextElement, { key: string; x: number; y: number }>("text.group-label")
+        .each(function (d) {
+          const labelX = parseFloat(this.getAttribute("x") ?? "0");
+          const labelY = parseFloat(this.getAttribute("y") ?? "0");
+          const clusterTop = groupMinY.get(d.key) ?? labelY + 20;
+          const c = actualCentroids.get(d.key);
+          if (!c) return;
+          lineData.push({ key: d.key, x1: labelX, y1: labelY + 4, x2: c.cx, y2: clusterTop });
+        });
+
+      linesG
+        .selectAll<SVGLineElement, LineDatum>("line.leader")
+        .data(lineData, (d) => d.key)
+        .join(
+          (enter) =>
+            enter.append("line").attr("class", "leader")
+              .attr("x1", (d) => d.x1).attr("y1", (d) => d.y1)
+              .attr("x2", (d) => d.x2).attr("y2", (d) => d.y2)
+              .attr("stroke", (d) => distColors.get(d.key) ?? "rgba(255,255,255,0.3)")
+              .attr("stroke-width", 0.75)
+              .attr("stroke-dasharray", "3,3")
+              .attr("opacity", 0)
+              .style("pointer-events", "none")
+              .call((e) => e.transition().duration(300).attr("opacity", 0.4)),
+          (update) =>
+            update
+              .attr("x1", (d) => d.x1).attr("y1", (d) => d.y1)
+              .attr("x2", (d) => d.x2).attr("y2", (d) => d.y2),
+          (exit) => exit.transition().duration(200).attr("opacity", 0).remove()
+        );
     });
 
     if (groupChanged) {

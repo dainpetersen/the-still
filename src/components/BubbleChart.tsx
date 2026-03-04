@@ -45,6 +45,7 @@ interface Props {
   onBottleClick: (node: BubbleNode) => void;
   onBottleFlag?: (id: string, name: string) => void;
   ratings: Record<string, { avg: number; count: number }>;
+  searchQuery?: string;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -148,6 +149,78 @@ function estimatedClusterRadius(count: number, avgR: number): number {
   return Math.sqrt(count * Math.PI * avgR * avgR) * 1.1;
 }
 
+// ── Halo helpers ──────────────────────────────────────────────────────────────
+
+type HaloDatum = { key: string; cx: number; cy: number; r: number };
+
+function updateHalos(
+  halosG: d3.Selection<SVGGElement, unknown, null, undefined>,
+  nodes: BubbleNode[],
+  showHalos: boolean
+): void {
+  if (!showHalos) {
+    halosG.selectAll<SVGCircleElement, HaloDatum>("circle.halo")
+      .transition().duration(300)
+      .attr("opacity", 0)
+      .remove();
+    return;
+  }
+
+  // Compute centroid per groupKey from live node positions
+  const sums = new Map<string, { sx: number; sy: number; count: number }>();
+  for (const n of nodes) {
+    if (n.x == null || n.y == null) continue;
+    const s = sums.get(n.groupKey) ?? { sx: 0, sy: 0, count: 0 };
+    s.sx += n.x; s.sy += n.y; s.count++;
+    sums.set(n.groupKey, s);
+  }
+  const centroids = new Map<string, { cx: number; cy: number }>();
+  for (const [g, s] of sums) {
+    centroids.set(g, { cx: s.sx / s.count, cy: s.sy / s.count });
+  }
+
+  // Compute bounding radius per group (farthest node edge + 18px padding)
+  const radii = new Map<string, number>();
+  for (const n of nodes) {
+    if (n.x == null || n.y == null) continue;
+    const c = centroids.get(n.groupKey)!;
+    const dist = Math.sqrt((n.x - c.cx) ** 2 + (n.y - c.cy) ** 2) + n.r + 18;
+    radii.set(n.groupKey, Math.max(radii.get(n.groupKey) ?? 0, dist));
+  }
+
+  const data: HaloDatum[] = [...centroids.entries()].map(([key, c]) => ({
+    key,
+    cx: c.cx,
+    cy: c.cy,
+    r: radii.get(key) ?? 50,
+  }));
+
+  halosG
+    .selectAll<SVGCircleElement, HaloDatum>("circle.halo")
+    .data(data, (d) => d.key)
+    .join(
+      (enter) =>
+        enter
+          .append("circle")
+          .attr("class", "halo")
+          .attr("cx", (d) => d.cx)
+          .attr("cy", (d) => d.cy)
+          .attr("r",  (d) => d.r)
+          .attr("fill",         "rgba(245,158,11,0.055)")
+          .attr("stroke",       "rgba(245,158,11,0.13)")
+          .attr("stroke-width", 1)
+          .attr("opacity", 0)
+          .call((e) => e.transition().duration(400).attr("opacity", 1)),
+      (update) =>
+        update
+          .attr("cx", (d) => d.cx)
+          .attr("cy", (d) => d.cy)
+          .attr("r",  (d) => d.r),
+      (exit) =>
+        exit.transition().duration(250).attr("opacity", 0).remove()
+    );
+}
+
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function BubbleChart({
@@ -158,6 +231,7 @@ export default function BubbleChart({
   onBottleClick,
   onBottleFlag,
   ratings,
+  searchQuery,
 }: Props) {
   const svgRef   = useRef<SVGSVGElement>(null);
   const wrapRef  = useRef<HTMLDivElement>(null);
@@ -467,6 +541,15 @@ export default function BubbleChart({
 
     simRef.current = simulation;
 
+    // ── Halos layer (behind bubbles, only in distillery mode) ─────────────────
+    let halosG = root.select<SVGGElement>("g.halos-layer");
+    if (halosG.empty()) {
+      const bl = root.select("g.bubbles-layer");
+      halosG = bl.empty()
+        ? root.append("g").attr("class", "halos-layer")
+        : root.insert("g", "g.bubbles-layer").attr("class", "halos-layer");
+    }
+
     // ── Bubbles layer ─────────────────────────────────────────────────────────
     let bubblesG = root.select<SVGGElement>("g.bubbles-layer");
     if (bubblesG.empty()) {
@@ -581,15 +664,16 @@ export default function BubbleChart({
         onBottleClickRef.current(d);
       });
 
-    // Bring flags above bubbles, labels above flags
+    // Enforce layer order: halos (back) → bubbles → flags → labels (front)
+    root.select("g.halos-layer").lower();
     root.select("g.flags-layer").raise();
-    // Bring labels to front
     root.select("g.labels-layer").raise();
 
     // Render labels
     updateLabels(groupChanged);
 
     // ── Tick ─────────────────────────────────────────────────────────────────
+    let tickN = 0;
     simulation.on("tick", () => {
       bubblesG
         .selectAll<SVGCircleElement, BubbleNode>("circle.bubble")
@@ -599,10 +683,17 @@ export default function BubbleChart({
         .selectAll<SVGTextElement, BubbleNode>("text.flag-btn")
         .attr("x", (d) => (d.x ?? 0) + d.r * 0.45)
         .attr("y", (d) => (d.y ?? 0) - d.r * 0.5);
+      // Update halos every 5 ticks (distillery mode only)
+      if (++tickN % 5 === 0) {
+        updateHalos(halosG, newNodes, groupMode === "distillery");
+      }
     });
 
-    // When sim settles, update label positions once more (more accurate centroid)
+    // When sim settles, update halos + label positions (more accurate centroid)
     simulation.on("end", () => {
+      // Final halo update with settled positions
+      updateHalos(halosG, newNodes, groupMode === "distillery");
+
       // Recompute label Y positions from actual node positions
       const groupMinY = new Map<string, number>();
       for (const n of newNodes) {
@@ -652,6 +743,34 @@ export default function BubbleChart({
     draw();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [brands, groupMode, sizeMode, colorMode, ratings]);
+
+  // ── Search: dim/shrink non-matching bubbles (no sim rebuild) ───────────────
+  useEffect(() => {
+    const svg = svgRef.current;
+    if (!svg) return;
+    const q = (searchQuery ?? "").toLowerCase().trim();
+    const bubbles = d3
+      .select(svg)
+      .selectAll<SVGCircleElement, BubbleNode>("circle.bubble");
+    if (!bubbles.size()) return;
+
+    if (!q) {
+      bubbles
+        .transition().duration(250)
+        .attr("opacity", 1)
+        .attr("r", (d) => d.r);
+    } else {
+      const matches = (d: BubbleNode) =>
+        d.name.toLowerCase().includes(q) ||
+        d.brandName.toLowerCase().includes(q) ||
+        d.subBrandName.toLowerCase().includes(q) ||
+        (d.style ?? "").toLowerCase().includes(q);
+      bubbles
+        .transition().duration(250)
+        .attr("opacity", (d) => (matches(d) ? 1 : 0.1))
+        .attr("r",       (d) => (matches(d) ? d.r : d.r * 0.4));
+    }
+  }, [searchQuery]);
 
   // ── Tooltip DOM element ────────────────────────────────────────────────────
   useEffect(() => {

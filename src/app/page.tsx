@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import dynamic from "next/dynamic";
 import type { User } from "@supabase/supabase-js";
-import { WHISKEY_DATA, buildTreemapData, buildGroupedData } from "@/data/whiskeys";
+import { WHISKEY_DATA, buildGroupedData } from "@/data/whiskeys";
 import {
   fetchAllAverageRatings,
   fetchApprovedSubmissions,
@@ -52,8 +52,7 @@ import TopRatedSection from "@/components/TopRatedSection";
 import AboutSection from "@/components/AboutSection";
 import Logo from "@/components/Logo";
 
-const WhiskeyTreemap = dynamic(() => import("@/components/WhiskeyTreemap"), { ssr: false });
-const BubbleChart    = dynamic(() => import("@/components/BubbleChart"),    { ssr: false });
+const BubbleChart = dynamic(() => import("@/components/BubbleChart"), { ssr: false });
 
 interface BottleNode {
   id?: string;
@@ -69,8 +68,8 @@ interface BottleNode {
 export default function Home() {
   const [colorMode, setColorMode]   = useState<ColorMode>("price");
   const [groupMode, setGroupMode]   = useState<GroupMode>("distillery");
-  const [viewMode,  setViewMode]    = useState<"treemap" | "bubbles">("treemap");
   const [sizeMode,  setSizeMode]    = useState<BubbleSizeMode>("price");
+  const [searchQuery, setSearchQuery] = useState("");
   const [selectedBottle, setSelectedBottle] = useState<BottleNode | null>(null);
   const [flaggedBottle, setFlaggedBottle] = useState<{ id: string; name: string } | null>(null);
   const [showSubmit, setShowSubmit] = useState(false);
@@ -85,35 +84,10 @@ export default function Home() {
   const [showUserMenu, setShowUserMenu] = useState(false);
 
   // ── Filtering state ───────────────────────────────────────────────────────
-  const [filterBrand, setFilterBrand] = useState<string | null>(null);
-  const [filterSubBrand, setFilterSubBrand] = useState<string | null>(null);
   const [showDiscontinued, setShowDiscontinued] = useState(true);
 
   const handleGroupModeChange = useCallback((mode: GroupMode) => {
     setGroupMode(mode);
-    if (mode !== "distillery") {
-      setFilterBrand(null);
-      setFilterSubBrand(null);
-    }
-  }, []);
-
-  const handleBrandClick = useCallback((brandName: string) => {
-    setFilterBrand(brandName);
-    setFilterSubBrand(null);
-  }, []);
-
-  const handleSubBrandClick = useCallback((subBrandName: string, brandName: string) => {
-    setFilterBrand(brandName);
-    setFilterSubBrand(subBrandName);
-  }, []);
-
-  const clearFilter = useCallback(() => {
-    setFilterBrand(null);
-    setFilterSubBrand(null);
-  }, []);
-
-  const clearSubBrandFilter = useCallback(() => {
-    setFilterSubBrand(null);
   }, []);
 
   // ── Derived display data ──────────────────────────────────────────────────
@@ -129,20 +103,8 @@ export default function Home() {
           })),
         }));
 
-    if (!filterBrand) return base;
-    const brand = base.find((b) => b.name === filterBrand);
-    if (!brand) return base;
-    if (!filterSubBrand) return [brand];
-    return [{ ...brand, subBrands: brand.subBrands.filter((sb) => sb.name === filterSubBrand) }];
-  }, [mergedBrands, filterBrand, filterSubBrand, showDiscontinued]);
-
-  const displayData = useMemo(
-    () =>
-      groupMode === "distillery"
-        ? buildTreemapData(displayBrands)
-        : buildGroupedData(displayBrands, groupMode),
-    [displayBrands, groupMode]
-  );
+    return base;
+  }, [mergedBrands, showDiscontinued]);
 
   // ── Stats for current view ────────────────────────────────────────────────
   const viewStats = useMemo(() => {
@@ -152,11 +114,8 @@ export default function Home() {
     );
     const subBrands = displayBrands.reduce((s, b) => s + b.subBrands.length, 0);
     const distilleries = displayBrands.length;
-    const activeBrand = filterBrand
-      ? mergedBrands.find((b) => b.name === filterBrand)
-      : null;
-    return { bottles, subBrands, distilleries, activeBrand };
-  }, [displayBrands, filterBrand, mergedBrands]);
+    return { bottles, subBrands, distilleries };
+  }, [displayBrands]);
 
   // ── Data loading ──────────────────────────────────────────────────────────
   // Public reads now go through a dedicated anonymous Supabase client that
@@ -241,42 +200,9 @@ export default function Home() {
           Common Cask — Explore &amp; Rate
         </span>
 
-        {/* Breadcrumb — only in distillery mode */}
-        {groupMode === "distillery" && filterBrand && (
-          <div className="flex items-center gap-2 text-xs ml-2">
-            <button
-              onClick={clearFilter}
-              className="transition-colors"
-              style={{ color: "rgba(245,158,11,0.5)" }}
-              onMouseEnter={(e) => (e.currentTarget.style.color = "#f59e0b")}
-              onMouseLeave={(e) => (e.currentTarget.style.color = "rgba(245,158,11,0.5)")}
-            >
-              ← All
-            </button>
-            <span style={{ color: "rgba(255,255,255,0.2)" }}>/</span>
-            {filterSubBrand ? (
-              <>
-                <button
-                  onClick={clearSubBrandFilter}
-                  className="transition-colors"
-                  style={{ color: "rgba(245,158,11,0.7)" }}
-                  onMouseEnter={(e) => (e.currentTarget.style.color = "#f59e0b")}
-                  onMouseLeave={(e) => (e.currentTarget.style.color = "rgba(245,158,11,0.7)")}
-                >
-                  {filterBrand}
-                </button>
-                <span style={{ color: "rgba(255,255,255,0.2)" }}>/</span>
-                <span style={{ color: "#f5f5f5" }}>{filterSubBrand}</span>
-              </>
-            ) : (
-              <span style={{ color: "#f5f5f5" }}>{filterBrand}</span>
-            )}
-          </div>
-        )}
-
         <div className="ml-auto flex items-center gap-3">
           <span className="text-xs text-gray-600 hidden md:block">
-            {filterBrand ? "Click a sub-brand to drill in" : "Click any bottle to rate it"}
+            Click any bottle to rate it
           </span>
 
           {/* Auth control */}
@@ -385,84 +311,19 @@ export default function Home() {
       <div className="flex" style={{ height: "100vh" }}>
         {/* Visualization */}
         <div className="flex-1 relative min-h-0">
-          {/* View mode toggle — floats over chart */}
-          <div
-            className="absolute top-3 right-3 z-10 flex rounded-xl overflow-hidden"
-            style={{
-              border: "1px solid rgba(245,158,11,0.35)",
-              background: "rgba(10,6,8,0.88)",
-              backdropFilter: "blur(8px)",
+          <BubbleChart
+            brands={displayBrands}
+            colorMode={colorMode}
+            groupMode={groupMode}
+            sizeMode={sizeMode}
+            onBottleClick={(node) => {
+              if (!user) { setShowAuth(true); return; }
+              setSelectedBottle(node as unknown as BottleNode);
             }}
-          >
-            {([
-              { mode: "treemap" as const, label: "Treemap",
-                icon: (
-                  <svg width="14" height="14" viewBox="0 0 15 15" fill="currentColor">
-                    <rect x="0" y="0" width="6" height="6" rx="1"/>
-                    <rect x="8" y="0" width="7" height="6" rx="1"/>
-                    <rect x="0" y="8" width="4" height="7" rx="1"/>
-                    <rect x="6" y="8" width="9" height="7" rx="1"/>
-                  </svg>
-                ),
-              },
-              { mode: "bubbles" as const, label: "Bubbles",
-                icon: (
-                  <svg width="14" height="14" viewBox="0 0 15 15" fill="currentColor">
-                    <circle cx="4.5" cy="4.5" r="3.5"/>
-                    <circle cx="11" cy="4" r="2.5"/>
-                    <circle cx="3.5" cy="11.5" r="2"/>
-                    <circle cx="10" cy="11" r="3"/>
-                  </svg>
-                ),
-              },
-            ] as const).map(({ mode, label, icon }) => {
-              const active = viewMode === mode;
-              return (
-                <button
-                  key={mode}
-                  onClick={() => setViewMode(mode)}
-                  className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium transition-all"
-                  style={{
-                    background: active ? "rgba(245,158,11,0.2)" : "transparent",
-                    color: active ? "#fff" : "rgba(255,255,255,0.35)",
-                    borderRight: mode === "treemap" ? "1px solid rgba(245,158,11,0.25)" : undefined,
-                  }}
-                >
-                  {icon}
-                  {label}
-                </button>
-              );
-            })}
-          </div>
-
-          {viewMode === "treemap" ? (
-            <WhiskeyTreemap
-              data={displayData}
-              colorMode={colorMode}
-              groupMode={groupMode}
-              onBottleClick={(node) => {
-                if (!user) { setShowAuth(true); return; }
-                setSelectedBottle(node as BottleNode);
-              }}
-              onBottleFlag={(id, name) => setFlaggedBottle({ id, name })}
-              ratings={ratings}
-              onBrandClick={groupMode === "distillery" ? handleBrandClick : undefined}
-              onSubBrandClick={groupMode === "distillery" ? handleSubBrandClick : undefined}
-            />
-          ) : (
-            <BubbleChart
-              brands={displayBrands}
-              colorMode={colorMode}
-              groupMode={groupMode}
-              sizeMode={sizeMode}
-              onBottleClick={(node) => {
-                if (!user) { setShowAuth(true); return; }
-                setSelectedBottle(node as unknown as BottleNode);
-              }}
-              onBottleFlag={(id, name) => setFlaggedBottle({ id, name })}
-              ratings={ratings}
-            />
-          )}
+            onBottleFlag={(id, name) => setFlaggedBottle({ id, name })}
+            ratings={ratings}
+            searchQuery={searchQuery}
+          />
         </div>
 
         {/* Sidebar */}
@@ -470,176 +331,108 @@ export default function Home() {
           className="w-56 flex-shrink-0 p-4 flex flex-col gap-4 overflow-y-auto"
           style={{ borderLeft: "1px solid rgba(245,158,11,0.15)" }}
         >
-          {/* How to use — at top so users see it first */}
+          {/* Search input */}
+          <div className="relative">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search bottles, brands…"
+              className="search-input w-full rounded-lg px-3 py-2 text-xs bg-transparent outline-none"
+              style={{ border: "1px solid rgba(245,158,11,0.2)", color: "#f5f5f5" }}
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery("")}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-xs"
+                style={{ color: "rgba(255,255,255,0.35)" }}
+              >✕</button>
+            )}
+          </div>
+
+          {/* How to use */}
           <div
             className="rounded-xl p-3 text-xs text-gray-600"
             style={{ border: "1px solid rgba(255,255,255,0.05)" }}
           >
             <p className="font-semibold text-gray-500 mb-1">How to use</p>
-            <p>
-              {filterSubBrand
-                ? "Click any bottle to rate it. Hover a bottle to report an error."
-                : filterBrand
-                ? "Click a sub-brand label to drill in, or a bottle to rate it."
-                : "Click a brand label to filter. Click a bottle to rate it. Hover any bottle for a ⚑ error-report icon."}
-            </p>
+            <p>Search by bottle, brand, or style. Click any bottle to rate it.</p>
           </div>
 
           <GroupControl groupMode={groupMode} onChange={handleGroupModeChange} />
 
-          {/* Size By — only shown in bubble view */}
-          {viewMode === "bubbles" && (
+          {/* Size By */}
+          <div
+            className="rounded-xl p-3"
+            style={{
+              background: "rgba(10,10,20,0.85)",
+              border: "1px solid rgba(245,158,11,0.15)",
+            }}
+          >
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
+              Size By
+            </p>
             <div
-              className="rounded-xl p-3"
-              style={{
-                background: "rgba(10,10,20,0.85)",
-                border: "1px solid rgba(245,158,11,0.15)",
-              }}
+              className="flex rounded-lg overflow-hidden text-xs"
+              style={{ border: "1px solid rgba(245,158,11,0.2)" }}
             >
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
-                Size By
-              </p>
-              <div
-                className="flex rounded-lg overflow-hidden text-xs"
-                style={{ border: "1px solid rgba(245,158,11,0.2)" }}
-              >
-                {(["price", "rating", "uniform"] as BubbleSizeMode[]).map((m) => (
-                  <button
-                    key={m}
-                    onClick={() => setSizeMode(m)}
-                    className="flex-1 py-1.5 transition-colors"
-                    style={{
-                      background: sizeMode === m ? "rgba(245,158,11,0.18)" : "transparent",
-                      color: sizeMode === m ? "#f59e0b" : "rgba(255,255,255,0.35)",
-                      fontWeight: sizeMode === m ? "600" : "400",
-                      borderRight: m !== "uniform" ? "1px solid rgba(245,158,11,0.2)" : undefined,
-                    }}
-                  >
-                    {m === "price" ? "Price" : m === "rating" ? "Rating" : "Equal"}
-                  </button>
-                ))}
-              </div>
+              {(["price", "rating", "uniform"] as BubbleSizeMode[]).map((m) => (
+                <button
+                  key={m}
+                  onClick={() => setSizeMode(m)}
+                  className="flex-1 py-1.5 transition-colors"
+                  style={{
+                    background: sizeMode === m ? "rgba(245,158,11,0.18)" : "transparent",
+                    color: sizeMode === m ? "#f59e0b" : "rgba(255,255,255,0.35)",
+                    fontWeight: sizeMode === m ? "600" : "400",
+                    borderRight: m !== "uniform" ? "1px solid rgba(245,158,11,0.2)" : undefined,
+                  }}
+                >
+                  {m === "price" ? "Price" : m === "rating" ? "Rating" : "Equal"}
+                </button>
+              ))}
             </div>
-          )}
+          </div>
 
           <ColorLegend colorMode={colorMode} onColorModeChange={setColorMode} />
 
-          {/* Stats / Filter panel */}
+          {/* Stats panel */}
           <div
             className="rounded-xl p-4"
             style={{
               background: "rgba(10,10,20,0.85)",
-              border: filterBrand
-                ? "1px solid rgba(245,158,11,0.35)"
-                : "1px solid rgba(245,158,11,0.15)",
+              border: "1px solid rgba(245,158,11,0.15)",
             }}
           >
-            {filterBrand ? (
-              /* Filtered view */
-              <>
-                <div className="flex items-start justify-between mb-3 gap-1">
-                  <p
-                    className="text-xs font-bold leading-tight"
-                    style={{ color: "#f59e0b" }}
-                  >
-                    {filterSubBrand ?? filterBrand}
-                  </p>
-                  <button
-                    onClick={filterSubBrand ? clearSubBrandFilter : clearFilter}
-                    className="text-gray-600 hover:text-gray-300 text-xs flex-shrink-0 transition-colors"
-                    title="Clear filter"
-                  >
-                    ✕
-                  </button>
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
+              Collection
+            </p>
+            <div className="space-y-1.5 text-sm">
+              {[
+                ["Distilleries", WHISKEY_DATA.length],
+                ["Sub-brands", viewStats.subBrands],
+                ["Bottles", viewStats.bottles],
+                ["Rated", Object.keys(ratings).length],
+              ].map(([label, val]) => (
+                <div key={String(label)} className="flex justify-between">
+                  <span className="text-gray-500">{label}</span>
+                  <span className="text-amber-400 font-semibold">{val}</span>
                 </div>
-
-                {viewStats.activeBrand && (
-                  <p className="text-xs text-gray-600 mb-3">
-                    {viewStats.activeBrand.region}
-                    {viewStats.activeBrand.isNDP && (
-                      <span
-                        className="ml-2 font-bold text-[10px] px-1 rounded"
-                        style={{ background: "rgba(245,158,11,0.12)", color: "rgba(245,158,11,0.6)" }}
-                      >
-                        NDP
-                      </span>
-                    )}
-                  </p>
-                )}
-
-                <div className="space-y-1.5 text-sm">
-                  {!filterSubBrand && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-500">Sub-brands</span>
-                      <span className="text-amber-400 font-semibold">{viewStats.subBrands}</span>
-                    </div>
-                  )}
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Bottles</span>
-                    <span className="text-amber-400 font-semibold">{viewStats.bottles}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Rated</span>
-                    <span className="text-amber-400 font-semibold">
-                      {Object.keys(ratings).length}
-                    </span>
-                  </div>
-                </div>
-
-                <button
-                  onClick={clearFilter}
-                  className="mt-3 w-full py-1.5 rounded-lg text-xs transition-colors"
-                  style={{
-                    border: "1px solid rgba(245,158,11,0.2)",
-                    color: "rgba(245,158,11,0.6)",
-                    background: "transparent",
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = "rgba(245,158,11,0.08)";
-                    e.currentTarget.style.color = "#f59e0b";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = "transparent";
-                    e.currentTarget.style.color = "rgba(245,158,11,0.6)";
-                  }}
+              ))}
+              {communityCount > 0 && (
+                <div
+                  className="flex justify-between pt-1"
+                  style={{ borderTop: "1px solid rgba(139,92,246,0.2)" }}
                 >
-                  ← All Distilleries
-                </button>
-              </>
-            ) : (
-              /* Full collection view */
-              <>
-                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
-                  Collection
-                </p>
-                <div className="space-y-1.5 text-sm">
-                  {[
-                    ["Distilleries", WHISKEY_DATA.length],
-                    ["Sub-brands", viewStats.subBrands],
-                    ["Bottles", viewStats.bottles],
-                    ["Rated", Object.keys(ratings).length],
-                  ].map(([label, val]) => (
-                    <div key={String(label)} className="flex justify-between">
-                      <span className="text-gray-500">{label}</span>
-                      <span className="text-amber-400 font-semibold">{val}</span>
-                    </div>
-                  ))}
-                  {communityCount > 0 && (
-                    <div
-                      className="flex justify-between pt-1"
-                      style={{ borderTop: "1px solid rgba(139,92,246,0.2)" }}
-                    >
-                      <span className="text-purple-400 text-xs">Community</span>
-                      <span className="text-purple-400 font-semibold text-xs">+{communityCount}</span>
-                    </div>
-                  )}
+                  <span className="text-purple-400 text-xs">Community</span>
+                  <span className="text-purple-400 font-semibold text-xs">+{communityCount}</span>
                 </div>
-              </>
-            )}
+              )}
+            </div>
           </div>
 
-          {/* Regions (only in distillery full view) */}
-          {groupMode === "distillery" && !filterBrand && (
+          {/* Regions (only in distillery mode) */}
+          {groupMode === "distillery" && (
             <div
               className="rounded-xl p-4"
               style={{

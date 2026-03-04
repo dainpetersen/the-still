@@ -400,8 +400,8 @@ export default function BubbleChart({
     if (isDistilleryMode) {
       for (const [key, pos] of centroids) {
         centroids.set(key, {
-          x: W / 2 + (pos.x - W / 2) * 0.12,
-          y: H / 2 + (pos.y - H / 2) * 0.12,
+          x: W / 2 + (pos.x - W / 2) * 0.30,
+          y: H / 2 + (pos.y - H / 2) * 0.30,
         });
       }
     }
@@ -529,14 +529,23 @@ export default function BubbleChart({
         for (const node of existingNodes) {
           node.r = computeRadius(node, sizeMode);
         }
-        // Update circles
+        // Update circles + clay
         root.selectAll<SVGCircleElement, BubbleNode>("circle.bubble")
           .data(existingNodes, (d) => d.id)
           .transition().duration(300)
           .attr("r", (d) => d.r)
           .attr("fill", colorFn);
+        root.select("g.glow-layer")
+          .selectAll<SVGGElement, string>("g.clay-group")
+          .each(function () {
+            d3.select(this)
+              .selectAll<SVGCircleElement, BubbleNode>("circle.clay-bubble")
+              .data(existingNodes, (d) => d.id)
+              .transition().duration(300)
+              .attr("r", (d) => d.r);
+          });
         // Update collision force + reheat
-        (sim.force("collide") as d3.ForceCollide<BubbleNode>).radius((d) => d.r + 1.5);
+        (sim.force("collide") as d3.ForceCollide<BubbleNode>).radius((d) => d.r + 0.5);
         sim.alpha(0.5).restart();
       }
       return;
@@ -570,13 +579,14 @@ export default function BubbleChart({
     nodesRef.current = newNodes;
 
     // ── D3 simulation ─────────────────────────────────────────────────────────
-    // In distillery mode: tighter packing — stronger attraction, lighter repulsion
-    const forceStrength  = isDistilleryMode ? 0.14 : 0.07;
-    const chargeStrength = isDistilleryMode ? -1   : -3;
+    // In distillery mode: stronger centroid pull + no charge so same-distillery
+    // bubbles pack tight enough for the gooey filter to merge them into clay blobs.
+    const forceStrength  = isDistilleryMode ? 0.28 : 0.07;
+    const chargeStrength = isDistilleryMode ?  0   : -3;
 
     const simulation = d3.forceSimulation<BubbleNode>(newNodes)
       .force("collide",
-        d3.forceCollide<BubbleNode>((d) => d.r + 1).iterations(4)
+        d3.forceCollide<BubbleNode>((d) => d.r + 0.5).iterations(5)
       )
       .force("charge", d3.forceManyBody<BubbleNode>().strength(chargeStrength))
       .force("x",
@@ -660,32 +670,62 @@ export default function BubbleChart({
             .remove()
       );
 
-    // ── Glow circles (blurred, per-bubble, distillery color) ──────────────────
+    // ── SVG <defs> + shared gooey "clay" filter ───────────────────────────────
+    // Classic blur+threshold metaball trick: circles close enough to touch
+    // merge visually into a single blob that deforms as they approach / separate.
+    let defsEl = root.select<SVGDefsElement>("defs");
+    if (defsEl.empty()) defsEl = root.insert<SVGDefsElement>("defs", ":first-child");
+    if (defsEl.select("#gooey-clay").empty()) {
+      const flt = defsEl.append("filter")
+        .attr("id", "gooey-clay")
+        .attr("x", "-30%").attr("y", "-30%")
+        .attr("width", "160%").attr("height", "160%");
+      flt.append("feGaussianBlur")
+        .attr("in", "SourceGraphic").attr("stdDeviation", 6).attr("result", "blur");
+      // Amplify alpha to create sharp merged edges (clay-like surface tension)
+      flt.append("feColorMatrix")
+        .attr("in", "blur").attr("mode", "matrix")
+        .attr("values", "1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 20 -8");
+    }
+
+    // ── Per-distillery clay groups (one <g> per distillery, gooey filter) ─────
+    // Circles within the same group merge into coloured clay when touching.
+    const distGroupKeys = [...new Set(newNodes.map((n) => n.groupKey))];
+    const clayOpacity = isDistilleryMode ? 0.72 : 0;
+
     glowG
-      .selectAll<SVGCircleElement, BubbleNode>("circle.glow-bubble")
-      .data(newNodes, (d) => d.id)
+      .selectAll<SVGGElement, string>("g.clay-group")
+      .data(distGroupKeys, (g) => g)
       .join(
         (enter) =>
-          enter
-            .append("circle")
-            .attr("class", "glow-bubble")
-            .attr("cx", (d) => d.x ?? W / 2)
-            .attr("cy", (d) => d.y ?? H / 2)
-            .attr("r",  (d) => d.r * 1.6)
-            .attr("fill", (d) => distColors.get(d.groupKey) ?? "rgba(255,255,255,0.2)")
-            .attr("opacity", 0)
-            .style("filter", "blur(10px)")
+          enter.append("g").attr("class", "clay-group")
+            .attr("filter", "url(#gooey-clay)")
+            .attr("fill", (g) => distColors.get(g) ?? "#ffffff")
             .style("pointer-events", "none")
-            .call((e) => e.transition().duration(400).attr("opacity", glowOpacity)),
+            .attr("opacity", 0)
+            .call((e) => e.transition().duration(400).attr("opacity", clayOpacity)),
         (update) =>
           update
-            .attr("r",  (d) => d.r * 1.6)
-            .attr("fill", (d) => distColors.get(d.groupKey) ?? "rgba(255,255,255,0.2)")
-            .call((u) => u.transition().duration(300).attr("opacity", glowOpacity)),
+            .attr("fill", (g) => distColors.get(g) ?? "#ffffff")
+            .call((u) => u.transition().duration(300).attr("opacity", clayOpacity)),
         (exit) =>
-          exit
-            .call((e) => e.transition().duration(200).attr("opacity", 0).remove())
-      );
+          exit.call((e) => e.transition().duration(200).attr("opacity", 0).remove())
+      )
+      .each(function (distKey) {
+        const distNodes = newNodes.filter((n) => n.groupKey === distKey);
+        d3.select(this)
+          .selectAll<SVGCircleElement, BubbleNode>("circle.clay-bubble")
+          .data(distNodes, (d) => d.id)
+          .join(
+            (enter) =>
+              enter.append("circle").attr("class", "clay-bubble")
+                .attr("cx", (d) => d.x ?? W / 2)
+                .attr("cy", (d) => d.y ?? H / 2)
+                .attr("r",  (d) => d.r),
+            (update) => update.attr("r", (d) => d.r),
+            (exit)   => exit.attr("r", 0).remove()
+          );
+      });
 
     // Flag icons (one per bubble, shown on hover)
     let flagHideTimeout: ReturnType<typeof setTimeout> | null = null;
@@ -774,10 +814,12 @@ export default function BubbleChart({
         .selectAll<SVGCircleElement, BubbleNode>("circle.bubble")
         .attr("cx", (d) => d.x ?? 0)
         .attr("cy", (d) => d.y ?? 0);
-      glowG
-        .selectAll<SVGCircleElement, BubbleNode>("circle.glow-bubble")
-        .attr("cx", (d) => d.x ?? 0)
-        .attr("cy", (d) => d.y ?? 0);
+      glowG.selectAll<SVGGElement, string>("g.clay-group").each(function () {
+        d3.select(this)
+          .selectAll<SVGCircleElement, BubbleNode>("circle.clay-bubble")
+          .attr("cx", (d) => d.x ?? 0)
+          .attr("cy", (d) => d.y ?? 0);
+      });
       flagsG
         .selectAll<SVGTextElement, BubbleNode>("text.flag-btn")
         .attr("x", (d) => (d.x ?? 0) + d.r * 0.45)
@@ -965,11 +1007,20 @@ export default function BubbleChart({
       .selectAll<SVGCircleElement, BubbleNode>("circle.bubble");
     if (!bubbles.size()) return;
 
+    const clayLayer = d3.select(svg).select("g.glow-layer");
+
+    const updateClay = (matchFn: ((d: BubbleNode) => boolean) | null) => {
+      clayLayer.selectAll<SVGGElement, string>("g.clay-group").each(function () {
+        d3.select(this)
+          .selectAll<SVGCircleElement, BubbleNode>("circle.clay-bubble")
+          .transition().duration(250)
+          .attr("r", (d) => (matchFn === null || matchFn(d)) ? d.r : 0);
+      });
+    };
+
     if (!q) {
-      bubbles
-        .transition().duration(250)
-        .attr("opacity", 1)
-        .attr("r", (d) => d.r);
+      bubbles.transition().duration(250).attr("opacity", 1).attr("r", (d) => d.r);
+      updateClay(null); // restore all clay circles
     } else {
       const matches = (d: BubbleNode) =>
         d.name.toLowerCase().includes(q) ||
@@ -980,6 +1031,7 @@ export default function BubbleChart({
         .transition().duration(250)
         .attr("opacity", (d) => (matches(d) ? 1 : 0.1))
         .attr("r",       (d) => (matches(d) ? d.r : d.r * 0.4));
+      updateClay(matches); // collapse non-matching clay circles to r=0
     }
   }, [searchQuery]);
 

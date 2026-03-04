@@ -39,3 +39,5 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+reddit-reviews-raw.json
+reddit-reviews-clean.json

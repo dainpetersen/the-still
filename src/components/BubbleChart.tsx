@@ -11,6 +11,7 @@ import {
   WhiskeyStyle,
 } from "@/types/whiskey";
 import { getAgeTier, getPriceTier } from "@/data/whiskeys";
+import { buildDistilleryColors } from "@/lib/distilleryColors";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -46,6 +47,7 @@ interface Props {
   onBottleFlag?: (id: string, name: string) => void;
   ratings: Record<string, { avg: number; count: number }>;
   searchQuery?: string;
+  distilleryColors?: Map<string, string>;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -151,12 +153,20 @@ function estimatedClusterRadius(count: number, avgR: number): number {
 
 // ── Halo helpers ──────────────────────────────────────────────────────────────
 
+function hexToRgba(hex: string, alpha: number): string {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
 type HaloDatum = { key: string; cx: number; cy: number; r: number };
 
 function updateHalos(
   halosG: d3.Selection<SVGGElement, unknown, null, undefined>,
   nodes: BubbleNode[],
-  showHalos: boolean
+  showHalos: boolean,
+  colorMap?: Map<string, string>
 ): void {
   if (!showHalos) {
     halosG.selectAll<SVGCircleElement, HaloDatum>("circle.halo")
@@ -206,8 +216,14 @@ function updateHalos(
           .attr("cx", (d) => d.cx)
           .attr("cy", (d) => d.cy)
           .attr("r",  (d) => d.r)
-          .attr("fill",         "rgba(245,158,11,0.055)")
-          .attr("stroke",       "rgba(245,158,11,0.13)")
+          .attr("fill",   (d) => {
+            const base = colorMap?.get(d.key);
+            return base ? hexToRgba(base, 0.06) : "rgba(245,158,11,0.055)";
+          })
+          .attr("stroke", (d) => {
+            const base = colorMap?.get(d.key);
+            return base ? hexToRgba(base, 0.18) : "rgba(245,158,11,0.13)";
+          })
           .attr("stroke-width", 1)
           .attr("opacity", 0)
           .call((e) => e.transition().duration(400).attr("opacity", 1)),
@@ -215,7 +231,15 @@ function updateHalos(
         update
           .attr("cx", (d) => d.cx)
           .attr("cy", (d) => d.cy)
-          .attr("r",  (d) => d.r),
+          .attr("r",  (d) => d.r)
+          .attr("fill",   (d) => {
+            const base = colorMap?.get(d.key);
+            return base ? hexToRgba(base, 0.06) : "rgba(245,158,11,0.055)";
+          })
+          .attr("stroke", (d) => {
+            const base = colorMap?.get(d.key);
+            return base ? hexToRgba(base, 0.18) : "rgba(245,158,11,0.13)";
+          }),
       (exit) =>
         exit.transition().duration(250).attr("opacity", 0).remove()
     );
@@ -232,6 +256,7 @@ export default function BubbleChart({
   onBottleFlag,
   ratings,
   searchQuery,
+  distilleryColors,
 }: Props) {
   const svgRef   = useRef<SVGSVGElement>(null);
   const wrapRef  = useRef<HTMLDivElement>(null);
@@ -365,6 +390,21 @@ export default function BubbleChart({
     const newNodes = buildNodes(brands, groupMode, sizeMode);
     const groups   = canonicalOrder([...new Set(newNodes.map((n) => n.groupKey))], groupMode);
     const centroids = computeCentroids(groups, W, H);
+
+    const isDistilleryMode = groupMode === "distillery";
+    const distColors = distilleryColors ?? buildDistilleryColors(brands);
+    const glowOpacity = isDistilleryMode ? 0.35 : 0;
+
+    // In distillery mode, pull all cluster centers 65% closer to chart center
+    // so all bubbles form one big central cloud with gentle per-distillery drift
+    if (isDistilleryMode) {
+      for (const [key, pos] of centroids) {
+        centroids.set(key, {
+          x: W / 2 + (pos.x - W / 2) * 0.35,
+          y: H / 2 + (pos.y - H / 2) * 0.35,
+        });
+      }
+    }
 
     const colorFn = getColorFn(colorMode, ratingsRef.current);
 
@@ -541,13 +581,19 @@ export default function BubbleChart({
 
     simRef.current = simulation;
 
-    // ── Halos layer (behind bubbles, only in distillery mode) ─────────────────
+    // ── Halos layer (behind everything else) ──────────────────────────────────
     let halosG = root.select<SVGGElement>("g.halos-layer");
     if (halosG.empty()) {
       const bl = root.select("g.bubbles-layer");
       halosG = bl.empty()
         ? root.append("g").attr("class", "halos-layer")
         : root.insert("g", "g.bubbles-layer").attr("class", "halos-layer");
+    }
+
+    // ── Glow layer (per-bubble colored glow, behind bubbles) ──────────────────
+    let glowG = root.select<SVGGElement>("g.glow-layer");
+    if (glowG.empty()) {
+      glowG = root.append("g").attr("class", "glow-layer");
     }
 
     // ── Bubbles layer ─────────────────────────────────────────────────────────
@@ -593,6 +639,33 @@ export default function BubbleChart({
             .attr("opacity", 0)
             .attr("r", 0)
             .remove()
+      );
+
+    // ── Glow circles (blurred, per-bubble, distillery color) ──────────────────
+    glowG
+      .selectAll<SVGCircleElement, BubbleNode>("circle.glow-bubble")
+      .data(newNodes, (d) => d.id)
+      .join(
+        (enter) =>
+          enter
+            .append("circle")
+            .attr("class", "glow-bubble")
+            .attr("cx", (d) => d.x ?? W / 2)
+            .attr("cy", (d) => d.y ?? H / 2)
+            .attr("r",  (d) => d.r * 1.6)
+            .attr("fill", (d) => distColors.get(d.groupKey) ?? "rgba(255,255,255,0.2)")
+            .attr("opacity", 0)
+            .style("filter", "blur(10px)")
+            .style("pointer-events", "none")
+            .call((e) => e.transition().duration(400).attr("opacity", glowOpacity)),
+        (update) =>
+          update
+            .attr("r",  (d) => d.r * 1.6)
+            .attr("fill", (d) => distColors.get(d.groupKey) ?? "rgba(255,255,255,0.2)")
+            .call((u) => u.transition().duration(300).attr("opacity", glowOpacity)),
+        (exit) =>
+          exit
+            .call((e) => e.transition().duration(200).attr("opacity", 0).remove())
       );
 
     // Flag icons (one per bubble, shown on hover)
@@ -664,8 +737,10 @@ export default function BubbleChart({
         onBottleClickRef.current(d);
       });
 
-    // Enforce layer order: halos (back) → bubbles → flags → labels (front)
+    // Enforce layer order: halos (back) → glow → bubbles → flags → labels (front)
     root.select("g.halos-layer").lower();
+    root.select("g.glow-layer").raise();
+    root.select("g.bubbles-layer").raise();
     root.select("g.flags-layer").raise();
     root.select("g.labels-layer").raise();
 
@@ -679,20 +754,24 @@ export default function BubbleChart({
         .selectAll<SVGCircleElement, BubbleNode>("circle.bubble")
         .attr("cx", (d) => d.x ?? 0)
         .attr("cy", (d) => d.y ?? 0);
+      glowG
+        .selectAll<SVGCircleElement, BubbleNode>("circle.glow-bubble")
+        .attr("cx", (d) => d.x ?? 0)
+        .attr("cy", (d) => d.y ?? 0);
       flagsG
         .selectAll<SVGTextElement, BubbleNode>("text.flag-btn")
         .attr("x", (d) => (d.x ?? 0) + d.r * 0.45)
         .attr("y", (d) => (d.y ?? 0) - d.r * 0.5);
       // Update halos every 5 ticks (distillery mode only)
       if (++tickN % 5 === 0) {
-        updateHalos(halosG, newNodes, groupMode === "distillery");
+        updateHalos(halosG, newNodes, isDistilleryMode, distColors);
       }
     });
 
     // When sim settles, update halos + label positions (more accurate centroid)
     simulation.on("end", () => {
       // Final halo update with settled positions
-      updateHalos(halosG, newNodes, groupMode === "distillery");
+      updateHalos(halosG, newNodes, isDistilleryMode, distColors);
 
       // Recompute label Y positions from actual node positions
       const groupMinY = new Map<string, number>();
@@ -727,6 +806,14 @@ export default function BubbleChart({
       if (sim && nodesRef.current.length > 0) {
         const groups    = canonicalOrder([...new Set(nodesRef.current.map((n) => n.groupKey))], groupMode);
         const centroids = computeCentroids(groups, W, H);
+        if (groupMode === "distillery") {
+          for (const [key, pos] of centroids) {
+            centroids.set(key, {
+              x: W / 2 + (pos.x - W / 2) * 0.35,
+              y: H / 2 + (pos.y - H / 2) * 0.35,
+            });
+          }
+        }
         (sim.force("x") as d3.ForceX<BubbleNode>)
           .x((d) => centroids.get(d.groupKey)?.x ?? W / 2);
         (sim.force("y") as d3.ForceY<BubbleNode>)

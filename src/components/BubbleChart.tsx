@@ -151,6 +151,14 @@ function estimatedClusterRadius(count: number, avgR: number): number {
   return Math.sqrt(count * Math.PI * avgR * avgR) * 1.1;
 }
 
+// ── Gradient helpers ──────────────────────────────────────────────────────────
+
+// Sanitize a bottle ID for use as an SVG element id (community IDs can have
+// spaces or special chars when the sub-brand name is embedded in the slug).
+function rgId(id: string): string {
+  return `rg-${id.replace(/[^a-zA-Z0-9_-]/g, "_")}`;
+}
+
 // ── Halo helpers ──────────────────────────────────────────────────────────────
 
 function hexToRgba(hex: string, alpha: number): string {
@@ -512,11 +520,18 @@ export default function BubbleChart({
       }
     };
 
-    // ── If only color changed, re-fill circles and return ────────────────────
+    // ── If only color changed, update gradient stop-colours and return ────────
+    // Bubble fill attributes stay as url(#rg-…); we just retune the gradient stops.
     if (colorChanged && !groupChanged && !sizeChanged && !isFirstRender) {
-      root.selectAll<SVGCircleElement, BubbleNode>("circle.bubble")
-        .transition().duration(400)
-        .attr("fill", colorFn);
+      const defsEl = root.select<SVGDefsElement>("defs");
+      for (const n of nodesRef.current) {
+        const c = colorFn(n);
+        defsEl
+          .select<SVGRadialGradientElement>(`[id="${rgId(n.id)}"]`)
+          .selectAll<SVGStopElement, unknown>("stop")
+          .transition().duration(400)
+          .attr("stop-color", c);
+      }
       return;
     }
 
@@ -533,8 +548,8 @@ export default function BubbleChart({
         root.selectAll<SVGCircleElement, BubbleNode>("circle.bubble")
           .data(existingNodes, (d) => d.id)
           .transition().duration(300)
-          .attr("r", (d) => d.r)
-          .attr("fill", colorFn);
+          .attr("r", (d) => d.r);
+        // Gradient uses objectBoundingBox units → auto-scales; no fill update needed.
         root.select("g.glow-layer")
           .selectAll<SVGGElement, string>("g.clay-group")
           .each(function () {
@@ -648,7 +663,7 @@ export default function BubbleChart({
             .attr("r", (d) => d.r)
             .attr("cx", (d) => d.x ?? W / 2)
             .attr("cy", (d) => d.y ?? H / 2)
-            .attr("fill", colorFn)
+            .attr("fill", (d) => `url(#${rgId(d.id)})`)
             .attr("stroke", (d) =>
               d.source === "community" ? "rgba(139,92,246,0.8)" : "rgba(255,255,255,0.08)"
             )
@@ -660,7 +675,7 @@ export default function BubbleChart({
         (update) =>
           update
             .attr("r", (d) => d.r)
-            .attr("fill", colorFn)
+            .attr("fill", (d) => `url(#${rgId(d.id)})`)
             .attr("opacity", 1),
         (exit) =>
           exit
@@ -686,6 +701,26 @@ export default function BubbleChart({
       flt.append("feColorMatrix")
         .attr("in", "blur").attr("mode", "matrix")
         .attr("values", "1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 20 -8");
+    }
+
+    // ── Per-bubble radial gradients ────────────────────────────────────────────
+    // Each bubble gets a <radialGradient> that fades from full colour at the
+    // centre (100% opacity) to ~60% at the perimeter. This lets the coloured
+    // clay blobs underneath bleed through visually at the bubble edges,
+    // giving the "meatball" cloud a more organic, merged look.
+    // gradientUnits="objectBoundingBox" means the gradient auto-scales with
+    // each circle's radius — no update needed when bubble sizes change.
+    defsEl.selectAll<SVGRadialGradientElement, unknown>("radialGradient.bubble-rg").remove();
+    for (const n of newNodes) {
+      const c = colorFn(n);
+      const rg = defsEl.append("radialGradient")
+        .attr("class", "bubble-rg")
+        .attr("id",    rgId(n.id))
+        .attr("gradientUnits", "objectBoundingBox")
+        .attr("cx", "50%").attr("cy", "50%").attr("r", "50%");
+      rg.append("stop").attr("offset",   "0%").attr("stop-color", c).attr("stop-opacity", "1");
+      rg.append("stop").attr("offset",  "72%").attr("stop-color", c).attr("stop-opacity", "0.88");
+      rg.append("stop").attr("offset", "100%").attr("stop-color", c).attr("stop-opacity", "0.60");
     }
 
     // ── Per-distillery clay groups (one <g> per distillery, gooey filter) ─────

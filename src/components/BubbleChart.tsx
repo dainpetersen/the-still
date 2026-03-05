@@ -401,13 +401,15 @@ export default function BubbleChart({
     const distColors = distilleryColors ?? buildDistilleryColors(brands);
     const glowOpacity = isDistilleryMode ? 0.35 : 0;
 
-    // In distillery mode, pull all cluster centers very close to chart center
-    // so all bubbles pack into one tight circular cloud (NYT-style)
+    // In distillery mode, pull all cluster centers close to chart center so all
+    // bubbles form one circular cloud. 0.20 (vs 0.10) gives each distillery a
+    // slightly more distinct home-base, which the custom cluster force below
+    // reinforces so same-brand bubbles end up touching.
     if (isDistilleryMode) {
       for (const [key, pos] of centroids) {
         centroids.set(key, {
-          x: W / 2 + (pos.x - W / 2) * 0.10,
-          y: H / 2 + (pos.y - H / 2) * 0.10,
+          x: W / 2 + (pos.x - W / 2) * 0.20,
+          y: H / 2 + (pos.y - H / 2) * 0.20,
         });
       }
     }
@@ -604,6 +606,31 @@ export default function BubbleChart({
     const forceStrength  = isDistilleryMode ? 0.40 : 0.07;
     const chargeStrength = isDistilleryMode ?  0   : -3;
 
+    // ── Custom dynamic cluster force ──────────────────────────────────────────
+    // On every tick, compute the live average position of each group and pull
+    // each bubble toward it.  This is O(n) and guarantees same-brand bubbles
+    // converge on each other (rather than just a static map point), so they
+    // end up touching regardless of how many other distilleries share the cloud.
+    const clusterStrength = isDistilleryMode ? 0.45 : 0.10;
+    const clusteringForce = (alpha: number) => {
+      const sums = new Map<string, { sx: number; sy: number; count: number }>();
+      for (const n of newNodes) {
+        if (n.x == null || n.y == null) continue;
+        const s = sums.get(n.groupKey) ?? { sx: 0, sy: 0, count: 0 };
+        s.sx += n.x; s.sy += n.y; s.count++;
+        sums.set(n.groupKey, s);
+      }
+      for (const n of newNodes) {
+        if (n.x == null || n.y == null) continue;
+        const s = sums.get(n.groupKey);
+        if (!s || s.count <= 1) continue;
+        const cx = s.sx / s.count;
+        const cy = s.sy / s.count;
+        n.vx = (n.vx ?? 0) + (cx - n.x) * clusterStrength * alpha;
+        n.vy = (n.vy ?? 0) + (cy - n.y) * clusterStrength * alpha;
+      }
+    };
+
     const simulation = d3.forceSimulation<BubbleNode>(newNodes)
       .force("collide",
         d3.forceCollide<BubbleNode>((d) => d.r + 0.5).iterations(5)
@@ -615,6 +642,8 @@ export default function BubbleChart({
       .force("y",
         d3.forceY<BubbleNode>((d) => centroids.get(d.groupKey)?.y ?? H / 2).strength(forceStrength)
       )
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .force("cluster", clusteringForce as any)
       .alphaDecay(0.015)
       .velocityDecay(0.3);
 

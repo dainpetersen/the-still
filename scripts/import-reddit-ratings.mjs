@@ -27,6 +27,36 @@ import { createClient } from "@supabase/supabase-js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
+// ── CSV parser ────────────────────────────────────────────────────────────────
+function parseCsv(text) {
+  const lines = text.trim().split("\n");
+  const headers = lines[0].split(",").map((h) => h.trim().replace(/^"|"$/g, ""));
+  return lines.slice(1).map((line) => {
+    // Handle quoted fields containing commas
+    const fields = [];
+    let cur = "", inQuote = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (ch === '"' && !inQuote)          { inQuote = true; }
+      else if (ch === '"' && inQuote) {
+        if (line[i + 1] === '"')           { cur += '"'; i++; }
+        else                               { inQuote = false; }
+      } else if (ch === "," && !inQuote)   { fields.push(cur); cur = ""; }
+      else                                 { cur += ch; }
+    }
+    fields.push(cur);
+    const obj = {};
+    headers.forEach((h, i) => {
+      const v = (fields[i] ?? "").trim();
+      obj[h] = v === "" ? null : v;
+    });
+    // Coerce numeric fields
+    if (obj.rating_raw != null) obj.rating_raw = parseFloat(obj.rating_raw);
+    if (obj.score      != null) obj.score      = parseInt(obj.score, 10);
+    return obj;
+  }).filter((r) => r.reddit_id); // skip blank rows
+}
+
 // ── Load .env.local ───────────────────────────────────────────────────────────
 function loadEnv() {
   const envPath = path.join(__dirname, "..", ".env.local");
@@ -48,17 +78,22 @@ function loadEnv() {
 async function main() {
   loadEnv();
 
-  const inputFile = process.argv[2]
-    ?? path.join(__dirname, "reddit-reviews-clean.json");
+  // Accept .csv or .json — default tries clean.csv first, then clean.json
+  const inputFile = process.argv[2] ?? (
+    fs.existsSync(path.join(__dirname, "reddit-reviews-clean.csv"))
+      ? path.join(__dirname, "reddit-reviews-clean.csv")
+      : path.join(__dirname, "reddit-reviews-clean.json")
+  );
 
   if (!fs.existsSync(inputFile)) {
     console.error(`✗ File not found: ${inputFile}`);
-    console.error("  Run fetch-reddit-reviews.mjs first, clean the output,");
-    console.error("  then save it as reddit-reviews-clean.json");
+    console.error("  Expected: scripts/reddit-reviews-clean.csv  (or .json)");
     process.exit(1);
   }
 
-  const rows = JSON.parse(fs.readFileSync(inputFile, "utf8"));
+  const rows = inputFile.endsWith(".csv")
+    ? parseCsv(fs.readFileSync(inputFile, "utf8"))
+    : JSON.parse(fs.readFileSync(inputFile, "utf8"));
   console.log(`Loaded ${rows.length} rows from ${inputFile}`);
 
   // ── Validation ──────────────────────────────────────────────────────────────

@@ -1,4 +1,5 @@
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
+import { unstable_noStore as noStore } from "next/cache";
 import { Brand, Bottle, SubBrand, Submission, SubmissionData, SubmissionType, Profile, WhiskeyStyle } from "@/types/whiskey";
 
 // ── Browser (authenticated) client ────────────────────────────────────────────
@@ -227,6 +228,7 @@ export async function submitCorrection(payload: {
 // ── Admin functions (use service role client) ─────────────────────────────────
 
 export async function fetchPendingSubmissions(): Promise<Submission[]> {
+  noStore(); // Always fetch live — never serve a cached result
   const client = getServiceClient();
   if (!client) throw new Error("SUPABASE_SERVICE_ROLE_KEY is not configured");
   const { data, error } = await client
@@ -239,6 +241,7 @@ export async function fetchPendingSubmissions(): Promise<Submission[]> {
 }
 
 export async function fetchReviewedSubmissions(): Promise<Submission[]> {
+  noStore(); // Always fetch live — never serve a cached result
   const client = getServiceClient();
   if (!client) throw new Error("SUPABASE_SERVICE_ROLE_KEY is not configured");
   const { data, error } = await client

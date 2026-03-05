@@ -2,6 +2,9 @@ import { fetchPendingSubmissions, fetchReviewedSubmissions } from "@/lib/supabas
 import { Submission, SubmissionData } from "@/types/whiskey";
 import AdminActions from "./AdminActions";
 
+// Always fetch fresh data — never serve a cached version of the admin page
+export const dynamic = "force-dynamic";
+
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("en-US", {
     month: "short",

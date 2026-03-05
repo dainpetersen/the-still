@@ -44,7 +44,6 @@ interface Props {
   groupMode: GroupMode;
   sizeMode: BubbleSizeMode;
   onBottleClick: (node: BubbleNode) => void;
-  onBottleFlag?: (id: string, name: string) => void;
   ratings: Record<string, { avg: number; count: number }>;
   searchQuery?: string;
   distilleryColors?: Map<string, string>;
@@ -261,7 +260,6 @@ export default function BubbleChart({
   groupMode,
   sizeMode,
   onBottleClick,
-  onBottleFlag,
   ratings,
   searchQuery,
   distilleryColors,
@@ -279,9 +277,6 @@ export default function BubbleChart({
   // Keep stable refs for callbacks (avoid sim re-init on every render)
   const onBottleClickRef = useRef(onBottleClick);
   onBottleClickRef.current = onBottleClick;
-
-  const onBottleFlagRef = useRef(onBottleFlag);
-  onBottleFlagRef.current = onBottleFlag;
 
   const ratingsRef = useRef(ratings);
   ratingsRef.current = ratings;
@@ -636,12 +631,6 @@ export default function BubbleChart({
       bubblesG = root.append("g").attr("class", "bubbles-layer");
     }
 
-    // ── Flags layer (report-error icons shown on bubble hover) ───────────────
-    let flagsG = root.select<SVGGElement>("g.flags-layer");
-    if (flagsG.empty()) {
-      flagsG = root.append("g").attr("class", "flags-layer");
-    }
-
     // ── Lines layer (leader lines from labels to clusters, distillery mode) ───
     let linesG = root.select<SVGGElement>("g.lines-layer");
     if (linesG.empty()) {
@@ -762,80 +751,20 @@ export default function BubbleChart({
           );
       });
 
-    // Flag icons (one per bubble, shown on hover)
-    let flagHideTimeout: ReturnType<typeof setTimeout> | null = null;
-
-    flagsG
-      .selectAll<SVGTextElement, BubbleNode>("text.flag-btn")
-      .data(newNodes, (d) => d.id)
-      .join(
-        (enter) =>
-          enter
-            .append("text")
-            .attr("class", "flag-btn")
-            .attr("text-anchor", "middle")
-            .attr("fill", "rgba(255,255,255,0.45)")
-            .attr("font-size", "10px")
-            .attr("font-family", "system-ui, sans-serif")
-            .style("pointer-events", "all")
-            .style("cursor", "pointer")
-            .style("user-select", "none")
-            .attr("opacity", 0)
-            .attr("x", (d) => (d.x ?? W / 2) + d.r * 0.45)
-            .attr("y", (d) => (d.y ?? H / 2) - d.r * 0.5)
-            .text("⚑"),
-        (update) => update,
-        (exit) => exit.remove()
-      )
-      .on("click", (event: MouseEvent, d) => {
-        event.stopPropagation();
-        if (flagHideTimeout) clearTimeout(flagHideTimeout);
-        onBottleFlagRef.current?.(d.id, d.name);
-      })
-      .on("mouseover", function (this: SVGTextElement) {
-        if (flagHideTimeout) clearTimeout(flagHideTimeout);
-        d3.select(this).attr("fill", "#f59e0b").attr("opacity", 1);
-      })
-      .on("mouseout", function (this: SVGTextElement, _event: MouseEvent, d: BubbleNode) {
-        flagHideTimeout = setTimeout(() => {
-          flagsG
-            .selectAll<SVGTextElement, BubbleNode>("text.flag-btn")
-            .filter((fd) => fd.id === d.id)
-            .attr("opacity", 0)
-            .attr("fill", "rgba(255,255,255,0.45)");
-        }, 120);
-      });
-
     // Events
     circles
-      .on("mouseover", (event: MouseEvent, d) => {
-        showTooltip(event, d);
-        if (flagHideTimeout) clearTimeout(flagHideTimeout);
-        flagsG
-          .selectAll<SVGTextElement, BubbleNode>("text.flag-btn")
-          .filter((fd) => fd.id === d.id)
-          .attr("opacity", 0.7);
-      })
+      .on("mouseover", (event: MouseEvent, d) => { showTooltip(event, d); })
       .on("mousemove", (event: MouseEvent) => moveTooltip(event))
-      .on("mouseout",  (_event: MouseEvent, d: BubbleNode) => {
-        hideTooltip();
-        flagHideTimeout = setTimeout(() => {
-          flagsG
-            .selectAll<SVGTextElement, BubbleNode>("text.flag-btn")
-            .filter((fd) => fd.id === d.id)
-            .attr("opacity", 0);
-        }, 120);
-      })
+      .on("mouseout",  () => { hideTooltip(); })
       .on("click",     (event: MouseEvent, d) => {
         event.stopPropagation();
         onBottleClickRef.current(d);
       });
 
-    // Enforce layer order: halos (back) → glow → bubbles → flags → lines → labels (front)
+    // Enforce layer order: halos (back) → glow → bubbles → lines → labels (front)
     root.select("g.halos-layer").lower();
     root.select("g.glow-layer").raise();
     root.select("g.bubbles-layer").raise();
-    root.select("g.flags-layer").raise();
     root.select("g.lines-layer").raise();
     root.select("g.labels-layer").raise();
 
@@ -855,10 +784,6 @@ export default function BubbleChart({
           .attr("cx", (d) => d.x ?? 0)
           .attr("cy", (d) => d.y ?? 0);
       });
-      flagsG
-        .selectAll<SVGTextElement, BubbleNode>("text.flag-btn")
-        .attr("x", (d) => (d.x ?? 0) + d.r * 0.45)
-        .attr("y", (d) => (d.y ?? 0) - d.r * 0.5);
       if (++tickN % 5 === 0) {
         updateHalos(halosG, newNodes, false);
       }

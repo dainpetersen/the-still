@@ -18,6 +18,7 @@ interface Props {
   bottle: BottleInfo | null;
   onClose: () => void;
   onRatingSubmitted: () => void;
+  onFlag?: () => void;
   userId?: string;
 }
 
@@ -31,7 +32,7 @@ interface ReviewEntry {
 
 const STARS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 
-export default function RatingModal({ bottle, onClose, onRatingSubmitted, userId }: Props) {
+export default function RatingModal({ bottle, onClose, onRatingSubmitted, onFlag, userId }: Props) {
   const [rating, setRating] = useState(0);
   const [hovered, setHovered] = useState(0);
   const [nose, setNose] = useState("");
@@ -127,6 +128,15 @@ export default function RatingModal({ bottle, onClose, onRatingSubmitted, userId
             ×
           </button>
           <h2 className="text-lg font-bold text-amber-400 pr-8 leading-tight">{bottle.name}</h2>
+          {onFlag && (
+            <button
+              onClick={() => { onClose(); onFlag(); }}
+              className="mt-1 text-xs text-gray-600 hover:text-gray-400 transition-colors"
+              title="Report incorrect information"
+            >
+              ⚑ Report an error
+            </button>
+          )}
           <div className="flex flex-wrap gap-2 mt-2 text-sm">
             {bottle.price !== undefined && (
               <span className="text-gray-300">💰 ${bottle.price.toLocaleString()}</span>

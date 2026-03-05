@@ -313,7 +313,6 @@ export default function Home() {
               if (!user) { setShowAuth(true); return; }
               setSelectedBottle(node as unknown as BottleNode);
             }}
-            onBottleFlag={(id, name) => setFlaggedBottle({ id, name })}
             ratings={ratings}
             searchQuery={searchQuery}
             distilleryColors={distilleryColors}
@@ -548,6 +547,10 @@ export default function Home() {
           }}
           onClose={() => setSelectedBottle(null)}
           onRatingSubmitted={loadData}
+          onFlag={() => {
+            if (selectedBottle?.id) setFlaggedBottle({ id: selectedBottle.id, name: selectedBottle.name });
+            setSelectedBottle(null);
+          }}
           userId={user?.id}
         />
       )}

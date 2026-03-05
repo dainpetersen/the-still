@@ -48,6 +48,7 @@ function getColorScale(colorMode: ColorMode) {
     case "rating":
       return d3.scaleSequential(d3.interpolate("#374151", "#f59e0b")).domain([1, 10]);
     case "rarity":
+    default:
       return d3.scaleSequential(d3.interpolate("#fef9c3", "#9f1239")).domain([0, 100]);
   }
 }
@@ -63,6 +64,7 @@ function getNodeValue(
     case "price":   return d.price ?? null;
     case "rating":  return d.id ? (ratings[d.id]?.avg ?? null) : null;
     case "rarity":  return d.rarityScore ?? null;
+    default:        return null;
   }
 }
 

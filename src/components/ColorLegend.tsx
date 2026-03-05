@@ -6,12 +6,14 @@ import { ColorMode } from "@/types/whiskey";
 interface Props {
   colorMode: ColorMode;
   onColorModeChange: (mode: ColorMode) => void;
+  distilleryColors?: Map<string, string>;
 }
 
 const MODES: { value: ColorMode; label: string; emoji: string }[] = [
-  { value: "price", label: "Price", emoji: "💰" },
+  { value: "price",  label: "Price",  emoji: "💰" },
   { value: "rating", label: "Rating", emoji: "⭐" },
   { value: "rarity", label: "Rarity", emoji: "💎" },
+  { value: "brand",  label: "Brand",  emoji: "🏭" },
 ];
 
 function GradientBar({ colorMode }: { colorMode: ColorMode }) {
@@ -81,7 +83,33 @@ function GradientBar({ colorMode }: { colorMode: ColorMode }) {
   );
 }
 
-export default function ColorLegend({ colorMode, onColorModeChange }: Props) {
+function BrandLegend({ distilleryColors }: { distilleryColors: Map<string, string> }) {
+  return (
+    <div className="mt-2 space-y-1.5 overflow-y-auto" style={{ maxHeight: 180 }}>
+      {[...distilleryColors.entries()].map(([name, color]) => (
+        <div key={name} className="flex items-center gap-2">
+          <div
+            className="flex-shrink-0 rounded-full"
+            style={{
+              width: 10,
+              height: 10,
+              background: color,
+              boxShadow: `0 0 5px 1px ${color}66`,
+            }}
+          />
+          <span
+            className="text-xs truncate"
+            style={{ color: "rgba(255,255,255,0.55)" }}
+          >
+            {name}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export default function ColorLegend({ colorMode, onColorModeChange, distilleryColors }: Props) {
   return (
     <div
       className="rounded-xl p-4 select-none"
@@ -114,8 +142,12 @@ export default function ColorLegend({ colorMode, onColorModeChange }: Props) {
         ))}
       </div>
 
-      {/* Gradient legend */}
-      <GradientBar colorMode={colorMode} />
+      {/* Legend — gradient for price/rating/rarity; dot list for brand */}
+      {colorMode === "brand" && distilleryColors ? (
+        <BrandLegend distilleryColors={distilleryColors} />
+      ) : colorMode !== "brand" ? (
+        <GradientBar colorMode={colorMode} />
+      ) : null}
     </div>
   );
 }

@@ -94,13 +94,15 @@ function computeRadius(node: BubbleNode, mode: BubbleSizeMode): number {
 
 function getColorFn(
   mode: ColorMode,
-  ratings: Record<string, { avg: number; count: number }>
+  ratings: Record<string, { avg: number; count: number }>,
+  distColors?: Map<string, string>
 ): (d: BubbleNode) => string {
   const priceScale = d3.scaleSequentialLog(d3.interpolate("#d1fae5", "#14532d")).domain([15, 3500]).clamp(true);
   const ratingScale = d3.scaleSequential(d3.interpolate("#374151", "#f59e0b")).domain([1, 10]);
   const rarityScale = d3.scaleSequential(d3.interpolate("#fef9c3", "#9f1239")).domain([0, 100]);
 
   return (d: BubbleNode) => {
+    if (mode === "brand")  return distColors?.get(d.brandName) ?? "#6b7280";
     if (mode === "price")  return d.price ? priceScale(d.price) : "#1f2937";
     if (mode === "rarity") return rarityScale(d.rarityScore ?? 0);
     // rating
@@ -395,6 +397,7 @@ export default function BubbleChart({
     const centroids = computeCentroids(groups, W, H);
 
     const isDistilleryMode = groupMode === "distillery";
+    const isBrandMode = colorMode === "brand";
     const distColors = distilleryColors ?? buildDistilleryColors(brands);
     const glowOpacity = isDistilleryMode ? 0.35 : 0;
 
@@ -409,7 +412,7 @@ export default function BubbleChart({
       }
     }
 
-    const colorFn = getColorFn(colorMode, ratingsRef.current);
+    const colorFn = getColorFn(colorMode, ratingsRef.current, distColors);
 
     const prevGroupMode = prevGroupModeRef.current;
     const prevSizeMode  = prevSizeModeRef.current;
@@ -527,6 +530,13 @@ export default function BubbleChart({
           .transition().duration(400)
           .attr("stop-color", c);
       }
+      // Clay opacity also changes when crossing the brand/non-brand boundary
+      // in distillery group mode (brand mode disables the gooey clay blobs).
+      const newClayOpacity = (isDistilleryMode && !isBrandMode) ? 0.72 : 0;
+      root.select("g.glow-layer")
+        .selectAll("g.clay-group")
+        .transition().duration(400)
+        .attr("opacity", newClayOpacity);
       return;
     }
 
@@ -714,8 +724,10 @@ export default function BubbleChart({
 
     // ── Per-distillery clay groups (one <g> per distillery, gooey filter) ─────
     // Circles within the same group merge into coloured clay when touching.
+    // Clay is suppressed in brand color mode — bubble color already encodes
+    // distillery identity, so the gooey blobs would be redundant noise.
     const distGroupKeys = [...new Set(newNodes.map((n) => n.groupKey))];
-    const clayOpacity = isDistilleryMode ? 0.72 : 0;
+    const clayOpacity = (isDistilleryMode && !isBrandMode) ? 0.72 : 0;
 
     glowG
       .selectAll<SVGGElement, string>("g.clay-group")

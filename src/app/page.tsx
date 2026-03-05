@@ -402,7 +402,11 @@ export default function Home() {
             </div>
           </div>
 
-          <ColorLegend colorMode={colorMode} onColorModeChange={setColorMode} />
+          <ColorLegend
+            colorMode={colorMode}
+            onColorModeChange={setColorMode}
+            distilleryColors={distilleryColors}
+          />
 
           {/* Stats panel */}
           <div

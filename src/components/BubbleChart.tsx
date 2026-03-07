@@ -888,18 +888,56 @@ export default function BubbleChart({
           angleMap.set(d.key, Math.atan2(c.cy - cY, c.cx - cX));
         });
 
-      // ── Pass 2: stagger pads so nearby labels alternate inner/outer rings ──
-      // Labels within ~11° of each other would overlap → push every other one
-      // to an outer ring (labelPad 32 → 62).
-      const minAngularGap = 0.20; // radians ≈ 11.5°
-      const padMap = new Map<string, number>();
+      // ── Pass 2: bounding-box collision avoidance across multiple rings ────
+      // Sort labels by angle, then greedily assign each to the innermost
+      // radial ring where its estimated text box doesn't overlap any already-
+      // placed label.  This handles 3+ crowded labels cleanly.
+      const BASE_PAD  = 28;        // px from cluster edge to ring 0
+      const RING_STEP = 18;        // px between ring centres
+      const CHAR_W    = 7.5;       // estimated px per uppercase char (11px bold, 0.08em spacing)
+      const LABEL_H   = 15;        // estimated label line-height in px
+      const BOX_GAP   = 5;         // minimum clear space between boxes
+
+      type LabelBox = { x1: number; y1: number; x2: number; y2: number };
+      const placed: LabelBox[] = [];
+
+      function labelBox(θ: number, pad: number, textLen: number): LabelBox {
+        const lx   = cX + (overallR + pad) * Math.cos(θ);
+        const ly   = cY + (overallR + pad) * Math.sin(θ) + 4; // matches .attr("y", ly+4)
+        const tw   = textLen * CHAR_W;
+        const cosθ = Math.cos(θ);
+        const x1   = cosθ > 0.2 ? lx : cosθ < -0.2 ? lx - tw : lx - tw / 2;
+        return { x1, y1: ly - LABEL_H / 2, x2: x1 + tw, y2: ly + LABEL_H / 2 };
+      }
+
+      function overlaps(a: LabelBox, b: LabelBox): boolean {
+        return (
+          a.x1 - BOX_GAP < b.x2 + BOX_GAP &&
+          a.x2 + BOX_GAP > b.x1 - BOX_GAP &&
+          a.y1 - BOX_GAP < b.y2 + BOX_GAP &&
+          a.y2 + BOX_GAP > b.y1 - BOX_GAP
+        );
+      }
+
       const sortedByAngle = [...angleMap.entries()].sort(([, a], [, b]) => a - b);
-      sortedByAngle.forEach(([key, θ], i) => {
-        const prevθ = i > 0 ? sortedByAngle[i - 1][1] : sortedByAngle[sortedByAngle.length - 1][1] - Math.PI * 2;
-        const crowded = (θ - prevθ) < minAngularGap;
-        const prevPad = i > 0 ? (padMap.get(sortedByAngle[i - 1][0]) ?? 32) : 32;
-        padMap.set(key, crowded ? (prevPad === 32 ? 62 : 32) : 32);
-      });
+      const padMap = new Map<string, number>();
+      for (const [key, θ] of sortedByAngle) {
+        const textLen = key.length;
+        for (let ring = 0; ring < 12; ring++) {
+          const pad = BASE_PAD + ring * RING_STEP;
+          const box = labelBox(θ, pad, textLen);
+          if (!placed.some((b) => overlaps(box, b))) {
+            padMap.set(key, pad);
+            placed.push(box);
+            break;
+          }
+          if (ring === 11) {
+            // Safety fallback — place at outermost ring regardless
+            padMap.set(key, BASE_PAD + 11 * RING_STEP);
+            placed.push(labelBox(θ, BASE_PAD + 11 * RING_STEP, textLen));
+          }
+        }
+      }
 
       // ── Pass 3: apply positions using per-label pad ────────────────────────
       labelsLayer

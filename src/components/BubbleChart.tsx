@@ -47,6 +47,10 @@ interface Props {
   ratings: Record<string, { avg: number; count: number }>;
   searchQuery?: string;
   distilleryColors?: Map<string, string>;
+  /** Key of the currently-selected group label (distillery/style/etc) */
+  selectedGroup?: string | null;
+  /** Called when user clicks a label; null means "clear selection" */
+  onLabelClick?: (key: string | null) => void;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -265,6 +269,8 @@ export default function BubbleChart({
   ratings,
   searchQuery,
   distilleryColors,
+  selectedGroup,
+  onLabelClick,
 }: Props) {
   const svgRef   = useRef<SVGSVGElement>(null);
   const wrapRef  = useRef<HTMLDivElement>(null);
@@ -279,6 +285,12 @@ export default function BubbleChart({
   // Keep stable refs for callbacks (avoid sim re-init on every render)
   const onBottleClickRef = useRef(onBottleClick);
   onBottleClickRef.current = onBottleClick;
+
+  const onLabelClickRef = useRef(onLabelClick);
+  onLabelClickRef.current = onLabelClick;
+
+  const selectedGroupRef = useRef(selectedGroup);
+  selectedGroupRef.current = selectedGroup;
 
   const ratingsRef = useRef(ratings);
   ratingsRef.current = ratings;
@@ -423,13 +435,17 @@ export default function BubbleChart({
     const groupChanged = prevGroupMode !== null && prevGroupMode !== groupMode;
     const sizeChanged  = prevSizeMode  !== null && prevSizeMode  !== sizeMode;
     const colorChanged = prevColorMode !== null && prevColorMode !== colorMode;
-    const isFirstRender = prevGroupMode === null;
 
     prevGroupModeRef.current = groupMode;
     prevSizeModeRef.current  = sizeMode;
     prevColorModeRef.current = colorMode;
 
     const root = d3.select(svg);
+
+    // Clicking empty SVG space clears any active label filter
+    root.on("click.clearGroup", () => {
+      onLabelClickRef.current?.(null);
+    });
 
     // ── Labels layer ─────────────────────────────────────────────────────────
     const updateLabels = (animated: boolean) => {
@@ -522,7 +538,7 @@ export default function BubbleChart({
 
     // ── If only color changed, update gradient stop-colours and return ────────
     // Bubble fill attributes stay as url(#rg-…); we just retune the gradient stops.
-    if (colorChanged && !groupChanged && !sizeChanged && !isFirstRender) {
+    if (colorChanged && !groupChanged && !sizeChanged && prevGroupMode !== null) {
       const defsEl = root.select<SVGDefsElement>("defs");
       for (const n of nodesRef.current) {
         const c = colorFn(n);
@@ -543,7 +559,7 @@ export default function BubbleChart({
     }
 
     // ── If only size changed, update radii + restart sim ─────────────────────
-    if (sizeChanged && !groupChanged && !isFirstRender) {
+    if (sizeChanged && !groupChanged && prevGroupMode !== null) {
       const sim = simRef.current;
       if (sim) {
         const existingNodes = nodesRef.current;
@@ -588,10 +604,13 @@ export default function BubbleChart({
           n.vy = (prev.vy ?? 0) * 0.3;
         }
       }
-    } else if (isFirstRender) {
-      // Burst from center
-      const cx = W / 2, cy = H / 2;
-      for (const n of newNodes) {
+    }
+    // Initialize any node that still lacks a position (first render, Strict Mode remount,
+    // or new nodes added after a groupMode transfer). Burst from center so bubbles
+    // animate outward rather than flying in from the D3 golden-angle spiral near (0,0).
+    const cx = W / 2, cy = H / 2;
+    for (const n of newNodes) {
+      if (n.x == null || n.y == null) {
         n.x  = cx + (Math.random() - 0.5) * 20;
         n.y  = cy + (Math.random() - 0.5) * 20;
         n.vx = 0; n.vy = 0;
@@ -984,12 +1003,21 @@ export default function BubbleChart({
           else /* "middle" */           { lx = Math.max(SVG_MARG + tw / 2, Math.min(liveW - SVG_MARG - tw / 2, lx)); }
           ly = Math.max(SVG_MARG + LABEL_H / 2, Math.min(liveH - SVG_MARG - LABEL_H / 2, ly));
 
+          const sel = selectedGroupRef.current;
+          const targetOpacity = sel ? (sel === d.key ? 1.0 : 0.2) : 0.92;
+
           d3.select(this)
             .attr("text-anchor", anchor)
+            .style("cursor", "pointer")
+            .on("click.labelFilter", (event: MouseEvent) => {
+              event.stopPropagation(); // don't bubble to SVG background handler
+              const current = selectedGroupRef.current;
+              onLabelClickRef.current?.(current === d.key ? null : d.key);
+            })
             .transition().duration(350)
             .attr("x", lx)
             .attr("y", ly + 4)
-            .attr("opacity", 0.92);
+            .attr("opacity", targetOpacity);
 
           // Leader line: cluster outer edge → label anchor
           const ex = cX + overallR * Math.cos(θ);
@@ -1065,15 +1093,21 @@ export default function BubbleChart({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [brands, groupMode, sizeMode, colorMode, ratings]);
 
-  // ── Search: dim/shrink non-matching bubbles (no sim rebuild) ───────────────
+  // ── Search + group filter: dim/shrink non-matching bubbles (no sim rebuild) ─
   useEffect(() => {
     const svg = svgRef.current;
     if (!svg) return;
-    const q = (searchQuery ?? "").toLowerCase().trim();
+    const q   = (searchQuery ?? "").toLowerCase().trim();
+    const sel = selectedGroup ?? null;
+
     const bubbles = d3
       .select(svg)
       .selectAll<SVGCircleElement, BubbleNode>("circle.bubble");
     if (!bubbles.size()) return;
+
+    const labels = d3
+      .select(svg)
+      .selectAll<SVGTextElement, { key: string }>("text.group-label");
 
     const clayLayer = d3.select(svg).select("g.glow-layer");
 
@@ -1086,22 +1120,32 @@ export default function BubbleChart({
       });
     };
 
-    if (!q) {
+    const matchesSearch = (d: BubbleNode) =>
+      !q ||
+      d.name.toLowerCase().includes(q) ||
+      d.brandName.toLowerCase().includes(q) ||
+      d.subBrandName.toLowerCase().includes(q) ||
+      (d.style ?? "").toLowerCase().includes(q);
+
+    const matchesGroup = (d: BubbleNode) => !sel || d.groupKey === sel;
+    const highlight    = (d: BubbleNode) => matchesSearch(d) && matchesGroup(d);
+
+    if (!q && !sel) {
       bubbles.transition().duration(250).attr("opacity", 1).attr("r", (d) => d.r);
-      updateClay(null); // restore all clay circles
+      labels.transition().duration(200).attr("opacity", 0.92);
+      updateClay(null);
     } else {
-      const matches = (d: BubbleNode) =>
-        d.name.toLowerCase().includes(q) ||
-        d.brandName.toLowerCase().includes(q) ||
-        d.subBrandName.toLowerCase().includes(q) ||
-        (d.style ?? "").toLowerCase().includes(q);
       bubbles
         .transition().duration(250)
-        .attr("opacity", (d) => (matches(d) ? 1 : 0.1))
-        .attr("r",       (d) => (matches(d) ? d.r : d.r * 0.4));
-      updateClay(matches); // collapse non-matching clay circles to r=0
+        .attr("opacity", (d) => (highlight(d) ? 1 : 0.08))
+        .attr("r",       (d) => (highlight(d) ? d.r : d.r * 0.35));
+      updateClay(highlight);
+      // Dim labels that aren't the active group filter
+      labels.transition().duration(200).attr("opacity", (d) =>
+        sel ? (d.key === sel ? 1.0 : 0.2) : 0.92
+      );
     }
-  }, [searchQuery]);
+  }, [searchQuery, selectedGroup]);
 
   // ── Tooltip DOM element ────────────────────────────────────────────────────
   useEffect(() => {

@@ -71,6 +71,7 @@ export default function Home() {
   const [groupMode, setGroupMode]   = useState<GroupMode>("distillery");
   const [sizeMode,  setSizeMode]    = useState<BubbleSizeMode>("price");
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
   const [selectedBottle, setSelectedBottle] = useState<BottleNode | null>(null);
   const [flaggedBottle, setFlaggedBottle] = useState<{ id: string; name: string } | null>(null);
   const [showSubmit, setShowSubmit] = useState(false);
@@ -316,6 +317,12 @@ export default function Home() {
             ratings={ratings}
             searchQuery={searchQuery}
             distilleryColors={distilleryColors}
+            selectedGroup={selectedGroup}
+            onLabelClick={(key) => {
+              setSelectedGroup(key);
+              // Clear text search when a label filter is activated
+              if (key) setSearchQuery("");
+            }}
           />
 
           {/* Search — centered overlay at top of chart */}
@@ -336,7 +343,7 @@ export default function Home() {
               <input
                 type="text"
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => { setSearchQuery(e.target.value); setSelectedGroup(null); }}
                 placeholder="Search bottles, brands, styles…"
                 className="search-input w-full rounded-full pl-9 pr-9 py-2.5 text-sm outline-none"
                 style={{

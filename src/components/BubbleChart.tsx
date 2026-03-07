@@ -851,8 +851,12 @@ export default function BubbleChart({
       }
 
       // ── Distillery: radial edge labels + cluster-edge leader lines ────────
-      const cX = W / 2;
-      const cY = H / 2;
+      // Re-read live dimensions — the container may have been resized by the
+      // ResizeObserver between when draw() captured W/H and when this fires.
+      const liveW = svgRef.current?.clientWidth  ?? W;
+      const liveH = svgRef.current?.clientHeight ?? H;
+      const cX = liveW / 2;
+      const cY = liveH / 2;
 
       // Actual centroid of each distillery's settled bubbles
       const sums = new Map<string, { sx: number; sy: number; count: number }>();
@@ -890,21 +894,29 @@ export default function BubbleChart({
 
       // ── Pass 2: bounding-box collision avoidance across multiple rings ────
       // Sort labels by angle, then greedily assign each to the innermost
-      // radial ring where its estimated text box doesn't overlap any already-
-      // placed label.  This handles 3+ crowded labels cleanly.
+      // radial ring where its measured text box doesn't overlap any already-
+      // placed label.  Prefer rings that keep the box within SVG bounds.
       const BASE_PAD  = 28;        // px from cluster edge to ring 0
       const RING_STEP = 18;        // px between ring centres
-      const CHAR_W    = 7.5;       // estimated px per uppercase char (11px bold, 0.08em spacing)
       const LABEL_H   = 15;        // estimated label line-height in px
       const BOX_GAP   = 5;         // minimum clear space between boxes
+      const SVG_MARG  = 4;         // minimum margin from SVG edge
+
+      // Measure actual rendered text widths via SVG getComputedTextLength().
+      // Labels are already in the DOM at opacity 0 from the join above.
+      const textWidthMap = new Map<string, number>();
+      labelsLayer
+        .selectAll<SVGTextElement, { key: string }>("text.group-label")
+        .each(function (d) {
+          textWidthMap.set(d.key, this.getComputedTextLength());
+        });
 
       type LabelBox = { x1: number; y1: number; x2: number; y2: number };
       const placed: LabelBox[] = [];
 
-      function labelBox(θ: number, pad: number, textLen: number): LabelBox {
+      function labelBox(θ: number, pad: number, tw: number): LabelBox {
         const lx   = cX + (overallR + pad) * Math.cos(θ);
-        const ly   = cY + (overallR + pad) * Math.sin(θ) + 4; // matches .attr("y", ly+4)
-        const tw   = textLen * CHAR_W;
+        const ly   = cY + (overallR + pad) * Math.sin(θ) + 4;
         const cosθ = Math.cos(θ);
         const x1   = cosθ > 0.2 ? lx : cosθ < -0.2 ? lx - tw : lx - tw / 2;
         return { x1, y1: ly - LABEL_H / 2, x2: x1 + tw, y2: ly + LABEL_H / 2 };
@@ -919,41 +931,58 @@ export default function BubbleChart({
         );
       }
 
+      function inBounds(box: LabelBox): boolean {
+        return box.x1 >= SVG_MARG && box.x2 <= liveW - SVG_MARG &&
+               box.y1 >= SVG_MARG && box.y2 <= liveH - SVG_MARG;
+      }
+
       const sortedByAngle = [...angleMap.entries()].sort(([, a], [, b]) => a - b);
       const padMap = new Map<string, number>();
       for (const [key, θ] of sortedByAngle) {
-        const textLen = key.length;
+        const tw = textWidthMap.get(key) ?? key.length * 8;
+        let bestPad = BASE_PAD;
+        let bestInBounds = false;
         for (let ring = 0; ring < 12; ring++) {
           const pad = BASE_PAD + ring * RING_STEP;
-          const box = labelBox(θ, pad, textLen);
-          if (!placed.some((b) => overlaps(box, b))) {
-            padMap.set(key, pad);
-            placed.push(box);
-            break;
-          }
-          if (ring === 11) {
-            // Safety fallback — place at outermost ring regardless
-            padMap.set(key, BASE_PAD + 11 * RING_STEP);
-            placed.push(labelBox(θ, BASE_PAD + 11 * RING_STEP, textLen));
+          const box = labelBox(θ, pad, tw);
+          const noOverlap = !placed.some((b) => overlaps(box, b));
+          const fits = inBounds(box);
+          if (noOverlap) {
+            // Prefer in-bounds; accept out-of-bounds only if no in-bounds slot found yet
+            if (fits || !bestInBounds) {
+              bestPad = pad;
+              bestInBounds = fits;
+            }
+            if (fits) break; // in-bounds non-overlapping slot found — done
           }
         }
+        padMap.set(key, bestPad);
+        placed.push(labelBox(θ, bestPad, tw));
       }
 
-      // ── Pass 3: apply positions using per-label pad ────────────────────────
+      // ── Pass 3: apply positions, clamping to SVG bounds ───────────────────
+      // After ring assignment, clamp the final (lx, ly) so every label's
+      // text box stays visible regardless of how tight the chart area is.
       labelsLayer
         .selectAll<SVGTextElement, { key: string; x: number; y: number }>("text.group-label")
         .each(function (d) {
           const c = actualCentroids.get(d.key);
           if (!c) return;
 
-          const θ   = angleMap.get(d.key) ?? 0;
-          const pad = padMap.get(d.key) ?? 32;
-          const lx  = cX + (overallR + pad) * Math.cos(θ);
-          const ly  = cY + (overallR + pad) * Math.sin(θ);
-
-          // Text-anchor: right side → "start", left side → "end", top/bottom → "middle"
+          const θ    = angleMap.get(d.key) ?? 0;
+          const pad  = padMap.get(d.key) ?? BASE_PAD;
           const cosθ = Math.cos(θ);
           const anchor = cosθ > 0.2 ? "start" : cosθ < -0.2 ? "end" : "middle";
+
+          let lx = cX + (overallR + pad) * Math.cos(θ);
+          let ly = cY + (overallR + pad) * Math.sin(θ);
+
+          // Clamp so the text box stays within SVG bounds (use measured width)
+          const tw = textWidthMap.get(d.key) ?? d.key.length * 8;
+          if (anchor === "start")       { lx = Math.max(SVG_MARG, Math.min(liveW - SVG_MARG - tw, lx)); }
+          else if (anchor === "end")    { lx = Math.max(SVG_MARG + tw, Math.min(liveW - SVG_MARG, lx)); }
+          else /* "middle" */           { lx = Math.max(SVG_MARG + tw / 2, Math.min(liveW - SVG_MARG - tw / 2, lx)); }
+          ly = Math.max(SVG_MARG + LABEL_H / 2, Math.min(liveH - SVG_MARG - LABEL_H / 2, ly));
 
           d3.select(this)
             .attr("text-anchor", anchor)

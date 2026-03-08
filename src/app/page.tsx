@@ -139,9 +139,16 @@ export default function Home() {
 
       setRatings(ratingsData);
 
-      // Use Supabase catalog if available (enriched with static style/state),
-      // otherwise fall back to static data
-      const baseData = catalogData ? enrichCatalogStyles(catalogData) : WHISKEY_DATA;
+      // Use Supabase catalog as the base (enriched with static style/state),
+      // then append any static brands not yet in the Supabase catalog so that
+      // new entries in whiskeys.ts always appear in the chart.
+      const baseData = (() => {
+        if (!catalogData) return WHISKEY_DATA;
+        const enriched = enrichCatalogStyles(catalogData);
+        const catalogIds = new Set(enriched.map((b) => b.id));
+        const staticOnly = WHISKEY_DATA.filter((b) => !catalogIds.has(b.id));
+        return [...enriched, ...staticOnly];
+      })();
 
       if (approvedSubs.length > 0) {
         const merged = mergeApprovedSubmissions(baseData, approvedSubs);

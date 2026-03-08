@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import type { Metadata } from "next";
 import { WHISKEY_DATA } from "@/data/whiskeys";
 import type { Bottle, WhiskeyStyle } from "@/types/whiskey";
@@ -134,6 +135,19 @@ function BottleCard({
     <article className="flex flex-col bg-neutral-900 border border-neutral-800 rounded-sm overflow-hidden">
       {/* Color accent bar */}
       <div className={`h-px w-full ${colors.line}`} />
+
+      {/* Bottle image */}
+      {bottle.imageUrl && (
+        <div className="relative h-48 bg-neutral-950 flex items-center justify-center px-8 pt-4">
+          <Image
+            src={bottle.imageUrl}
+            alt={bottle.name}
+            fill
+            className="object-contain p-4"
+            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+          />
+        </div>
+      )}
 
       <div className="flex flex-col gap-3 p-4">
         {/* Style badge + availability */}
@@ -290,10 +304,10 @@ export default async function BrandPage({
           {brand.subBrands.map((subBrand) => (
             <section key={subBrand.id}>
               {showSubBrandHeaders && (
-                <h2 className="flex items-center gap-3 text-[10px] font-mono uppercase tracking-widest text-neutral-600 mb-5">
+                <h2 className="flex items-center gap-3 text-sm font-semibold text-neutral-200 mb-5">
                   {subBrand.name}
                   <span className="flex-1 h-px bg-neutral-800" />
-                  <span className="text-neutral-800">
+                  <span className="text-neutral-600 text-xs font-normal font-mono">
                     {subBrand.bottles.length}
                   </span>
                 </h2>

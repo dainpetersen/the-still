@@ -32,6 +32,7 @@ export interface Bottle {
   rarity: RarityLevel;
   rarityScore: number;     // 1–100
   description: string;
+  imageUrl?: string;        // bottle photo, e.g. "/bottles/peerless-small-batch-bourbon.webp"
   sourceDistillery?: string; // for NDP bottles, e.g. "MGP" or "Undisclosed"
   source?: DataSource;     // "official" | "community"
   availability?: AvailabilityStatus; // "current" | "limited_release" | "discontinued"

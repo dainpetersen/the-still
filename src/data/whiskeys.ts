@@ -1757,6 +1757,7 @@ export const WHISKEY_DATA: Brand[] = [
             rarityScore: 14,
             style: "Bourbon",
             description: "Penelope's flagship. A blend of three mash bills across four grains (75% corn, 15% wheat, 7% rye, 3% barley). Caramel, syrup, vanilla, and buttercream on the finish.",
+            imageUrl: "https://shop.penelopebourbon.com/cdn/shop/products/penelopebourbon-fourgrain.png?v=1632480542",
             availability: "current",
           },
           {
@@ -1770,6 +1771,7 @@ export const WHISKEY_DATA: Brand[] = [
             rarityScore: 14,
             style: "Wheated Bourbon",
             description: "Four-grain straight bourbon with a high-wheat mash (74% corn, 16% wheat, 7% rye, 3% barley). Non-chill filtered at 95 proof. Honey, caramel apple, and brown sugar finish.",
+            imageUrl: "https://shop.penelopebourbon.com/cdn/shop/files/wheated.png?v=1733440789",
             availability: "current",
           },
           {
@@ -1782,6 +1784,7 @@ export const WHISKEY_DATA: Brand[] = [
             rarityScore: 35,
             style: "Bourbon",
             description: "High-rye mash (75% corn, 21% rye) finished in a new hand-toasted barrel (Char 5 / Heavy Toast). Brown sugar, graham cracker, and roasted marshmallow. Each bottle varies by toast level.",
+            imageUrl: "https://shop.penelopebourbon.com/cdn/shop/files/Penelope_Toasted-BourbonBarrelFinish_WEB_1.png?v=1682972762",
             availability: "current",
           },
           {
@@ -1808,6 +1811,7 @@ export const WHISKEY_DATA: Brand[] = [
             rarityScore: 42,
             style: "Bourbon",
             description: "Uncut, non-chill filtered blend of three Indiana straight bourbon mash bills (82% corn, 8% wheat, 7% rye, 3% barley). Pecans, dried apricot, caramel, toffee, and white pepper.",
+            imageUrl: "https://shop.penelopebourbon.com/cdn/shop/files/barrel_c2f09183-1d35-426e-94ee-f716f075cbd9.png?v=1770825139",
             availability: "current",
           },
         ],
@@ -1899,6 +1903,7 @@ export const WHISKEY_DATA: Brand[] = [
             rarityScore: 48,
             style: "Rye Whiskey",
             description: "Annual release. 6-year MGP straight rye finished in new Char 2 / Heavy Toast barrels. Caramel, cocoa, vanilla, toffee, toasted oak, and brown sugar spice.",
+            imageUrl: "https://shop.penelopebourbon.com/cdn/shop/files/Penelope_Toasted-Rye_7-1-24.png?v=1748414159",
             sourceDistillery: "MGP",
             availability: "current",
           },
@@ -1913,6 +1918,7 @@ export const WHISKEY_DATA: Brand[] = [
             rarityScore: 70,
             style: "Blended American",
             description: "Rare 17-year corn-based whiskey (99% corn) from the historic Seagram's/MGP distillery, aged in second-fill oak — the legal definition of \"Light Whiskey.\" Butterscotch, cake batter, cotton candy, and brown sugar.",
+            imageUrl: "https://shop.penelopebourbon.com/cdn/shop/files/Penelope_Mock_AmericanLight-18yr_WEB_Sq_7-15-25_a02b7316-231e-433b-88aa-84039bf32903.png?v=1770780544",
             sourceDistillery: "MGP",
             availability: "current",
           },
@@ -2422,6 +2428,7 @@ export const WHISKEY_DATA: Brand[] = [
             rarityScore: 12,
             style: "Bourbon",
             description: "Named after the 14th tallest redwood on Earth (367 ft), this craft bourbon blends 4–14 year old barrels on a 73% corn mash bill. Maple, vanilla, honey, and roasted pecan with a black pepper finish. 91 pts Whisky Advocate, 94 pts Wine Enthusiast Top 100.",
+            imageUrl: "https://redwoodempirewhiskey.com/wp-content/uploads/2024/04/PipeDream-Bourbon-Whiskey-RedwoodEmpire.png",
           },
           {
             id: "redwood-empire-pipe-dream-101",
@@ -2455,6 +2462,7 @@ export const WHISKEY_DATA: Brand[] = [
             rarityScore: 38,
             style: "Bourbon",
             description: "Uncut and unfiltered at 115.8 proof. Blends 4–14 year old barrels on a 73% corn mash bill. Toffee, cherry, and soft leather on the nose; cherry cola, honey, butterscotch, and pecans on the palate. 96 pts The Tasting Panel, Platinum + Best in Show TAG Spiritis Awards.",
+            imageUrl: "https://redwoodempirewhiskey.com/wp-content/uploads/2026/01/PipeDream-Cask-Strength-Whiskey-RedwoodEmpire.png",
           },
         ],
       },
@@ -2473,6 +2481,7 @@ export const WHISKEY_DATA: Brand[] = [
             rarityScore: 12,
             style: "Rye Whiskey",
             description: "Named after the world's fastest-growing redwood, this 92% rye mash bill blends 4–7 year old barrels. Brown sugar, cinnamon, and natural rye on the nose; rye spice, honey, orange peel, and peppery cinnamon finish. 97 pts The Tasting Panel, 91 pts Whisky Advocate.",
+            imageUrl: "https://redwoodempirewhiskey.com/wp-content/uploads/2024/04/EmeraldGiant-Rye-Whiskey-RedwoodEmpire.png",
           },
           {
             id: "redwood-empire-emerald-giant-cask-strength",
@@ -2484,6 +2493,7 @@ export const WHISKEY_DATA: Brand[] = [
             rarityScore: 38,
             style: "Rye Whiskey",
             description: "Uncut and unfiltered at 115.4 proof. Same 92% rye mash bill at full barrel strength. Delicate herbal tea, soft cinnamon, and dried orange peel; Earl Grey, dark chocolate coffee beans, and warm spice finish. 96 pts The Tasting Panel.",
+            imageUrl: "https://redwoodempirewhiskey.com/wp-content/uploads/2026/01/EmeraldGiant-Cask-Stregnth-Whiskey-RedwoodEmpire.png",
           },
         ],
       },
@@ -2502,6 +2512,7 @@ export const WHISKEY_DATA: Brand[] = [
             rarityScore: 12,
             style: "Blended American",
             description: "Named after the world's largest coastal redwood (321 ft). A 55% rye / 45% bourbon blend drawing from 3–14 year old barrels. Clove, vanilla, orange citrus, and butterscotch on the nose; maple syrup, caramel, and peppery finish. 95 pts The Tasting Panel.",
+            imageUrl: "https://redwoodempirewhiskey.com/wp-content/uploads/2024/04/Lost-Monarch-Small-Batch-Whiskey-RedwoodEmpire.png",
           },
           {
             id: "redwood-empire-lost-monarch-cask-strength",
@@ -2513,6 +2524,7 @@ export const WHISKEY_DATA: Brand[] = [
             rarityScore: 40,
             style: "Blended American",
             description: "Uncut and unfiltered at 116.2 proof. The same 55% rye / 45% bourbon blend at barrel strength. Vibrant and earthy with mint chocolate on the nose; warm spices, dried apricot, and white pepper. 95 pts The Tasting Panel, 91 pts Whisky Advocate.",
+            imageUrl: "https://redwoodempirewhiskey.com/wp-content/uploads/2026/01/LostMonarch-Cask-Strength-Whiskey-RedwoodEmpire.png",
           },
         ],
       },
@@ -2576,6 +2588,7 @@ export const WHISKEY_DATA: Brand[] = [
             rarityScore: 50,
             style: "American Single Malt",
             description: "Named after a 347-ft redwood that draws ~40% of its water from coastal fog. 100% malted barley at 94 proof. Brandied cherries, port, and cashew on the nose; brownie sundae, forest floor, and molasses on the palate. 95 pts The Tasting Panel, 91 pts Whisky Advocate.",
+            imageUrl: "https://redwoodempirewhiskey.com/wp-content/uploads/2026/01/Foggy-Burl-Single-Malt-Whiskey-batch-003.png",
             availability: "limited_release",
           },
           {
@@ -2619,6 +2632,7 @@ export const WHISKEY_DATA: Brand[] = [
             rarityScore: 62,
             style: "Bourbon",
             description: "Single-barrel straight bourbon from Redwood Empire's barrel-selection program. Proof varies by barrel (typically 115–124 proof); age varies by selection. Only 4 barrels distilled per day — 100% grain-to-glass. Each release is a one-of-a-kind snapshot of the rickhouse.",
+            imageUrl: "https://redwoodempirewhiskey.com/wp-content/uploads/2024/11/Haystack-Straight-Bourbon-Whiskey-RedwoodEmpire-1.png",
             availability: "limited_release",
           },
           {
@@ -2631,6 +2645,7 @@ export const WHISKEY_DATA: Brand[] = [
             rarityScore: 62,
             style: "Rye Whiskey",
             description: "Single-barrel straight rye whiskey from Redwood Empire's barrel-selection program. Proof varies by barrel (typically 115–124 proof); age varies by selection. Only 4 barrels distilled per day — 100% grain-to-glass. Each release is a unique expression of California rye.",
+            imageUrl: "https://redwoodempirewhiskey.com/wp-content/uploads/2024/11/Haystack-Straight-Rye-Whiskey-RedwoodEmpire-1.png",
             availability: "limited_release",
           },
         ],
@@ -2661,6 +2676,7 @@ export const WHISKEY_DATA: Brand[] = [
             rarityScore: 18,
             style: "Bourbon",
             description: "Flagship sweet-mash Kentucky straight bourbon. Never sourced, never chill-filtered, barrel proof. Citrus, cedar, honeysuckle, caramel, and toasted oak on the nose; the finish duels between sweet citrus and spicy dry cocoa.",
+            imageUrl: "https://kentuckypeerless.com/wp-content/uploads/2024/07/KentuckyPeerless_SmallBatchBourbon-401x1024.png",
             availability: "current",
           },
           {
@@ -2673,6 +2689,7 @@ export const WHISKEY_DATA: Brand[] = [
             rarityScore: 52,
             style: "High Rye Bourbon",
             description: "Peerless's first departure from their original mash bill — a significantly elevated rye content. Savory nose of warm seasoned oak, leather, citrus, and dark fruit. Candied oak, toasted sugar, and charred orange on the palate; warm leather and rich tobacco on the finish.",
+            imageUrl: "https://kentuckypeerless.com/wp-content/uploads/2024/08/KentuckyPeerless-HighRyeBourbon.png",
             availability: "current",
           },
           {
@@ -2685,6 +2702,7 @@ export const WHISKEY_DATA: Brand[] = [
             rarityScore: 42,
             style: "Bourbon",
             description: "Small Batch Bourbon aged in two successive new American oak casks. Caramel, butterscotch, fresh cherry, and dried tobacco on the nose; bright citrus and florals open the palate, followed by dry red wine, cocoa, honey, and toasted oak.",
+            imageUrl: "https://kentuckypeerless.com/wp-content/uploads/2024/07/KentuckyPeerlessDoubleOakBourbon.png",
             availability: "current",
           },
           {
@@ -2697,6 +2715,7 @@ export const WHISKEY_DATA: Brand[] = [
             rarityScore: 48,
             style: "Bourbon",
             description: "Finished in a medium-toasted (no char) barrel after primary maturation in Char 3 American oak. Fewer tannins create a more aromatic whiskey: rich red berries, brown sugar, caramel, and marshmallow on the nose; warm honey, vanilla, toasted spice, and chocolate throughout.",
+            imageUrl: "https://kentuckypeerless.com/wp-content/uploads/2024/08/KentuckyPeerlessToastedBarrelFinish-1.png",
             availability: "current",
           },
           {
@@ -2709,6 +2728,7 @@ export const WHISKEY_DATA: Brand[] = [
             rarityScore: 62,
             style: "Bourbon",
             description: "Small Batch Bourbon finished in rum barrels — two full barrel extractions of flavor. Toasted citrus and molasses lead a dark, savory nose with sweet cedar and coffee. The palate is deep and spicy: cinnamon, orange bitters, toasted sugar, dark fruit, and sweet grasses.",
+            imageUrl: "https://kentuckypeerless.com/wp-content/uploads/2024/07/KentuckyPeerlessRumBarrelFinish.png",
             availability: "limited_release",
           },
           {
@@ -2721,6 +2741,7 @@ export const WHISKEY_DATA: Brand[] = [
             rarityScore: 65,
             style: "Bourbon",
             description: "Small Batch Bourbon finished in premium cognac barrels — Kentucky-only release. Fresh raisins, sweet herbs, toffee pudding, caramel apple, and toasted honey on the nose. Cranberry raisin bread, muscadine grapes, port wine, chocolate, and crisp pear on the palate.",
+            imageUrl: "https://kentuckypeerless.com/wp-content/uploads/2024/08/KentuckyPeerlessCognacBarrelFinish.png",
             availability: "limited_release",
           },
         ],
@@ -2740,6 +2761,7 @@ export const WHISKEY_DATA: Brand[] = [
             rarityScore: 25,
             style: "Rye Whiskey",
             description: "Flagship sweet-mash Kentucky straight rye. Never sourced, never chill-filtered, barrel proof. Multidimensional profile balancing oak and pepper with fruit and florals, and caramel and vanilla — approachable yet complex.",
+            imageUrl: "https://kentuckypeerless.com/wp-content/uploads/2024/07/KentuckyPeerless_SmallBatchRye-401x1024.png",
             availability: "current",
           },
           {
@@ -2752,6 +2774,7 @@ export const WHISKEY_DATA: Brand[] = [
             rarityScore: 55,
             style: "Rye Whiskey",
             description: "Small Batch Rye aged in two successive new oak casks. Sweet seasoned oak and orange zest on the nose. Warm molasses and earthy cinnamon open the palate, shifting to bright florals and earthy smoked herbs; candied smoke on the finish.",
+            imageUrl: "https://kentuckypeerless.com/wp-content/uploads/2024/07/KentuckyPeerlessDoubleOakRye.png",
             availability: "current",
           },
           {
@@ -2764,6 +2787,7 @@ export const WHISKEY_DATA: Brand[] = [
             rarityScore: 48,
             style: "Rye Whiskey",
             description: "Finished in a medium-toasted barrel after Char 3 primary maturation. Indulgent nose of buttered French toast, warm caramel, saltwater taffy, and strawberry icing. The palate delivers warm Boston creme doughnut with custard richness and lingering toasted spice.",
+            imageUrl: "https://kentuckypeerless.com/wp-content/uploads/2025/02/KentuckyPeerlessToastedRye.png",
             availability: "current",
           },
           {
@@ -2776,6 +2800,7 @@ export const WHISKEY_DATA: Brand[] = [
             rarityScore: 60,
             style: "Rye Whiskey",
             description: "Collaboration with Copper & Kings. Peerless Rye finished in American Alembic Absinthe barrels — two full barrel extractions. Prominent anise and botanicals weave through caramel, baking spice, and citrus; the finish is anise, menthol, and black licorice with a moderate burn.",
+            imageUrl: "https://kentuckypeerless.com/wp-content/uploads/2024/07/KentuckyPeerlessAbsintheBarrelFinish.png",
             availability: "limited_release",
           },
         ],
@@ -2795,6 +2820,7 @@ export const WHISKEY_DATA: Brand[] = [
             rarityScore: 70,
             style: "Bourbon",
             description: "Individually hand-selected barrel bottled at barrel proof (typically 53–57% ABV). Each barrel yields ~160–200 bottles with a unique label. Citrus zest, honeysuckle, chocolate-covered pecans, caramel, cinnamon, and dried fruit. Distillery and private retailer selections only.",
+            imageUrl: "https://kentuckypeerless.com/wp-content/uploads/2024/07/KentuckyPeerlessSingleBarrelBourbon-401x1024.png",
             availability: "limited_release",
           },
           {
@@ -2807,6 +2833,7 @@ export const WHISKEY_DATA: Brand[] = [
             rarityScore: 70,
             style: "Rye Whiskey",
             description: "Individually hand-selected rye barrel bottled at barrel proof (typically 52–57% ABV). Each barrel yields ~160–200 bottles with a unique label. Distillers celebrate rare notes that distinguish each barrel from the standard profile. Distillery and private retailer selections only.",
+            imageUrl: "https://kentuckypeerless.com/wp-content/uploads/2024/07/KentuckyPeerless_SingleBarrelRye-401x1024.png",
             availability: "limited_release",
           },
         ],

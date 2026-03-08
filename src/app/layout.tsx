@@ -13,9 +13,73 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://commoncask.com";
+
 export const metadata: Metadata = {
-  title: "Common Cask",
-  description: "American Whiskey — Explore, rate, and discover with the community",
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: "Common Cask — American Whiskey Explorer",
+    template: "%s | Common Cask",
+  },
+  description:
+    "Explore and discover American whiskey. Browse hundreds of bourbons, ryes, and craft whiskeys from distilleries across the US — rated and reviewed by the community.",
+  keywords: [
+    "bourbon",
+    "rye whiskey",
+    "American whiskey",
+    "whiskey catalog",
+    "craft distillery",
+    "whiskey ratings",
+    "bourbon guide",
+    "Kentucky bourbon",
+    "single barrel bourbon",
+  ],
+  authors: [{ name: "Common Cask" }],
+  creator: "Common Cask",
+  openGraph: {
+    type: "website",
+    siteName: "Common Cask",
+    title: "Common Cask — American Whiskey Explorer",
+    description:
+      "Explore and discover American whiskey. Browse hundreds of bourbons, ryes, and craft whiskeys from distilleries across the US.",
+    url: SITE_URL,
+    locale: "en_US",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Common Cask — American Whiskey Explorer",
+    description:
+      "Explore and discover American whiskey. Browse hundreds of bourbons, ryes, and craft whiskeys from distilleries across the US.",
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+    },
+  },
+  alternates: {
+    canonical: SITE_URL,
+  },
+};
+
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  name: "Common Cask",
+  url: SITE_URL,
+  description:
+    "Explore and discover American whiskey. Browse hundreds of bourbons, ryes, and craft whiskeys from distilleries across the US — rated and reviewed by the community.",
+  inLanguage: "en-US",
+  potentialAction: {
+    "@type": "SearchAction",
+    target: {
+      "@type": "EntryPoint",
+      urlTemplate: `${SITE_URL}/?q={search_term_string}`,
+    },
+    "query-input": "required name=search_term_string",
+  },
 };
 
 export default function RootLayout({
@@ -25,6 +89,12 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >

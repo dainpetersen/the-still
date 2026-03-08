@@ -13,7 +13,8 @@ export type WhiskeyStyle =
   | "Rye Whiskey"
   | "Wheat Whiskey"
   | "Tennessee Whiskey"
-  | "Blended American";
+  | "Blended American"
+  | "American Single Malt";
 
 // Treemap grouping modes
 export type GroupMode = "distillery" | "style" | "state" | "ageTier" | "priceTier";

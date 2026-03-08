@@ -18,6 +18,7 @@ import { buildDistilleryColors } from "@/lib/distilleryColors";
 interface BubbleNode extends d3.SimulationNodeDatum {
   id: string;
   name: string;
+  brandId: string;
   brandName: string;
   subBrandName: string;
   price: number;
@@ -361,6 +362,7 @@ export default function BubbleChart({
             nodes.push({
               id: bt.id,
               name: bt.name,
+              brandId: brand.id,
               brandName: brand.name,
               subBrandName: sb.name,
               price: bt.price,

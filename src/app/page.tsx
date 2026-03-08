@@ -58,6 +58,8 @@ const BubbleChart = dynamic(() => import("@/components/BubbleChart"), { ssr: fal
 interface BottleNode {
   id?: string;
   name: string;
+  brandId?: string;
+  brandName?: string;
   price?: number;
   abv?: number;
   age?: number;
@@ -557,6 +559,8 @@ export default function Home() {
           bottle={{
             id: selectedBottle.id,
             name: selectedBottle.name,
+            brandId: selectedBottle.brandId,
+            brandName: selectedBottle.brandName,
             price: selectedBottle.price,
             abv: selectedBottle.abv,
             age: selectedBottle.age,

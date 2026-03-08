@@ -1,12 +1,15 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { submitRating, fetchBottleRatings } from "@/lib/supabase";
 import { getSessionId } from "@/lib/session";
 
 interface BottleInfo {
   id: string;
   name: string;
+  brandId?: string;
+  brandName?: string;
   price?: number;
   abv?: number;
   age?: number;
@@ -128,6 +131,15 @@ export default function RatingModal({ bottle, onClose, onRatingSubmitted, onFlag
             ×
           </button>
           <h2 className="text-lg font-bold text-amber-400 pr-8 leading-tight">{bottle.name}</h2>
+          {bottle.brandId && (
+            <Link
+              href={`/brands/${bottle.brandId}`}
+              className="inline-block mt-1 text-xs text-gray-500 hover:text-amber-400 transition-colors"
+              onClick={onClose}
+            >
+              {bottle.brandName ?? "View distillery"} →
+            </Link>
+          )}
           {onFlag && (
             <button
               onClick={() => { onClose(); onFlag(); }}

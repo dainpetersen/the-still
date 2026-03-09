@@ -56,6 +56,7 @@ export interface Brand {
   country: string;
   region: string;
   state?: string;          // US state for Group By feature, e.g. "Kentucky"
+  description?: string;
   subBrands: SubBrand[];
   isNDP?: boolean;         // Non-Distilling Producer
   source?: DataSource;

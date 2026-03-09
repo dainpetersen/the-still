@@ -37,6 +37,10 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "www.beamdistilling.com", pathname: "/sites/default/**" },
       // High West
       { protocol: "https", hostname: "ship.highwest.com", pathname: "/cdn/shop/**" },
+      // Seelbach's (Four Gate bottle images)
+      { protocol: "https", hostname: "seelbachs.com", pathname: "/cdn/shop/**" },
+      // Fred Minnick (Four Gate Kelvin VI press photo)
+      { protocol: "https", hostname: "www.fredminnick.com", pathname: "/wp-content/uploads/**" },
     ],
   },
 };

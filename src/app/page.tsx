@@ -54,6 +54,7 @@ import AboutSection from "@/components/AboutSection";
 import Logo from "@/components/Logo";
 
 const BubbleChart = dynamic(() => import("@/components/BubbleChart"), { ssr: false });
+const MobileStripChart = dynamic(() => import("@/components/MobileStripChart"), { ssr: false });
 
 interface BottleNode {
   id?: string;
@@ -89,6 +90,16 @@ export default function Home() {
 
   // ── Filtering state ───────────────────────────────────────────────────────
   const [showDiscontinued, setShowDiscontinued] = useState(true);
+
+  // ── Mobile detection ──────────────────────────────────────────────────────
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 767px)");
+    setIsMobile(mq.matches);
+    const fn = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mq.addEventListener("change", fn);
+    return () => mq.removeEventListener("change", fn);
+  }, []);
 
   const handleGroupModeChange = useCallback((mode: GroupMode) => {
     setGroupMode(mode);
@@ -312,77 +323,96 @@ export default function Home() {
 
       {/* Hero layout — fills viewport height, first thing user sees */}
       <div className="flex" style={{ height: "calc(100vh - 49px)" }}>
-        {/* Visualization */}
-        <div className="flex-1 relative min-h-0">
-          <BubbleChart
-            brands={displayBrands}
-            colorMode={colorMode}
-            groupMode={groupMode}
-            sizeMode={sizeMode}
-            onBottleClick={(node) => {
-              if (!user) { setShowAuth(true); return; }
-              setSelectedBottle(node as unknown as BottleNode);
-            }}
-            ratings={ratings}
-            searchQuery={searchQuery}
-            distilleryColors={distilleryColors}
-            selectedGroup={selectedGroup}
-            onLabelClick={(key) => {
-              setSelectedGroup(key);
-              // Clear text search when a label filter is activated
-              if (key) setSearchQuery("");
-            }}
-          />
 
-          {/* Search — centered overlay at top of chart */}
-          <div
-            className="absolute top-5 left-1/2 -translate-x-1/2 z-10"
-            style={{ width: "min(480px, 70%)" }}
-          >
-            <div className="relative">
-              {/* Search icon */}
-              <svg
-                className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"
-                width="14" height="14" viewBox="0 0 16 16" fill="none"
-                style={{ color: searchQuery ? "rgba(245,158,11,0.7)" : "rgba(255,255,255,0.25)" }}
-              >
-                <circle cx="6.5" cy="6.5" r="5" stroke="currentColor" strokeWidth="1.5"/>
-                <path d="M10.5 10.5L14 14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-              </svg>
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => { setSearchQuery(e.target.value); setSelectedGroup(null); }}
-                placeholder="Search bottles, brands, styles…"
-                className="search-input w-full rounded-full pl-9 pr-9 py-2.5 text-sm outline-none"
-                style={{
-                  background: "rgba(8,8,16,0.82)",
-                  backdropFilter: "blur(12px)",
-                  border: searchQuery
-                    ? "1.5px solid rgba(245,158,11,0.7)"
-                    : "1.5px solid rgba(245,158,11,0.35)",
-                  color: "#f5f5f5",
-                  boxShadow: searchQuery
-                    ? "0 0 0 3px rgba(245,158,11,0.08), 0 4px 20px rgba(0,0,0,0.5)"
-                    : "0 4px 20px rgba(0,0,0,0.4)",
+        {/* ── Mobile: full-width strip chart ── */}
+        {isMobile ? (
+          <div className="flex-1 min-h-0 overflow-hidden">
+            <MobileStripChart
+              brands={displayBrands}
+              ratings={ratings}
+              onBottleClick={(bottle) => {
+                if (!user) { setShowAuth(true); return; }
+                setSelectedBottle(bottle as unknown as BottleNode);
+              }}
+              searchQuery={searchQuery}
+              onSearchChange={(q) => { setSearchQuery(q); setSelectedGroup(null); }}
+            />
+          </div>
+        ) : (
+          <>
+            {/* ── Desktop: bubble chart + sidebar ── */}
+
+            {/* Visualization */}
+            <div className="flex-1 relative min-h-0">
+              <BubbleChart
+                brands={displayBrands}
+                colorMode={colorMode}
+                groupMode={groupMode}
+                sizeMode={sizeMode}
+                onBottleClick={(node) => {
+                  if (!user) { setShowAuth(true); return; }
+                  setSelectedBottle(node as unknown as BottleNode);
+                }}
+                ratings={ratings}
+                searchQuery={searchQuery}
+                distilleryColors={distilleryColors}
+                selectedGroup={selectedGroup}
+                onLabelClick={(key) => {
+                  setSelectedGroup(key);
+                  // Clear text search when a label filter is activated
+                  if (key) setSearchQuery("");
                 }}
               />
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery("")}
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs leading-none"
-                  style={{ color: "rgba(255,255,255,0.4)" }}
-                >✕</button>
-              )}
-            </div>
-          </div>
-        </div>
 
-        {/* Sidebar */}
-        <aside
-          className="w-56 flex-shrink-0 p-4 flex flex-col gap-4 overflow-y-auto"
-          style={{ borderLeft: "1px solid rgba(245,158,11,0.15)" }}
-        >
+              {/* Search — centered overlay at top of chart */}
+              <div
+                className="absolute top-5 left-1/2 -translate-x-1/2 z-10"
+                style={{ width: "min(480px, 70%)" }}
+              >
+                <div className="relative">
+                  {/* Search icon */}
+                  <svg
+                    className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"
+                    width="14" height="14" viewBox="0 0 16 16" fill="none"
+                    style={{ color: searchQuery ? "rgba(245,158,11,0.7)" : "rgba(255,255,255,0.25)" }}
+                  >
+                    <circle cx="6.5" cy="6.5" r="5" stroke="currentColor" strokeWidth="1.5"/>
+                    <path d="M10.5 10.5L14 14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                  </svg>
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => { setSearchQuery(e.target.value); setSelectedGroup(null); }}
+                    placeholder="Search bottles, brands, styles…"
+                    className="search-input w-full rounded-full pl-9 pr-9 py-2.5 text-sm outline-none"
+                    style={{
+                      background: "rgba(8,8,16,0.82)",
+                      backdropFilter: "blur(12px)",
+                      border: searchQuery
+                        ? "1.5px solid rgba(245,158,11,0.7)"
+                        : "1.5px solid rgba(245,158,11,0.35)",
+                      color: "#f5f5f5",
+                      boxShadow: searchQuery
+                        ? "0 0 0 3px rgba(245,158,11,0.08), 0 4px 20px rgba(0,0,0,0.5)"
+                        : "0 4px 20px rgba(0,0,0,0.4)",
+                    }}
+                  />
+                  {searchQuery && (
+                    <button
+                      onClick={() => setSearchQuery("")}
+                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs leading-none"
+                      style={{ color: "rgba(255,255,255,0.4)" }}
+                    >✕</button>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Sidebar */}
+            <aside
+              className="w-56 flex-shrink-0 p-4 flex flex-col gap-4 overflow-y-auto"
+              style={{ borderLeft: "1px solid rgba(245,158,11,0.15)" }}
+            >
           <GroupControl groupMode={groupMode} onChange={handleGroupModeChange} />
 
           {/* Size By */}
@@ -532,6 +562,8 @@ export default function Home() {
             </div>
           </div>
         </aside>
+          </>
+        )}
       </div>
 
       {/* ── About strip — below the fold ────────────────────────────── */}

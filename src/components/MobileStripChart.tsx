@@ -240,7 +240,7 @@ export default function MobileStripChart({
                   <line
                     x1={PAD_LEFT} x2={chartWidth - PAD_RIGHT}
                     y1={y} y2={y}
-                    stroke="rgba(245,158,11,0.07)"
+                    stroke="rgba(245,158,11,0.18)"
                     strokeWidth={1}
                     strokeDasharray="3,7"
                   />
@@ -249,9 +249,11 @@ export default function MobileStripChart({
                     y={y}
                     textAnchor="end"
                     dominantBaseline="middle"
-                    fontSize="9"
-                    fill="rgba(255,255,255,0.22)"
+                    fontSize="10"
+                    fontWeight="600"
+                    fill="rgba(245,158,11,0.55)"
                     fontFamily="system-ui, -apple-system, sans-serif"
+                    letterSpacing="0.02em"
                   >
                     {label}
                   </text>

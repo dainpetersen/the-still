@@ -30,6 +30,10 @@ function seededJitter(seed: string): number {
   return ((h >>> 0) % 10000) / 10000;
 }
 
+function truncate(str: string, max: number): string {
+  return str.length > max ? str.slice(0, max - 1) + "…" : str;
+}
+
 const STYLE_COLORS: Record<string, string> = {
   "Bourbon":              "#f59e0b",
   "Wheat Bourbon":        "#fbbf24",
@@ -54,11 +58,16 @@ const AXIS_LABELS = [
   { score: 8,  label: "Shelf"     },
 ];
 
-const DOT_R    = 5;
-const PAD_LEFT = 62;
-const PAD_RIGHT = 12;
-const PAD_TOP  = 20;
+const DOT_R      = 5;
+const PAD_LEFT   = 62;  // room for axis labels
+const PAD_RIGHT  = 10;
+const PAD_TOP    = 20;
 const PAD_BOTTOM = 28;
+
+// Compact mode: dots stay in a narrow left column, labels go right
+const COMPACT_DOT_ZONE = 44; // px wide for dot jitter
+const COMPACT_LABEL_GAP = 10; // gap between dot zone and labels
+const COMPACT_THRESHOLD = 20; // fewer than this → compact
 
 interface Props {
   brands: Brand[];
@@ -76,16 +85,20 @@ export default function MobileStripChart({
   onSearchChange,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [chartWidth, setChartWidth] = useState(320);
+  const [containerSize, setContainerSize] = useState({ width: 320, height: 600 });
 
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
-    const ro = new ResizeObserver(([e]) => setChartWidth(e.contentRect.width));
+    const ro = new ResizeObserver(([e]) =>
+      setContainerSize({ width: e.contentRect.width, height: e.contentRect.height })
+    );
     ro.observe(el);
-    setChartWidth(el.clientWidth);
+    setContainerSize({ width: el.clientWidth, height: el.clientHeight });
     return () => ro.disconnect();
   }, []);
+
+  const { width: chartWidth, height: containerHeight } = containerSize;
 
   // Flatten all bottles from brands
   const allBottles = useMemo<MobileBottle[]>(() => {
@@ -117,7 +130,7 @@ export default function MobileStripChart({
     return out;
   }, [brands, ratings]);
 
-  // Search filters dots out completely (no dim/shrink — they disappear)
+  // Search: dots disappear entirely (no dim/shrink)
   const filtered = useMemo(() => {
     if (!searchQuery.trim()) return allBottles;
     const q = searchQuery.toLowerCase();
@@ -130,23 +143,57 @@ export default function MobileStripChart({
     );
   }, [allBottles, searchQuery]);
 
-  // Chart height: fixed on allBottles so Y scale stays stable during search
-  const CHART_H = Math.max(800, allBottles.length * 4.5);
+  // Compact mode: search active + small result set → fit in view + show labels
+  const isCompact =
+    searchQuery.trim().length > 0 &&
+    filtered.length > 0 &&
+    filtered.length < COMPACT_THRESHOLD;
+
+  // Chart height: compact fits viewport; normal is tall + scrollable
+  const CHART_H = isCompact
+    ? Math.max(containerHeight, 200)
+    : Math.max(800, allBottles.length * 4.5);
+
   const usableW = chartWidth - PAD_LEFT - PAD_RIGHT;
   const usableH = CHART_H - PAD_TOP - PAD_BOTTOM;
 
-  // Compute dot positions with stable seeded X jitter
-  const dots = useMemo(() => {
-    const margin = DOT_R * 2;
+  // Label zone starts after the dot column (compact only)
+  const labelStartX = PAD_LEFT + COMPACT_DOT_ZONE + COMPACT_LABEL_GAP;
+  const labelW = chartWidth - labelStartX - PAD_RIGHT;
+
+  // Compute dot positions
+  const rawDots = useMemo(() => {
     return filtered.map((b) => {
       const jitter = seededJitter(b.id);
-      const x = PAD_LEFT + margin + jitter * (usableW - margin * 2);
+      const x = isCompact
+        // compact: jitter within narrow left column
+        ? PAD_LEFT + DOT_R + jitter * (COMPACT_DOT_ZONE - DOT_R * 2)
+        // normal: spread full width
+        : PAD_LEFT + DOT_R * 2 + jitter * (usableW - DOT_R * 4);
       const y = PAD_TOP + (1 - b.rarityScore / 100) * usableH;
-      return { ...b, x, y };
+      return { ...b, x, y, labelY: y };
     });
-  }, [filtered, usableW, usableH]);
+  }, [filtered, isCompact, usableW, usableH]);
 
-  // Only show styles that are actually present
+  // In compact mode: push labels down to avoid overlap (greedy)
+  const dots = useMemo(() => {
+    if (!isCompact) return rawDots;
+
+    const LABEL_H = 34;
+    const sorted = [...rawDots].sort((a, b) => a.y - b.y);
+    const result: typeof rawDots = [];
+    let prevLabelBottom = -Infinity;
+
+    for (const dot of sorted) {
+      const idealTop = dot.y - LABEL_H / 2;
+      const top = Math.max(idealTop, prevLabelBottom + 2);
+      prevLabelBottom = top + LABEL_H;
+      result.push({ ...dot, labelY: top + LABEL_H / 2 });
+    }
+    return result;
+  }, [rawDots, isCompact]);
+
+  // Only show styles present in current data
   const presentStyles = useMemo(
     () =>
       [...new Set(allBottles.map((b) => b.style))].filter(
@@ -187,9 +234,7 @@ export default function MobileStripChart({
                 ? "1.5px solid rgba(245,158,11,0.7)"
                 : "1.5px solid rgba(245,158,11,0.3)",
               color: "#f5f5f5",
-              boxShadow: searchQuery
-                ? "0 0 0 3px rgba(245,158,11,0.08)"
-                : undefined,
+              boxShadow: searchQuery ? "0 0 0 3px rgba(245,158,11,0.08)" : undefined,
             }}
           />
           {searchQuery && (
@@ -214,8 +259,12 @@ export default function MobileStripChart({
         )}
       </div>
 
-      {/* ── Scrollable strip chart ──────────────────────────────────── */}
-      <div className="flex-1 overflow-y-auto" ref={containerRef}>
+      {/* ── Chart area ──────────────────────────────────────────────── */}
+      <div
+        className="flex-1"
+        ref={containerRef}
+        style={{ overflowY: isCompact ? "hidden" : "auto" }}
+      >
         {filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-64 gap-2">
             <p className="text-sm" style={{ color: "rgba(255,255,255,0.3)" }}>
@@ -261,27 +310,91 @@ export default function MobileStripChart({
               );
             })}
 
-            {/* Dots */}
+            {/* Dots (+ compact labels) */}
             {dots.map((dot) => {
               const color = getColor(dot.style);
+              const meta = [
+                dot.brandName,
+                dot.price ? `$${dot.price}` : null,
+              ].filter(Boolean).join(" · ");
+
+              // How many chars fit in the label zone at ~6.2px/char for 11px font
+              const nameMaxChars = Math.floor(labelW / 6.2);
+              const metaMaxChars = Math.floor(labelW / 5.4);
+
               return (
                 <g
                   key={dot.id}
                   onClick={() => onBottleClick(dot)}
                   style={{ cursor: "pointer" }}
                 >
-                  {/* Invisible touch target (44px diameter) */}
+                  {/* Touch target */}
                   <circle cx={dot.x} cy={dot.y} r={22} fill="transparent" />
-                  {/* Visible dot */}
+
+                  {/* Dot */}
                   <circle
                     cx={dot.x}
                     cy={dot.y}
-                    r={DOT_R}
+                    r={isCompact ? DOT_R + 1 : DOT_R}
                     fill={color}
-                    fillOpacity={0.82}
+                    fillOpacity={0.88}
                     stroke={color}
                     strokeWidth={0.5}
                   />
+
+                  {/* Compact label card */}
+                  {isCompact && (
+                    <g>
+                      {/* Connector line from dot to label if label is offset */}
+                      {Math.abs(dot.labelY - dot.y) > 8 && (
+                        <line
+                          x1={dot.x + DOT_R + 2}
+                          y1={dot.y}
+                          x2={labelStartX - 4}
+                          y2={dot.labelY}
+                          stroke={color}
+                          strokeWidth={0.75}
+                          strokeOpacity={0.3}
+                        />
+                      )}
+
+                      {/* Background pill */}
+                      <rect
+                        x={labelStartX}
+                        y={dot.labelY - 17}
+                        width={labelW}
+                        height={34}
+                        rx={6}
+                        fill="rgba(12,10,20,0.75)"
+                        stroke={color}
+                        strokeWidth={0.5}
+                        strokeOpacity={0.3}
+                      />
+
+                      {/* Bottle name */}
+                      <text
+                        x={labelStartX + 8}
+                        y={dot.labelY - 4}
+                        fontSize="11"
+                        fontWeight="500"
+                        fill="rgba(255,255,255,0.9)"
+                        fontFamily="system-ui, -apple-system, sans-serif"
+                      >
+                        {truncate(dot.name, nameMaxChars)}
+                      </text>
+
+                      {/* Brand · price */}
+                      <text
+                        x={labelStartX + 8}
+                        y={dot.labelY + 10}
+                        fontSize="9.5"
+                        fill="rgba(245,158,11,0.55)"
+                        fontFamily="system-ui, -apple-system, sans-serif"
+                      >
+                        {truncate(meta, metaMaxChars)}
+                      </text>
+                    </g>
+                  )}
                 </g>
               );
             })}
@@ -289,23 +402,25 @@ export default function MobileStripChart({
         )}
       </div>
 
-      {/* ── Style legend ────────────────────────────────────────────── */}
-      <div
-        className="flex-shrink-0 px-4 py-2 flex flex-wrap gap-x-3 gap-y-1"
-        style={{ borderTop: "1px solid rgba(245,158,11,0.10)" }}
-      >
-        {presentStyles.map((style) => (
-          <div key={style} className="flex items-center gap-1.5">
-            <div
-              className="rounded-full flex-shrink-0"
-              style={{ width: 7, height: 7, background: getColor(style) }}
-            />
-            <span className="text-xs" style={{ color: "rgba(255,255,255,0.32)" }}>
-              {style}
-            </span>
-          </div>
-        ))}
-      </div>
+      {/* ── Style legend (hidden in compact mode) ───────────────────── */}
+      {!isCompact && (
+        <div
+          className="flex-shrink-0 px-4 py-2 flex flex-wrap gap-x-3 gap-y-1"
+          style={{ borderTop: "1px solid rgba(245,158,11,0.10)" }}
+        >
+          {presentStyles.map((style) => (
+            <div key={style} className="flex items-center gap-1.5">
+              <div
+                className="rounded-full flex-shrink-0"
+                style={{ width: 7, height: 7, background: getColor(style) }}
+              />
+              <span className="text-xs" style={{ color: "rgba(255,255,255,0.32)" }}>
+                {style}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

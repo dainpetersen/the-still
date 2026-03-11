@@ -188,7 +188,7 @@ export default function MobileStripChart({
     if (isCompact) {
       // Sort by price descending (expensive at top), space evenly — no axis needed
       const sorted = [...filtered].sort(
-        (a, b) => (b.price ?? 0) - (a.price ?? 0)
+        (a, b) => (a.price ?? 0) - (b.price ?? 0)
       );
       return sorted.map((b, i) => {
         const jitter = seededJitter(b.id);

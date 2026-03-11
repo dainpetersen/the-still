@@ -89,6 +89,7 @@ const PAD_BOTTOM = 28;
 const COMPACT_DOT_ZONE = 44;
 const COMPACT_LABEL_GAP = 10;
 const COMPACT_THRESHOLD = 20;
+const COMPACT_ROW_H = 38; // fixed px per row — keeps results close together
 
 interface Props {
   brands: Brand[];
@@ -170,9 +171,9 @@ export default function MobileStripChart({
     filtered.length > 0 &&
     filtered.length < COMPACT_THRESHOLD;
 
-  // Chart height
+  // Chart height — compact uses fixed row height so results stay close together
   const CHART_H = isCompact
-    ? Math.max(containerHeight, 200)
+    ? PAD_TOP + PAD_BOTTOM + filtered.length * COMPACT_ROW_H
     : Math.max(800, allBottles.length * 4.5);
 
   const usableW = chartWidth - PAD_LEFT - PAD_RIGHT;
@@ -189,14 +190,11 @@ export default function MobileStripChart({
       const sorted = [...filtered].sort(
         (a, b) => (b.price ?? 0) - (a.price ?? 0)
       );
-      const n = sorted.length;
       return sorted.map((b, i) => {
         const jitter = seededJitter(b.id);
         const x = PAD_LEFT + DOT_R + jitter * (COMPACT_DOT_ZONE - DOT_R * 2);
-        // Even spacing top-to-bottom
-        const y = n === 1
-          ? PAD_TOP + usableH / 2
-          : PAD_TOP + (i / (n - 1)) * usableH;
+        // Fixed row height — results stay close regardless of container size
+        const y = PAD_TOP + i * COMPACT_ROW_H + COMPACT_ROW_H / 2;
         return { ...b, x, y, labelY: y };
       });
     } else {

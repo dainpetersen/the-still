@@ -50,24 +50,45 @@ function getColor(style: string): string {
   return STYLE_COLORS[style] ?? "#9ca3af";
 }
 
-const AXIS_LABELS = [
-  { score: 95, label: "Unicorn"   },
-  { score: 75, label: "Allocated" },
-  { score: 55, label: "Limited"   },
-  { score: 30, label: "Seasonal"  },
-  { score: 8,  label: "Shelf"     },
+// Human-readable rarity labels for label cards
+const RARITY_DISPLAY: Record<string, string> = {
+  "unicorn":   "Unicorn",
+  "allocated": "Allocated",
+  "limited":   "Limited",
+  "seasonal":  "Seasonal",
+  "available": "Shelf Find",
+};
+function rarityLabel(rarity?: string): string {
+  return RARITY_DISPLAY[rarity ?? ""] ?? "Available";
+}
+
+// ── Normal mode: price Y axis ──────────────────────────────────────────────
+const PRICE_CAP = 350; // prices above this cap at the top
+const PRICE_AXIS = [
+  { price: 300, label: "$300+" },
+  { price: 200, label: "$200"  },
+  { price: 100, label: "$100"  },
+  { price: 50,  label: "$50"   },
+  { price: 20,  label: "~$20"  },
 ];
 
+/** Normalise price to 0–1 (higher = more expensive = top of chart).
+ *  Bottles with no price sit near the bottom (treated as ~$25). */
+function normalizePrice(price?: number): number {
+  if (price == null) return 25 / PRICE_CAP;
+  return Math.min(price / PRICE_CAP, 1);
+}
+
 const DOT_R      = 5;
-const PAD_LEFT   = 62;  // room for axis labels
+const PAD_LEFT   = 54;  // room for price axis labels
 const PAD_RIGHT  = 10;
 const PAD_TOP    = 20;
 const PAD_BOTTOM = 28;
 
-// Compact mode: dots stay in a narrow left column, labels go right
-const COMPACT_DOT_ZONE = 44; // px wide for dot jitter
-const COMPACT_LABEL_GAP = 10; // gap between dot zone and labels
-const COMPACT_THRESHOLD = 20; // fewer than this → compact
+// Compact mode layout constants
+const COMPACT_DOT_ZONE = 44;
+const COMPACT_LABEL_GAP = 10;
+const COMPACT_THRESHOLD = 20;
 
 interface Props {
   brands: Brand[];
@@ -100,7 +121,7 @@ export default function MobileStripChart({
 
   const { width: chartWidth, height: containerHeight } = containerSize;
 
-  // Flatten all bottles from brands
+  // Flatten all bottles
   const allBottles = useMemo<MobileBottle[]>(() => {
     const out: MobileBottle[] = [];
     for (const brand of brands) {
@@ -130,7 +151,7 @@ export default function MobileStripChart({
     return out;
   }, [brands, ratings]);
 
-  // Search: dots disappear entirely (no dim/shrink)
+  // Search: non-matching dots disappear entirely
   const filtered = useMemo(() => {
     if (!searchQuery.trim()) return allBottles;
     const q = searchQuery.toLowerCase();
@@ -143,13 +164,13 @@ export default function MobileStripChart({
     );
   }, [allBottles, searchQuery]);
 
-  // Compact mode: search active + small result set → fit in view + show labels
+  // Compact: search active + small result set
   const isCompact =
     searchQuery.trim().length > 0 &&
     filtered.length > 0 &&
     filtered.length < COMPACT_THRESHOLD;
 
-  // Chart height: compact fits viewport; normal is tall + scrollable
+  // Chart height
   const CHART_H = isCompact
     ? Math.max(containerHeight, 200)
     : Math.max(800, allBottles.length * 4.5);
@@ -157,34 +178,45 @@ export default function MobileStripChart({
   const usableW = chartWidth - PAD_LEFT - PAD_RIGHT;
   const usableH = CHART_H - PAD_TOP - PAD_BOTTOM;
 
-  // Label zone starts after the dot column (compact only)
+  // Label zone (compact only)
   const labelStartX = PAD_LEFT + COMPACT_DOT_ZONE + COMPACT_LABEL_GAP;
   const labelW = chartWidth - labelStartX - PAD_RIGHT;
 
   // Compute dot positions
   const rawDots = useMemo(() => {
-    return filtered.map((b) => {
-      const jitter = seededJitter(b.id);
-      const x = isCompact
-        // compact: jitter within narrow left column
-        ? PAD_LEFT + DOT_R + jitter * (COMPACT_DOT_ZONE - DOT_R * 2)
-        // normal: spread full width
-        : PAD_LEFT + DOT_R * 2 + jitter * (usableW - DOT_R * 4);
-      const y = PAD_TOP + (1 - b.rarityScore / 100) * usableH;
-      return { ...b, x, y, labelY: y };
-    });
+    if (isCompact) {
+      // Sort by price descending (expensive at top), space evenly — no axis needed
+      const sorted = [...filtered].sort(
+        (a, b) => (b.price ?? 0) - (a.price ?? 0)
+      );
+      const n = sorted.length;
+      return sorted.map((b, i) => {
+        const jitter = seededJitter(b.id);
+        const x = PAD_LEFT + DOT_R + jitter * (COMPACT_DOT_ZONE - DOT_R * 2);
+        // Even spacing top-to-bottom
+        const y = n === 1
+          ? PAD_TOP + usableH / 2
+          : PAD_TOP + (i / (n - 1)) * usableH;
+        return { ...b, x, y, labelY: y };
+      });
+    } else {
+      // Normal: Y = price (expensive at top)
+      return filtered.map((b) => {
+        const jitter = seededJitter(b.id);
+        const x = PAD_LEFT + DOT_R * 2 + jitter * (usableW - DOT_R * 4);
+        const y = PAD_TOP + (1 - normalizePrice(b.price)) * usableH;
+        return { ...b, x, y, labelY: y };
+      });
+    }
   }, [filtered, isCompact, usableW, usableH]);
 
-  // In compact mode: push labels down to avoid overlap (greedy)
+  // Greedy label collision avoidance (compact only)
   const dots = useMemo(() => {
     if (!isCompact) return rawDots;
-
-    const LABEL_H = 34;
-    const sorted = [...rawDots].sort((a, b) => a.y - b.y);
+    const LABEL_H = 36;
     const result: typeof rawDots = [];
     let prevLabelBottom = -Infinity;
-
-    for (const dot of sorted) {
+    for (const dot of rawDots) {
       const idealTop = dot.y - LABEL_H / 2;
       const top = Math.max(idealTop, prevLabelBottom + 2);
       prevLabelBottom = top + LABEL_H;
@@ -193,7 +225,7 @@ export default function MobileStripChart({
     return result;
   }, [rawDots, isCompact]);
 
-  // Only show styles present in current data
+  // Only show styles present in data
   const presentStyles = useMemo(
     () =>
       [...new Set(allBottles.map((b) => b.style))].filter(
@@ -281,9 +313,9 @@ export default function MobileStripChart({
         ) : (
           <svg width={chartWidth} height={CHART_H} style={{ display: "block" }}>
 
-            {/* Axis reference lines + labels */}
-            {AXIS_LABELS.map(({ score, label }) => {
-              const y = PAD_TOP + (1 - score / 100) * usableH;
+            {/* Price axis (normal mode only) */}
+            {!isCompact && PRICE_AXIS.map(({ price, label }) => {
+              const y = PAD_TOP + (1 - normalizePrice(price)) * usableH;
               return (
                 <g key={label}>
                   <line
@@ -310,24 +342,19 @@ export default function MobileStripChart({
               );
             })}
 
-            {/* Dots (+ compact labels) */}
+            {/* Dots + compact label cards */}
             {dots.map((dot) => {
               const color = getColor(dot.style);
-              const meta = [
-                dot.brandName,
-                dot.price ? `$${dot.price}` : null,
-              ].filter(Boolean).join(" · ");
-
-              // How many chars fit in the label zone at ~6.2px/char for 11px font
               const nameMaxChars = Math.floor(labelW / 6.2);
               const metaMaxChars = Math.floor(labelW / 5.4);
+              const meta = [
+                dot.price ? `$${dot.price}` : null,
+                rarityLabel(dot.rarity),
+                dot.brandName,
+              ].filter(Boolean).join(" · ");
 
               return (
-                <g
-                  key={dot.id}
-                  onClick={() => onBottleClick(dot)}
-                  style={{ cursor: "pointer" }}
-                >
+                <g key={dot.id} onClick={() => onBottleClick(dot)} style={{ cursor: "pointer" }}>
                   {/* Touch target */}
                   <circle cx={dot.x} cy={dot.y} r={22} fill="transparent" />
 
@@ -345,13 +372,11 @@ export default function MobileStripChart({
                   {/* Compact label card */}
                   {isCompact && (
                     <g>
-                      {/* Connector line from dot to label if label is offset */}
+                      {/* Connector line when label is offset from dot */}
                       {Math.abs(dot.labelY - dot.y) > 8 && (
                         <line
-                          x1={dot.x + DOT_R + 2}
-                          y1={dot.y}
-                          x2={labelStartX - 4}
-                          y2={dot.labelY}
+                          x1={dot.x + DOT_R + 2} y1={dot.y}
+                          x2={labelStartX - 4}    y2={dot.labelY}
                           stroke={color}
                           strokeWidth={0.75}
                           strokeOpacity={0.3}
@@ -361,9 +386,9 @@ export default function MobileStripChart({
                       {/* Background pill */}
                       <rect
                         x={labelStartX}
-                        y={dot.labelY - 17}
+                        y={dot.labelY - 18}
                         width={labelW}
-                        height={34}
+                        height={36}
                         rx={6}
                         fill="rgba(12,10,20,0.75)"
                         stroke={color}
@@ -383,10 +408,10 @@ export default function MobileStripChart({
                         {truncate(dot.name, nameMaxChars)}
                       </text>
 
-                      {/* Brand · price */}
+                      {/* Brand · Rarity · Price */}
                       <text
                         x={labelStartX + 8}
-                        y={dot.labelY + 10}
+                        y={dot.labelY + 11}
                         fontSize="9.5"
                         fill="rgba(245,158,11,0.55)"
                         fontFamily="system-ui, -apple-system, sans-serif"
@@ -402,7 +427,7 @@ export default function MobileStripChart({
         )}
       </div>
 
-      {/* ── Style legend (hidden in compact mode) ───────────────────── */}
+      {/* ── Style legend (normal mode only) ─────────────────────────── */}
       {!isCompact && (
         <div
           className="flex-shrink-0 px-4 py-2 flex flex-wrap gap-x-3 gap-y-1"

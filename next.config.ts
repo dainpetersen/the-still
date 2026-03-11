@@ -41,6 +41,11 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "seelbachs.com", pathname: "/cdn/shop/**" },
       // Fred Minnick (Four Gate Kelvin VI press photo)
       { protocol: "https", hostname: "www.fredminnick.com", pathname: "/wp-content/uploads/**" },
+      // Leopold Bros. bottle images
+      { protocol: "https", hostname: "www.bittersandbottles.com", pathname: "/cdn/shop/**" },
+      { protocol: "https", hostname: "woodencork.com", pathname: "/cdn/shop/**" },
+      { protocol: "https", hostname: "dramfellows.com", pathname: "/cdn/shop/**" },
+      { protocol: "https", hostname: "www.missionliquor.com", pathname: "/cdn/shop/**" },
     ],
   },
 };

@@ -224,14 +224,39 @@ export default function Home() {
         }}
       >
         <Logo />
-        <span className="text-xs hidden md:block" style={{ color: "rgba(245,158,11,0.4)" }}>
-          Common Cask — Explore &amp; Rate
-        </span>
+
+        {/* Branding + live stats + one-liner — desktop only */}
+        <div className="hidden md:flex items-center gap-3 min-w-0">
+          <span className="text-xs font-semibold flex-shrink-0" style={{ color: "rgba(245,158,11,0.5)" }}>
+            Common Cask
+          </span>
+          <span className="flex-shrink-0" style={{ color: "rgba(245,158,11,0.18)", fontSize: 13 }}>|</span>
+          <div className="flex items-center gap-2 text-xs flex-shrink-0">
+            <span style={{ color: "rgba(255,255,255,0.28)" }}>
+              <span className="font-semibold" style={{ color: "rgba(245,158,11,0.75)" }}>{viewStats.distilleries}</span>
+              {" "}distilleries
+            </span>
+            <span style={{ color: "rgba(255,255,255,0.1)" }}>·</span>
+            <span style={{ color: "rgba(255,255,255,0.28)" }}>
+              <span className="font-semibold" style={{ color: "rgba(245,158,11,0.75)" }}>{viewStats.bottles}</span>
+              {" "}bottles
+            </span>
+            {Object.keys(ratings).length > 0 && (
+              <>
+                <span style={{ color: "rgba(255,255,255,0.1)" }}>·</span>
+                <span style={{ color: "rgba(255,255,255,0.28)" }}>
+                  <span className="font-semibold" style={{ color: "rgba(245,158,11,0.75)" }}>{Object.keys(ratings).length}</span>
+                  {" "}rated
+                </span>
+              </>
+            )}
+          </div>
+          <span className="text-xs hidden lg:block truncate" style={{ color: "rgba(255,255,255,0.18)" }}>
+            Community-driven American whiskey catalog · No paid rankings
+          </span>
+        </div>
 
         <div className="ml-auto flex items-center gap-3">
-          <span className="text-xs text-gray-600 hidden md:block">
-            Click any bottle to rate it
-          </span>
 
           {/* Auth control */}
           {user ? (

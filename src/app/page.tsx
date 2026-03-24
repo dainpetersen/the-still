@@ -153,14 +153,40 @@ export default function Home() {
       setRatings(ratingsData);
 
       // Use Supabase catalog as the base (enriched with static style/state),
-      // then append any static brands not yet in the Supabase catalog so that
-      // new entries in whiskeys.ts always appear in the chart.
+      // then merge in any static sub-brands/bottles not yet in Supabase so that
+      // new entries in whiskeys.ts always appear in the chart even for brands
+      // that already exist in the catalog.
       const baseData = (() => {
         if (!catalogData) return WHISKEY_DATA;
         const enriched = enrichCatalogStyles(catalogData);
-        const catalogIds = new Set(enriched.map((b) => b.id));
-        const staticOnly = WHISKEY_DATA.filter((b) => !catalogIds.has(b.id));
-        return [...enriched, ...staticOnly];
+        const catalogBrandMap = new Map(enriched.map((b) => [b.id, b]));
+
+        const merged = WHISKEY_DATA.map((staticBrand) => {
+          const catalogBrand = catalogBrandMap.get(staticBrand.id);
+          if (!catalogBrand) return staticBrand; // brand only in static data, use as-is
+
+          // Brand exists in both — merge sub-brands: use catalog version but add
+          // any static sub-brands/bottles not present in the catalog.
+          const catalogSubMap = new Map(catalogBrand.subBrands.map((sb) => [sb.id, sb]));
+          const mergedSubBrands = staticBrand.subBrands.map((staticSub) => {
+            const catalogSub = catalogSubMap.get(staticSub.id);
+            if (!catalogSub) return staticSub; // sub-brand only in static data
+            // Sub-brand exists in both — add static bottles not in catalog
+            const catalogBottleIds = new Set(catalogSub.bottles.map((b) => b.id));
+            const staticOnlyBottles = staticSub.bottles.filter((b) => !catalogBottleIds.has(b.id));
+            return { ...catalogSub, bottles: [...catalogSub.bottles, ...staticOnlyBottles] };
+          });
+          // Also include any catalog sub-brands not in static data
+          const staticSubIds = new Set(staticBrand.subBrands.map((sb) => sb.id));
+          const catalogOnlySubs = catalogBrand.subBrands.filter((sb) => !staticSubIds.has(sb.id));
+
+          return { ...catalogBrand, subBrands: [...mergedSubBrands, ...catalogOnlySubs] };
+        });
+
+        // Also include any catalog brands not in static data
+        const staticBrandIds = new Set(WHISKEY_DATA.map((b) => b.id));
+        const catalogOnlyBrands = enriched.filter((b) => !staticBrandIds.has(b.id));
+        return [...merged, ...catalogOnlyBrands];
       })();
 
       if (approvedSubs.length > 0) {

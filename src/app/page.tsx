@@ -156,9 +156,14 @@ export default function Home() {
       // then merge in any static sub-brands/bottles not yet in Supabase so that
       // new entries in whiskeys.ts always appear in the chart even for brands
       // that already exist in the catalog.
+      // Supabase brand IDs that are duplicates/typos consolidated into static data
+      const DEPRECATED_CATALOG_IDS = new Set(["new-rifff", "new-riff"]);
+
       const baseData = (() => {
         if (!catalogData) return WHISKEY_DATA;
-        const enriched = enrichCatalogStyles(catalogData);
+        const enriched = enrichCatalogStyles(catalogData).filter(
+          (b) => !DEPRECATED_CATALOG_IDS.has(b.id)
+        );
         const catalogBrandMap = new Map(enriched.map((b) => [b.id, b]));
 
         const merged = WHISKEY_DATA.map((staticBrand) => {

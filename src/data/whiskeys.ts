@@ -1721,7 +1721,7 @@ export const WHISKEY_DATA: Brand[] = [
             description: "Released when ready — not by year. An extraordinarily rare bottling.",
           },
           {
-            id: "michters-25-bourbon",
+            id: "michters-25",
             name: "Michter's 25 Year Bourbon",
             subBrandId: "michters-aged",
             age: 25,

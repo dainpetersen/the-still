@@ -122,17 +122,30 @@ export async function fetchAllAverageRatings(): Promise<
 > {
   const client = getAnonClient();
   if (!client) return {};
-  const { data, error } = await client.from("ratings").select("bottle_id, rating");
-  // Don't throw — an expired JWT causes PostgREST to reject even public-table reads.
-  // Return empty so loadData() can still load the catalog instead of silently aborting.
-  if (error) return {};
 
+  // Paginate in 1000-row pages (PostgREST default max) to fetch all ratings.
+  const PAGE = 1_000;
   const map: Record<string, { sum: number; count: number }> = {};
-  for (const row of data ?? []) {
-    if (!map[row.bottle_id]) map[row.bottle_id] = { sum: 0, count: 0 };
-    map[row.bottle_id].sum += row.rating;
-    map[row.bottle_id].count += 1;
+  let offset = 0;
+
+  while (true) {
+    const { data, error } = await client
+      .from("ratings")
+      .select("bottle_id, rating")
+      .range(offset, offset + PAGE - 1);
+    // Don't throw — expired JWT causes PostgREST to reject even public reads.
+    if (error || !data?.length) break;
+
+    for (const row of data) {
+      if (!map[row.bottle_id]) map[row.bottle_id] = { sum: 0, count: 0 };
+      map[row.bottle_id].sum += row.rating;
+      map[row.bottle_id].count += 1;
+    }
+
+    if (data.length < PAGE) break; // last page
+    offset += PAGE;
   }
+
   return Object.fromEntries(
     Object.entries(map).map(([id, { sum, count }]) => [
       id,

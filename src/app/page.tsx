@@ -165,6 +165,10 @@ export default function Home() {
           (b) => !DEPRECATED_CATALOG_IDS.has(b.id)
         );
         const catalogBrandMap = new Map(enriched.map((b) => [b.id, b]));
+        // IDs of static top-level brands — used to skip Supabase sub-brands whose
+        // ID collides with a standalone static brand (e.g. Supabase "makers-mark"
+        // sub-brand under beam-suntory vs static "makers-mark" top-level brand).
+        const staticTopLevelBrandIds = new Set(WHISKEY_DATA.map((b) => b.id));
 
         const merged = WHISKEY_DATA.map((staticBrand) => {
           const catalogBrand = catalogBrandMap.get(staticBrand.id);
@@ -172,18 +176,39 @@ export default function Home() {
 
           // Brand exists in both — merge sub-brands: use catalog version but add
           // any static sub-brands/bottles not present in the catalog.
+          // Two-pass to prevent duplicates when static/Supabase use different sub-brand IDs
+          // for the same bottles (e.g. static "stagg-jr-sub" vs Supabase "stagg").
           const catalogSubMap = new Map(catalogBrand.subBrands.map((sb) => [sb.id, sb]));
-          const mergedSubBrands = staticBrand.subBrands.map((staticSub) => {
-            const catalogSub = catalogSubMap.get(staticSub.id);
-            if (!catalogSub) return staticSub; // sub-brand only in static data
-            // Sub-brand exists in both — add static bottles not in catalog
-            const catalogBottleIds = new Set(catalogSub.bottles.map((b) => b.id));
-            const staticOnlyBottles = staticSub.bottles.filter((b) => !catalogBottleIds.has(b.id));
-            return { ...catalogSub, bottles: [...catalogSub.bottles, ...staticOnlyBottles] };
-          });
-          // Also include any catalog sub-brands not in static data
+
+          // Pass 1: merge sub-brands that have a catalog match (catalog wins for metadata)
+          const matchedSubBrands = staticBrand.subBrands
+            .filter((staticSub) => catalogSubMap.has(staticSub.id))
+            .map((staticSub) => {
+              const catalogSub = catalogSubMap.get(staticSub.id)!;
+              const catalogBottleIds = new Set(catalogSub.bottles.map((b) => b.id));
+              const staticOnlyBottles = staticSub.bottles.filter((b) => !catalogBottleIds.has(b.id));
+              return { ...catalogSub, bottles: [...catalogSub.bottles, ...staticOnlyBottles] };
+            });
+
+          // Pass 2: add static-only sub-brands, excluding bottles already merged above
+          const matchedBottleIds = new Set(matchedSubBrands.flatMap((sb) => sb.bottles.map((b) => b.id)));
+          const staticOnlySubBrands = staticBrand.subBrands
+            .filter((staticSub) => !catalogSubMap.has(staticSub.id))
+            .map((staticSub) => ({
+              ...staticSub,
+              bottles: staticSub.bottles.filter((b) => !matchedBottleIds.has(b.id)),
+            }))
+            .filter((sb) => sb.bottles.length > 0);
+
+          const mergedSubBrands = [...matchedSubBrands, ...staticOnlySubBrands];
+
+          // Add catalog-only sub-brands, excluding bottles already covered
           const staticSubIds = new Set(staticBrand.subBrands.map((sb) => sb.id));
-          const catalogOnlySubs = catalogBrand.subBrands.filter((sb) => !staticSubIds.has(sb.id));
+          const mergedBottleIds = new Set(mergedSubBrands.flatMap((sb) => sb.bottles.map((b) => b.id)));
+          const catalogOnlySubs = catalogBrand.subBrands
+            .filter((sb) => !staticSubIds.has(sb.id) && !staticTopLevelBrandIds.has(sb.id))
+            .map((sb) => ({ ...sb, bottles: sb.bottles.filter((b) => !mergedBottleIds.has(b.id)) }))
+            .filter((sb) => sb.bottles.length > 0);
 
           return { ...catalogBrand, subBrands: [...mergedSubBrands, ...catalogOnlySubs] };
         });
@@ -191,7 +216,22 @@ export default function Home() {
         // Also include any catalog brands not in static data
         const staticBrandIds = new Set(WHISKEY_DATA.map((b) => b.id));
         const catalogOnlyBrands = enriched.filter((b) => !staticBrandIds.has(b.id));
-        return [...merged, ...catalogOnlyBrands];
+        const allBrands = [...merged, ...catalogOnlyBrands];
+
+        // Global deduplication: ensure no bottle ID appears more than once across all brands.
+        // This catches any edge cases the per-brand merge logic didn't handle.
+        const seenBottleIds = new Set<string>();
+        return allBrands.map((brand) => ({
+          ...brand,
+          subBrands: brand.subBrands.map((sub) => ({
+            ...sub,
+            bottles: sub.bottles.filter((b) => {
+              if (seenBottleIds.has(b.id)) return false;
+              seenBottleIds.add(b.id);
+              return true;
+            }),
+          })).filter((sub) => sub.bottles.length > 0),
+        })).filter((brand) => brand.subBrands.length > 0);
       })();
 
       if (approvedSubs.length > 0) {

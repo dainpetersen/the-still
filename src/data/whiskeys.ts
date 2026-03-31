@@ -221,6 +221,18 @@ export const WHISKEY_DATA: Brand[] = [
             style: "Wheated Bourbon",
             description: "Limited distillery-only release. Among the most sought wheated bourbons.",
           },
+          {
+            id: "weller-wlw",
+            name: "William Larue Weller (BTAC)",
+            subBrandId: "weller",
+            abv: 62.6,
+            price: 500,
+            rarity: "allocated",
+            rarityScore: 93,
+            style: "Wheated Bourbon",
+            description: "The BTAC wheated bourbon — uncut, unfiltered, and deeply complex. Annual release using the W.L. Weller mashbill at barrel proof. Vanilla, caramel, dark fruit, and a rich, velvety texture. Consistently one of the highest-rated BTAC expressions.",
+            availability: "limited_release",
+          },
         ],
       },
       {

@@ -50,7 +50,7 @@ import RatingModal from "@/components/RatingModal";
 import SubmissionModal from "@/components/SubmissionModal";
 import AuthModal from "@/components/AuthModal";
 import FlagModal from "@/components/FlagModal";
-import TopRatedSection from "@/components/TopRatedSection";
+import TopRatedLeaderboard from "@/components/TopRatedLeaderboard";
 import AboutSection from "@/components/AboutSection";
 import Logo from "@/components/Logo";
 
@@ -428,7 +428,18 @@ export default function Home() {
           </div>
         ) : (
           <>
-            {/* ── Desktop: bubble chart + sidebar ── */}
+            {/* ── Desktop: leaderboard + bubble chart + sidebar ── */}
+
+            {/* Left leaderboard panel */}
+            <div className="w-44 flex-shrink-0 hidden lg:block">
+              <TopRatedLeaderboard
+                brands={displayBrands}
+                ratings={ratings}
+                searchQuery={searchQuery}
+                groupMode={groupMode}
+                selectedGroup={selectedGroup}
+              />
+            </div>
 
             {/* Visualization */}
             <div className="flex-1 relative min-h-0">
@@ -635,9 +646,6 @@ export default function Home() {
           >
             + Submit a Bottle
           </button>
-
-          {/* Top Rated — compact sidebar panel */}
-          <TopRatedSection brands={mergedBrands} ratings={ratings} panel />
 
           {/* Legend key */}
           <div className="space-y-1.5 px-1">

@@ -1107,7 +1107,7 @@ export default function BubbleChart({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [brands, groupMode, sizeMode, colorMode, ratings]);
 
-  // ── Search + group filter: dim/shrink non-matching bubbles (no sim rebuild) ─
+  // ── Search + group filter: fade non-matching bubbles out entirely ────────────
   useEffect(() => {
     const svg = svgRef.current;
     if (!svg) return;
@@ -1125,12 +1125,19 @@ export default function BubbleChart({
 
     const clayLayer = d3.select(svg).select("g.glow-layer");
 
+    // Fade entire clay group in/out based on whether any bubble in it matches
     const updateClay = (matchFn: ((d: BubbleNode) => boolean) | null) => {
       clayLayer.selectAll<SVGGElement, string>("g.clay-group").each(function () {
-        d3.select(this)
-          .selectAll<SVGCircleElement, BubbleNode>("circle.clay-bubble")
-          .transition().duration(250)
-          .attr("r", (d) => (matchFn === null || matchFn(d)) ? d.r : 0);
+        const grp = d3.select(this);
+        if (matchFn === null) {
+          grp.transition().duration(200).attr("opacity", 0.52);
+        } else {
+          const nodes = grp
+            .selectAll<SVGCircleElement, BubbleNode>("circle.clay-bubble")
+            .data();
+          const anyMatch = nodes.some(matchFn);
+          grp.transition().duration(200).attr("opacity", anyMatch ? 0.52 : 0);
+        }
       });
     };
 
@@ -1145,18 +1152,18 @@ export default function BubbleChart({
     const highlight    = (d: BubbleNode) => matchesSearch(d) && matchesGroup(d);
 
     if (!q && !sel) {
-      bubbles.transition().duration(250).attr("opacity", 1).attr("r", (d) => d.r);
+      // Restore everything
+      bubbles.transition().duration(250).attr("opacity", 1);
       labels.transition().duration(200).attr("opacity", 0.92);
       updateClay(null);
     } else {
+      // Matching bubbles stay visible; non-matching fade to invisible
       bubbles
-        .transition().duration(250)
-        .attr("opacity", (d) => (highlight(d) ? 1 : 0.08))
-        .attr("r",       (d) => (highlight(d) ? d.r : d.r * 0.35));
+        .transition().duration(200)
+        .attr("opacity", (d) => (highlight(d) ? 1 : 0));
       updateClay(highlight);
-      // Dim labels that aren't the active group filter
       labels.transition().duration(200).attr("opacity", (d) =>
-        sel ? (d.key === sel ? 1.0 : 0.2) : 0.92
+        sel ? (d.key === sel ? 1.0 : 0.15) : 0.92
       );
     }
   }, [searchQuery, selectedGroup]);

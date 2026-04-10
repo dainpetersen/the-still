@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import dynamic from "next/dynamic";
+import Link from "next/link";
 import type { User } from "@supabase/supabase-js";
 import { WHISKEY_DATA, buildGroupedData } from "@/data/whiskeys";
 import {
@@ -303,10 +304,10 @@ export default function Home() {
           </span>
           <span className="flex-shrink-0" style={{ color: "rgba(245,158,11,0.18)", fontSize: 13 }}>|</span>
           <div className="flex items-center gap-2 text-xs flex-shrink-0">
-            <span style={{ color: "rgba(255,255,255,0.28)" }}>
+            <Link href="/brands" style={{ color: "rgba(255,255,255,0.28)" }} className="hover:text-neutral-200 transition-colors">
               <span className="font-semibold" style={{ color: "rgba(245,158,11,0.75)" }}>{viewStats.distilleries}</span>
               {" "}distilleries
-            </span>
+            </Link>
             <span style={{ color: "rgba(255,255,255,0.1)" }}>·</span>
             <span style={{ color: "rgba(255,255,255,0.28)" }}>
               <span className="font-semibold" style={{ color: "rgba(245,158,11,0.75)" }}>{viewStats.bottles}</span>

@@ -281,17 +281,14 @@ export default function Home() {
   return (
     <main
       className="flex flex-col"
-      style={{
-        background: "linear-gradient(160deg, #0a0608 0%, #0f0a18 50%, #080a0f 100%)",
-        color: "#f5f5f5",
-      }}
+      style={{ background: "#f0e8d8", color: "#0d0b08" }}
     >
       {/* Header — sticky so it stays visible when scrolling into sections */}
       <header
         className="sticky top-0 z-40 px-6 py-3 flex items-center gap-4 flex-shrink-0"
         style={{
-          borderBottom: "1px solid rgba(245,158,11,0.2)",
-          background: "rgba(10,6,8,0.92)",
+          borderBottom: "1px solid rgba(0,0,0,0.12)",
+          background: "rgba(240,232,216,0.94)",
           backdropFilter: "blur(8px)",
         }}
       >
@@ -299,31 +296,31 @@ export default function Home() {
 
         {/* Branding + live stats + one-liner — desktop only */}
         <div className="hidden md:flex items-center gap-3 min-w-0">
-          <span className="text-xs font-semibold flex-shrink-0" style={{ color: "rgba(245,158,11,0.5)" }}>
+          <span className="text-xs font-semibold flex-shrink-0" style={{ color: "rgba(13,11,8,0.45)", fontFamily: "Georgia,serif" }}>
             Common Cask
           </span>
-          <span className="flex-shrink-0" style={{ color: "rgba(245,158,11,0.18)", fontSize: 13 }}>|</span>
+          <span className="flex-shrink-0" style={{ color: "rgba(13,11,8,0.2)", fontSize: 13 }}>|</span>
           <div className="flex items-center gap-2 text-xs flex-shrink-0">
-            <Link href="/brands" style={{ color: "rgba(255,255,255,0.28)" }} className="hover:text-neutral-200 transition-colors">
-              <span className="font-semibold" style={{ color: "rgba(245,158,11,0.75)" }}>{viewStats.distilleries}</span>
+            <Link href="/brands" style={{ color: "rgba(13,11,8,0.55)" }} className="hover:opacity-80 transition-opacity">
+              <span className="font-semibold" style={{ color: "#0d0b08" }}>{viewStats.distilleries}</span>
               {" "}distilleries
             </Link>
-            <span style={{ color: "rgba(255,255,255,0.1)" }}>·</span>
-            <span style={{ color: "rgba(255,255,255,0.28)" }}>
-              <span className="font-semibold" style={{ color: "rgba(245,158,11,0.75)" }}>{viewStats.bottles}</span>
+            <span style={{ color: "rgba(13,11,8,0.2)" }}>·</span>
+            <span style={{ color: "rgba(13,11,8,0.55)" }}>
+              <span className="font-semibold" style={{ color: "#0d0b08" }}>{viewStats.bottles}</span>
               {" "}bottles
             </span>
             {Object.keys(ratings).length > 0 && (
               <>
-                <span style={{ color: "rgba(255,255,255,0.1)" }}>·</span>
-                <span style={{ color: "rgba(255,255,255,0.28)" }}>
-                  <span className="font-semibold" style={{ color: "rgba(245,158,11,0.75)" }}>{Object.keys(ratings).length}</span>
+                <span style={{ color: "rgba(13,11,8,0.2)" }}>·</span>
+                <span style={{ color: "rgba(13,11,8,0.55)" }}>
+                  <span className="font-semibold" style={{ color: "#0d0b08" }}>{Object.keys(ratings).length}</span>
                   {" "}rated
                 </span>
               </>
             )}
           </div>
-          <span className="text-xs hidden lg:block truncate" style={{ color: "rgba(255,255,255,0.18)" }}>
+          <span className="text-xs hidden lg:block truncate" style={{ color: "rgba(13,11,8,0.3)", fontStyle: "italic" }}>
             Community-driven American whiskey catalog · No paid rankings
           </span>
         </div>
@@ -337,9 +334,9 @@ export default function Home() {
                 onClick={() => setShowUserMenu((v) => !v)}
                 className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-all"
                 style={{
-                  background: (profile?.avatarUrl ?? user.user_metadata?.avatar_url) ? "transparent" : "rgba(245,158,11,0.2)",
-                  border: "1px solid rgba(245,158,11,0.4)",
-                  color: "#f59e0b",
+                  background: (profile?.avatarUrl ?? user.user_metadata?.avatar_url) ? "transparent" : "rgba(13,11,8,0.08)",
+                  border: "1px solid rgba(13,11,8,0.25)",
+                  color: "#0d0b08",
                   overflow: "hidden",
                 }}
                 title={profile?.displayName ?? user.email ?? "Account"}
@@ -357,43 +354,41 @@ export default function Home() {
               </button>
               {showUserMenu && (
                 <div
-                  className="absolute right-0 top-10 w-44 rounded-xl py-2 z-50"
+                  className="absolute right-0 top-10 w-44 rounded-sm py-2 z-50"
                   style={{
-                    background: "#0d0d18",
-                    border: "1px solid rgba(245,158,11,0.2)",
-                    boxShadow: "0 8px 30px rgba(0,0,0,0.5)",
+                    background: "rgba(244,238,224,0.97)",
+                    border: "1px solid rgba(0,0,0,0.15)",
+                    boxShadow: "2px 4px 16px rgba(0,0,0,0.12)",
                   }}
                 >
-                  <div className="px-4 py-2 border-b" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
-                    <p className="text-xs font-semibold text-white truncate">
+                  <div className="px-4 py-2 border-b" style={{ borderColor: "rgba(0,0,0,0.08)" }}>
+                    <p className="text-xs font-semibold truncate" style={{ color: "#0d0b08" }}>
                       {profile?.displayName ?? user.email}
                     </p>
                     {profile?.displayName && (
-                      <p className="text-xs truncate" style={{ color: "rgba(255,255,255,0.3)" }}>{user.email}</p>
+                      <p className="text-xs truncate" style={{ color: "rgba(13,11,8,0.4)" }}>{user.email}</p>
                     )}
                   </div>
                   <button
                     onClick={() => { setShowUserMenu(false); setShowAuth(true); }}
                     className="w-full text-left px-4 py-2 text-sm transition-colors"
-                    style={{ color: "rgba(255,255,255,0.55)" }}
-                    onMouseEnter={(e) => (e.currentTarget.style.color = "#fff")}
-                    onMouseLeave={(e) => (e.currentTarget.style.color = "rgba(255,255,255,0.55)")}
+                    style={{ color: "rgba(13,11,8,0.6)" }}
+                    onMouseEnter={(e) => (e.currentTarget.style.color = "#0d0b08")}
+                    onMouseLeave={(e) => (e.currentTarget.style.color = "rgba(13,11,8,0.6)")}
                   >
                     Edit Profile
                   </button>
                   <button
                     onClick={() => {
                       setShowUserMenu(false);
-                      // Clear local state immediately so the UI reacts instantly,
-                      // then fire the network sign-out in the background.
                       setUser(null);
                       setProfile(null);
                       signOut().catch(() => {});
                     }}
                     className="w-full text-left px-4 py-2 text-sm transition-colors"
-                    style={{ color: "rgba(239,68,68,0.7)" }}
-                    onMouseEnter={(e) => (e.currentTarget.style.color = "rgba(239,68,68,1)")}
-                    onMouseLeave={(e) => (e.currentTarget.style.color = "rgba(239,68,68,0.7)")}
+                    style={{ color: "rgba(160,40,40,0.7)" }}
+                    onMouseEnter={(e) => (e.currentTarget.style.color = "rgba(160,40,40,1)")}
+                    onMouseLeave={(e) => (e.currentTarget.style.color = "rgba(160,40,40,0.7)")}
                   >
                     Sign Out
                   </button>
@@ -403,13 +398,13 @@ export default function Home() {
           ) : (
             <button
               onClick={() => setShowAuth(true)}
-              className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
+              className="px-3 py-1.5 rounded-sm text-xs font-semibold transition-all"
               style={{
-                border: "1px solid rgba(245,158,11,0.4)",
-                color: "rgba(245,158,11,0.85)",
+                border: "1px solid rgba(13,11,8,0.3)",
+                color: "rgba(13,11,8,0.7)",
                 background: "transparent",
               }}
-              onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(245,158,11,0.08)")}
+              onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(13,11,8,0.06)")}
               onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
             >
               Sign In
@@ -471,7 +466,7 @@ export default function Home() {
                   <svg
                     className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"
                     width="14" height="14" viewBox="0 0 16 16" fill="none"
-                    style={{ color: searchQuery ? "rgba(245,158,11,0.7)" : "rgba(255,255,255,0.25)" }}
+                    style={{ color: searchQuery ? "rgba(13,11,8,0.6)" : "rgba(13,11,8,0.28)" }}
                   >
                     <circle cx="6.5" cy="6.5" r="5" stroke="currentColor" strokeWidth="1.5"/>
                     <path d="M10.5 10.5L14 14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
@@ -483,22 +478,22 @@ export default function Home() {
                     placeholder="Search bottles, brands, styles…"
                     className="search-input w-full rounded-full pl-9 pr-9 py-2.5 text-sm outline-none"
                     style={{
-                      background: "rgba(8,8,16,0.82)",
+                      background: "rgba(244,238,224,0.94)",
                       backdropFilter: "blur(12px)",
                       border: searchQuery
-                        ? "1.5px solid rgba(245,158,11,0.7)"
-                        : "1.5px solid rgba(245,158,11,0.35)",
-                      color: "#f5f5f5",
+                        ? "1.5px solid rgba(13,11,8,0.4)"
+                        : "1.5px solid rgba(13,11,8,0.18)",
+                      color: "#0d0b08",
                       boxShadow: searchQuery
-                        ? "0 0 0 3px rgba(245,158,11,0.08), 0 4px 20px rgba(0,0,0,0.5)"
-                        : "0 4px 20px rgba(0,0,0,0.4)",
+                        ? "0 0 0 3px rgba(13,11,8,0.05), 0 4px 16px rgba(0,0,0,0.1)"
+                        : "0 4px 16px rgba(0,0,0,0.08)",
                     }}
                   />
                   {searchQuery && (
                     <button
                       onClick={() => setSearchQuery("")}
                       className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs leading-none"
-                      style={{ color: "rgba(255,255,255,0.4)" }}
+                      style={{ color: "rgba(13,11,8,0.4)" }}
                     >✕</button>
                   )}
                 </div>
@@ -508,24 +503,27 @@ export default function Home() {
             {/* Sidebar */}
             <aside
               className="w-56 flex-shrink-0 p-4 flex flex-col gap-4 overflow-y-auto"
-              style={{ borderLeft: "1px solid rgba(245,158,11,0.15)" }}
+              style={{ borderLeft: "1px solid rgba(13,11,8,0.1)" }}
             >
           <GroupControl groupMode={groupMode} onChange={handleGroupModeChange} />
 
           {/* Size By */}
           <div
-            className="rounded-xl p-3"
+            className="rounded-sm p-3"
             style={{
-              background: "rgba(10,10,20,0.85)",
-              border: "1px solid rgba(245,158,11,0.15)",
+              background: "rgba(244,238,224,0.92)",
+              border: "1px solid rgba(0,0,0,0.14)",
             }}
           >
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
+            <p
+              className="text-xs uppercase tracking-widest mb-2"
+              style={{ color: "rgba(13,11,8,0.45)", fontFamily: "Georgia,serif", letterSpacing: "0.13em" }}
+            >
               Size By
             </p>
             <div
-              className="flex rounded-lg overflow-hidden text-xs"
-              style={{ border: "1px solid rgba(245,158,11,0.2)" }}
+              className="flex rounded-sm overflow-hidden text-xs"
+              style={{ border: "1px solid rgba(13,11,8,0.15)" }}
             >
               {(["price", "rating", "uniform"] as BubbleSizeMode[]).map((m) => (
                 <button
@@ -533,10 +531,10 @@ export default function Home() {
                   onClick={() => setSizeMode(m)}
                   className="flex-1 py-1.5 transition-colors"
                   style={{
-                    background: sizeMode === m ? "rgba(245,158,11,0.18)" : "transparent",
-                    color: sizeMode === m ? "#f59e0b" : "rgba(255,255,255,0.35)",
+                    background: sizeMode === m ? "rgba(13,11,8,0.1)" : "transparent",
+                    color: sizeMode === m ? "#0d0b08" : "rgba(13,11,8,0.4)",
                     fontWeight: sizeMode === m ? "600" : "400",
-                    borderRight: m !== "uniform" ? "1px solid rgba(245,158,11,0.2)" : undefined,
+                    borderRight: m !== "uniform" ? "1px solid rgba(13,11,8,0.15)" : undefined,
                   }}
                 >
                   {m === "price" ? "Price" : m === "rating" ? "Rating" : "Equal"}
@@ -553,13 +551,16 @@ export default function Home() {
 
           {/* Stats panel */}
           <div
-            className="rounded-xl p-4"
+            className="rounded-sm p-4"
             style={{
-              background: "rgba(10,10,20,0.85)",
-              border: "1px solid rgba(245,158,11,0.15)",
+              background: "rgba(244,238,224,0.92)",
+              border: "1px solid rgba(0,0,0,0.14)",
             }}
           >
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
+            <p
+              className="text-xs uppercase tracking-widest mb-3"
+              style={{ color: "rgba(13,11,8,0.45)", fontFamily: "Georgia,serif", letterSpacing: "0.13em" }}
+            >
               Collection
             </p>
             <div className="space-y-1.5 text-sm">
@@ -570,17 +571,17 @@ export default function Home() {
                 ["Rated", Object.keys(ratings).length],
               ].map(([label, val]) => (
                 <div key={String(label)} className="flex justify-between">
-                  <span className="text-gray-500">{label}</span>
-                  <span className="text-amber-400 font-semibold">{val}</span>
+                  <span style={{ color: "rgba(13,11,8,0.45)" }}>{label}</span>
+                  <span className="font-semibold" style={{ color: "#0d0b08" }}>{val}</span>
                 </div>
               ))}
               {communityCount > 0 && (
                 <div
                   className="flex justify-between pt-1"
-                  style={{ borderTop: "1px solid rgba(139,92,246,0.2)" }}
+                  style={{ borderTop: "1px solid rgba(90,40,160,0.15)" }}
                 >
-                  <span className="text-purple-400 text-xs">Community</span>
-                  <span className="text-purple-400 font-semibold text-xs">+{communityCount}</span>
+                  <span className="text-xs" style={{ color: "rgba(90,40,160,0.7)" }}>Community</span>
+                  <span className="font-semibold text-xs" style={{ color: "rgba(90,40,160,0.7)" }}>+{communityCount}</span>
                 </div>
               )}
             </div>
@@ -589,32 +590,36 @@ export default function Home() {
 
           {/* Availability filter */}
           <div
-            className="rounded-xl p-3"
-            style={{ background: "rgba(10,10,20,0.85)", border: "1px solid rgba(245,158,11,0.15)" }}
+            className="rounded-sm p-3"
+            style={{ background: "rgba(244,238,224,0.92)", border: "1px solid rgba(0,0,0,0.14)" }}
           >
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
+            <p
+              className="text-xs uppercase tracking-widest mb-2"
+              style={{ color: "rgba(13,11,8,0.45)", fontFamily: "Georgia,serif", letterSpacing: "0.13em" }}
+            >
               Availability
             </p>
-            <div className="flex rounded-lg overflow-hidden text-xs" style={{ border: "1px solid rgba(245,158,11,0.2)" }}>
+            <div className="flex rounded-sm overflow-hidden text-xs" style={{ border: "1px solid rgba(13,11,8,0.15)" }}>
               {[
                 { label: "All", value: true },
                 { label: "Current", value: false },
-              ].map(({ label, value }) => (
+              ].map(({ label, value }, i) => (
                 <button
                   key={label}
                   onClick={() => setShowDiscontinued(value)}
                   className="flex-1 py-1.5 transition-colors"
                   style={{
-                    background: showDiscontinued === value ? "rgba(245,158,11,0.18)" : "transparent",
-                    color: showDiscontinued === value ? "#f59e0b" : "rgba(255,255,255,0.35)",
+                    background: showDiscontinued === value ? "rgba(13,11,8,0.1)" : "transparent",
+                    color: showDiscontinued === value ? "#0d0b08" : "rgba(13,11,8,0.4)",
                     fontWeight: showDiscontinued === value ? "600" : "400",
+                    borderRight: i === 0 ? "1px solid rgba(13,11,8,0.15)" : undefined,
                   }}
                 >
                   {label}
                 </button>
               ))}
             </div>
-            <p className="text-xs mt-2" style={{ color: "rgba(255,255,255,0.25)" }}>
+            <p className="text-xs mt-2" style={{ color: "rgba(13,11,8,0.3)", fontFamily: "Georgia,serif", fontStyle: "italic" }}>
               {showDiscontinued ? "Includes discontinued bottles" : "Hiding discontinued bottles"}
             </p>
           </div>
@@ -622,14 +627,15 @@ export default function Home() {
           {/* Community submission CTA */}
           <button
             onClick={() => { if (!user) { setShowAuth(true); return; } setShowSubmit(true); }}
-            className="w-full py-2.5 px-3 rounded-xl text-sm font-semibold transition-all"
+            className="w-full py-2.5 px-3 rounded-sm text-sm font-medium transition-all"
             style={{
-              border: "1px solid rgba(139,92,246,0.5)",
-              background: "rgba(139,92,246,0.08)",
-              color: "rgba(196,181,253,0.9)",
+              border: "1px solid rgba(90,40,160,0.3)",
+              background: "rgba(90,40,160,0.05)",
+              color: "rgba(90,40,160,0.75)",
+              fontFamily: "Georgia,serif",
             }}
-            onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(139,92,246,0.18)")}
-            onMouseLeave={(e) => (e.currentTarget.style.background = "rgba(139,92,246,0.08)")}
+            onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(90,40,160,0.1)")}
+            onMouseLeave={(e) => (e.currentTarget.style.background = "rgba(90,40,160,0.05)")}
           >
             + Submit a Bottle
           </button>
@@ -639,19 +645,19 @@ export default function Home() {
 
           {/* Legend key */}
           <div className="space-y-1.5 px-1">
-            <div className="flex items-center gap-2 text-xs text-gray-600">
-              <svg width="16" height="10">
+            <div className="flex items-center gap-2 text-xs" style={{ color: "rgba(13,11,8,0.45)" }}>
+              <svg width="16" height="10" className="flex-shrink-0">
                 <rect
-                  x="0" y="0" width="16" height="10" rx="2"
-                  fill="none" stroke="rgba(139,92,246,0.7)" strokeWidth="1.5" strokeDasharray="4,2"
+                  x="0" y="0" width="16" height="10" rx="1"
+                  fill="none" stroke="rgba(90,40,160,0.5)" strokeWidth="1.5" strokeDasharray="4,2"
                 />
               </svg>
               <span>Community entry</span>
             </div>
-            <div className="flex items-center gap-2 text-xs text-gray-600">
+            <div className="flex items-center gap-2 text-xs" style={{ color: "rgba(13,11,8,0.45)" }}>
               <span
-                className="font-bold text-[10px] px-1 rounded"
-                style={{ background: "rgba(245,158,11,0.15)", color: "rgba(245,158,11,0.7)" }}
+                className="font-mono text-[9px] px-1 rounded-sm flex-shrink-0"
+                style={{ background: "rgba(13,11,8,0.07)", color: "rgba(13,11,8,0.5)", border: "1px solid rgba(13,11,8,0.15)" }}
               >
                 NDP
               </span>
@@ -675,8 +681,10 @@ export default function Home() {
       <footer
         className="px-6 py-6 text-center text-xs"
         style={{
-          borderTop: "1px solid rgba(245,158,11,0.08)",
-          color: "rgba(255,255,255,0.18)",
+          borderTop: "1px solid rgba(13,11,8,0.1)",
+          color: "rgba(13,11,8,0.3)",
+          fontFamily: "Georgia,serif",
+          fontStyle: "italic",
         }}
       >
         Common Cask · Community-driven American whiskey catalog · Suggestions welcome

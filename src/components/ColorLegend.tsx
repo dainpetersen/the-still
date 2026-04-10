@@ -19,14 +19,14 @@ const MODES: { value: ColorMode; label: string; emoji: string }[] = [
 function GradientBar({ colorMode }: { colorMode: ColorMode }) {
   const id = `legend-gradient-${colorMode}`;
   const width = 160;
-  const height = 12;
+  const height = 10;
 
   let stops: { offset: string; color: string }[] = [];
   let minLabel = "";
   let maxLabel = "";
 
   if (colorMode === "price") {
-    const scale = d3.scaleSequentialLog(d3.interpolate("#d1fae5", "#14532d")).domain([15, 3500]);
+    const scale = d3.scaleSequentialLog(d3.interpolate("#e4d4a8", "#1a0800")).domain([15, 3500]);
     stops = [0, 0.25, 0.5, 0.75, 1].map((t) => ({
       offset: `${t * 100}%`,
       color: scale(15 * Math.pow(3500 / 15, t)),
@@ -34,7 +34,7 @@ function GradientBar({ colorMode }: { colorMode: ColorMode }) {
     minLabel = "$15";
     maxLabel = "$3,500";
   } else if (colorMode === "rating") {
-    const scale = d3.scaleSequential(d3.interpolate("#374151", "#f59e0b")).domain([1, 10]);
+    const scale = d3.scaleSequential(d3.interpolate("#c8b880", "#6b1200")).domain([1, 10]);
     stops = [0, 0.25, 0.5, 0.75, 1].map((t) => ({
       offset: `${t * 100}%`,
       color: scale(1 + t * 9),
@@ -42,7 +42,7 @@ function GradientBar({ colorMode }: { colorMode: ColorMode }) {
     minLabel = "1";
     maxLabel = "10";
   } else {
-    const scale = d3.scaleSequential(d3.interpolate("#fef9c3", "#9f1239")).domain([0, 100]);
+    const scale = d3.scaleSequential(d3.interpolate("#ddd0b0", "#5c0a0a")).domain([0, 100]);
     stops = [0, 0.25, 0.5, 0.75, 1].map((t) => ({
       offset: `${t * 100}%`,
       color: scale(t * 100),
@@ -61,23 +61,23 @@ function GradientBar({ colorMode }: { colorMode: ColorMode }) {
             ))}
           </linearGradient>
         </defs>
-        <rect x={0} y={0} width={width} height={height} fill={`url(#${id})`} rx={3} ry={3} />
-        <text x={0} y={height + 14} fill="#6b7280" fontSize={10} fontFamily="system-ui">
+        <rect x={0} y={0} width={width} height={height} fill={`url(#${id})`} rx={1} ry={1} />
+        <text x={0} y={height + 14} fill="rgba(13,11,8,0.45)" fontSize={10} fontFamily="Georgia,serif">
           {minLabel}
         </text>
         <text
           x={width}
           y={height + 14}
-          fill="#6b7280"
+          fill="rgba(13,11,8,0.45)"
           fontSize={10}
-          fontFamily="system-ui"
+          fontFamily="Georgia,serif"
           textAnchor="end"
         >
           {maxLabel}
         </text>
       </svg>
-      <p className="text-xs text-gray-600 mt-1">
-        Dark = unrated / no data
+      <p className="text-xs mt-1" style={{ color: "rgba(13,11,8,0.4)", fontFamily: "Georgia,serif", fontStyle: "italic" }}>
+        Pale = unrated / no data
       </p>
     </div>
   );
@@ -90,17 +90,9 @@ function BrandLegend({ distilleryColors }: { distilleryColors: Map<string, strin
         <div key={name} className="flex items-center gap-2">
           <div
             className="flex-shrink-0 rounded-full"
-            style={{
-              width: 10,
-              height: 10,
-              background: color,
-              boxShadow: `0 0 5px 1px ${color}66`,
-            }}
+            style={{ width: 8, height: 8, background: color }}
           />
-          <span
-            className="text-xs truncate"
-            style={{ color: "rgba(255,255,255,0.55)" }}
-          >
+          <span className="text-xs truncate" style={{ color: "rgba(13,11,8,0.6)" }}>
             {name}
           </span>
         </div>
@@ -112,29 +104,32 @@ function BrandLegend({ distilleryColors }: { distilleryColors: Map<string, strin
 export default function ColorLegend({ colorMode, onColorModeChange, distilleryColors }: Props) {
   return (
     <div
-      className="rounded-xl p-4 select-none"
+      className="rounded-sm p-4 select-none"
       style={{
-        background: "rgba(10,10,20,0.85)",
-        border: "1px solid rgba(245,158,11,0.25)",
-        backdropFilter: "blur(8px)",
+        background: "rgba(244,238,224,0.92)",
+        border: "1px solid rgba(0,0,0,0.14)",
+        backdropFilter: "blur(4px)",
         minWidth: "200px",
       }}
     >
-      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
+      <p
+        className="text-xs uppercase tracking-widest mb-3"
+        style={{ color: "rgba(13,11,8,0.45)", fontFamily: "Georgia,serif", letterSpacing: "0.13em" }}
+      >
         Color by
       </p>
 
-      {/* Mode toggles */}
       <div className="flex flex-col gap-1">
         {MODES.map((m) => (
           <button
             key={m.value}
             onClick={() => onColorModeChange(m.value)}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded text-sm font-medium transition-all text-left ${
+            className="flex items-center gap-2 px-3 py-1.5 rounded-sm text-sm font-medium transition-all text-left"
+            style={
               colorMode === m.value
-                ? "bg-amber-500 text-black"
-                : "text-gray-400 hover:text-white hover:bg-gray-800"
-            }`}
+                ? { background: "rgba(13,11,8,0.1)", color: "#0d0b08", border: "1px solid rgba(13,11,8,0.25)" }
+                : { background: "transparent", color: "rgba(13,11,8,0.5)", border: "1px solid transparent" }
+            }
           >
             <span>{m.emoji}</span>
             <span>{m.label}</span>
@@ -142,7 +137,6 @@ export default function ColorLegend({ colorMode, onColorModeChange, distilleryCo
         ))}
       </div>
 
-      {/* Legend — gradient for price/rating/rarity; dot list for brand */}
       {colorMode === "brand" && distilleryColors ? (
         <BrandLegend distilleryColors={distilleryColors} />
       ) : colorMode !== "brand" ? (

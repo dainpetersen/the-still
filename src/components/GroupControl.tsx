@@ -19,8 +19,8 @@ export default function GroupControl({ groupMode, onChange }: GroupControlProps)
   return (
     <div className="flex flex-col gap-1">
       <p
-        className="text-xs font-semibold uppercase tracking-widest mb-1"
-        style={{ color: "rgba(245,158,11,0.6)" }}
+        className="text-xs uppercase tracking-widest mb-1"
+        style={{ color: "rgba(13,11,8,0.45)", fontFamily: "Georgia,serif", letterSpacing: "0.13em" }}
       >
         Group By
       </p>
@@ -30,15 +30,11 @@ export default function GroupControl({ groupMode, onChange }: GroupControlProps)
           <button
             key={mode}
             onClick={() => onChange(mode)}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all text-left"
+            className="flex items-center gap-2 px-3 py-1.5 rounded-sm text-sm font-medium transition-all text-left"
             style={{
-              background: active
-                ? "rgba(245,158,11,0.18)"
-                : "rgba(255,255,255,0.03)",
-              border: active
-                ? "1px solid rgba(245,158,11,0.5)"
-                : "1px solid rgba(255,255,255,0.07)",
-              color: active ? "#f59e0b" : "rgba(245,245,245,0.55)",
+              background: active ? "rgba(13,11,8,0.1)" : "transparent",
+              border: active ? "1px solid rgba(13,11,8,0.25)" : "1px solid transparent",
+              color: active ? "#0d0b08" : "rgba(13,11,8,0.5)",
             }}
           >
             <span style={{ fontSize: "13px" }}>{icon}</span>

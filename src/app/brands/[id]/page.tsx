@@ -114,7 +114,7 @@ const AVAILABILITY: Record<string, { label: string; cls: string }> = {
   discontinued: { label: "Discontinued", cls: "text-neutral-600" },
 };
 
-// ── Bottle card ────────────────────────────────────────────────────────────────
+// ── Bottle row (editorial list layout) ────────────────────────────────────────
 function BottleCard({
   bottle,
   subBrandName,
@@ -132,91 +132,66 @@ function BottleCard({
     : AVAILABILITY.current;
 
   return (
-    <article className="flex flex-col bg-neutral-900 border border-neutral-800 rounded-sm overflow-hidden">
-      {/* Color accent bar */}
-      <div className={`h-px w-full ${colors.line}`} />
+    <article className="group flex items-center gap-4 py-4 border-b border-neutral-800/50 hover:bg-white/[0.018] transition-colors -mx-2 px-2">
+      {/* Left accent bar */}
+      <div className={`w-[2px] h-6 flex-shrink-0 rounded-full opacity-60 ${colors.dot}`} />
 
-      {/* Bottle image */}
-      {bottle.imageUrl && (
-        <div className="relative h-48 bg-neutral-950 flex items-center justify-center px-8 pt-4">
-          <Image
-            src={bottle.imageUrl}
-            alt={bottle.name}
-            fill
-            className="object-contain p-4"
-            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-          />
-        </div>
-      )}
-
-      <div className="flex flex-col gap-3 p-4">
-        {/* Style badge + availability */}
-        <div className="flex items-center justify-between gap-2 min-h-[20px]">
-          {bottle.style ? (
-            <span
-              className={`text-[9px] uppercase tracking-[0.12em] font-mono px-1.5 py-0.5 rounded-sm border ${colors.badge}`}
-            >
-              {bottle.style}
-            </span>
-          ) : (
-            <span />
-          )}
-          <span className={`text-[9px] font-mono ${avail.cls}`}>
-            {avail.label}
-          </span>
-        </div>
-
-        {/* Name */}
-        <div>
-          <h3 className="text-neutral-100 font-medium text-[13px] leading-snug">
+      {/* Name + description */}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 flex-wrap">
+          <h3 className="text-neutral-100 font-medium text-[13.5px] leading-snug">
             {bottle.name}
           </h3>
-          <p className="text-neutral-600 text-[11px] mt-0.5">{subBrandName}</p>
-        </div>
-
-        {/* Stats */}
-        <div className="grid grid-cols-4 divide-x divide-neutral-800 border border-neutral-800 rounded-sm bg-neutral-950/60">
-          {[
-            { label: "ABV", value: `${bottle.abv}%` },
-            { label: "PROOF", value: String(proof) },
-            { label: "PRICE", value: `$${bottle.price}` },
-            { label: "AGE", value: bottle.age ? `${bottle.age}yr` : "NAS" },
-          ].map(({ label, value }) => (
-            <div key={label} className="flex flex-col items-center py-2">
-              <span className="text-neutral-100 font-mono text-[11px] font-semibold tabular-nums">
-                {value}
-              </span>
-              <span className="text-neutral-700 text-[8px] uppercase tracking-wider mt-0.5">
-                {label}
-              </span>
-            </div>
-          ))}
-        </div>
-
-        {/* Rarity dots + label */}
-        <div className="flex items-center gap-2">
-          <div className="flex gap-[3px] items-center">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <span
-                key={i}
-                className={`w-[5px] h-[5px] rounded-full ${i < dots ? colors.dot : "bg-neutral-800"}`}
-              />
-            ))}
-          </div>
-          <span className="text-neutral-600 text-[9px] capitalize font-mono">
-            {bottle.rarity}
-          </span>
+          {bottle.style && (
+            <span className={`text-[8.5px] uppercase tracking-[0.11em] font-mono px-1.5 py-[3px] rounded-sm border ${colors.badge}`}>
+              {bottle.style}
+            </span>
+          )}
           {bottle.sourceDistillery && (
-            <span className="text-neutral-700 text-[9px] ml-auto font-mono">
+            <span className="text-neutral-700 text-[9px] font-mono hidden sm:inline">
               via {bottle.sourceDistillery}
             </span>
           )}
         </div>
+        {bottle.description && (
+          <p className="text-neutral-600 text-[11px] mt-0.5 line-clamp-1 leading-relaxed pr-4">
+            {bottle.description}
+          </p>
+        )}
+      </div>
 
-        {/* Description */}
-        <p className="text-neutral-500 text-[11px] leading-relaxed line-clamp-4">
-          {bottle.description}
-        </p>
+      {/* Stats — right-aligned */}
+      <div className="flex items-center gap-5 flex-shrink-0">
+        {/* ABV / Proof */}
+        <div className="text-[11px] font-mono tabular-nums hidden sm:block">
+          <span className="text-neutral-300">{bottle.abv}%</span>
+          <span className="text-neutral-700"> · {proof}pf</span>
+        </div>
+
+        {/* Price */}
+        <span className="text-[12px] font-mono tabular-nums font-semibold text-neutral-200 w-14 text-right">
+          ${bottle.price}
+        </span>
+
+        {/* Age */}
+        <span className="text-[11px] font-mono tabular-nums text-neutral-500 w-9 text-right">
+          {bottle.age ? `${bottle.age}yr` : "—"}
+        </span>
+
+        {/* Rarity dots */}
+        <div className="flex gap-[3px] items-center">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <span
+              key={i}
+              className={`w-[4px] h-[4px] rounded-full ${i < dots ? colors.dot : "bg-neutral-800"}`}
+            />
+          ))}
+        </div>
+
+        {/* Availability — hidden on small screens */}
+        <span className={`text-[9px] font-mono hidden lg:block w-20 text-right ${avail.cls}`}>
+          {avail.label}
+        </span>
       </div>
     </article>
   );
@@ -254,65 +229,78 @@ export default async function BrandPage({
   };
 
   return (
-    <div className="min-h-screen bg-neutral-950 text-neutral-100">
+    <div className="min-h-screen text-neutral-100" style={{ background: "#0d0a07" }}>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
 
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-10">
+      <div className="max-w-4xl mx-auto px-6 sm:px-10 py-10">
         {/* Back */}
         <Link
           href="/"
-          className="inline-flex items-center gap-1.5 text-neutral-600 hover:text-neutral-300 text-[10px] font-mono uppercase tracking-widest transition-colors mb-10"
+          className="inline-flex items-center gap-1.5 text-neutral-600 hover:text-neutral-400 text-[10px] font-mono uppercase tracking-widest transition-colors mb-12"
         >
           ← Explorer
         </Link>
 
         {/* Brand header */}
-        <header className="mb-10 pb-7 border-b border-neutral-800">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <h1 className="text-xl sm:text-2xl font-semibold text-neutral-100 tracking-tight leading-tight">
+        <header className="mb-12 pb-8 border-b border-neutral-800/60">
+          <div className="flex items-start justify-between gap-6">
+            <div className="flex-1">
+              <h1
+                className="text-neutral-100 leading-[1.05] tracking-tight"
+                style={{
+                  fontFamily: "'Georgia', 'Times New Roman', serif",
+                  fontSize: "clamp(2.2rem, 5vw, 3.6rem)",
+                  fontWeight: 400,
+                }}
+              >
                 {brand.name}
               </h1>
-              <p className="text-neutral-500 text-sm mt-1">{brand.region}</p>
-            </div>
-            <div className="flex gap-1.5 mt-0.5 flex-shrink-0">
-              {brand.isNDP && (
-                <span className="text-[9px] font-mono uppercase tracking-widest px-1.5 py-0.5 border border-neutral-800 text-neutral-600 rounded-sm">
-                  NDP
-                </span>
-              )}
-              {brand.state && (
-                <span className="text-[9px] font-mono uppercase tracking-widest px-1.5 py-0.5 border border-neutral-800 text-neutral-600 rounded-sm">
-                  {brand.state}
-                </span>
-              )}
+              <div className="flex items-center gap-3 mt-3">
+                <p className="text-neutral-500 text-sm">{brand.region}</p>
+                {brand.isNDP && (
+                  <span className="text-[9px] font-mono uppercase tracking-widest px-1.5 py-0.5 border border-neutral-800 text-neutral-600 rounded-sm">
+                    NDP
+                  </span>
+                )}
+                {brand.state && (
+                  <span className="text-[9px] font-mono uppercase tracking-widest px-1.5 py-0.5 border border-amber-900/40 text-amber-700/70 rounded-sm">
+                    {brand.state}
+                  </span>
+                )}
+              </div>
             </div>
           </div>
-          <p className="text-neutral-700 text-[10px] font-mono mt-5 tracking-wide">
-            {brand.subBrands.length}{" "}
-            {brand.subBrands.length === 1 ? "line" : "lines"} ·{" "}
-            {totalBottles}{" "}
-            {totalBottles === 1 ? "expression" : "expressions"}
-          </p>
+          {/* Column headers */}
+          <div className="flex items-center gap-4 mt-8 -mx-2 px-2">
+            <div className="w-[2px] flex-shrink-0" />
+            <div className="flex-1" />
+            <div className="flex items-center gap-5 flex-shrink-0 text-[9px] font-mono uppercase tracking-widest text-neutral-700">
+              <span className="hidden sm:block w-20 text-right">ABV · Proof</span>
+              <span className="w-14 text-right">Price</span>
+              <span className="w-9 text-right">Age</span>
+              <span className="w-[34px] text-right">Rarity</span>
+              <span className="hidden lg:block w-20 text-right">Status</span>
+            </div>
+          </div>
         </header>
 
         {/* Sub-brands + bottles */}
-        <div className="flex flex-col gap-12">
+        <div className="flex flex-col gap-10">
           {brand.subBrands.map((subBrand) => (
             <section key={subBrand.id}>
               {showSubBrandHeaders && (
-                <h2 className="flex items-center gap-3 text-sm font-semibold text-neutral-200 mb-5">
+                <h2 className="flex items-center gap-3 text-[11px] font-mono uppercase tracking-[0.15em] text-neutral-500 mb-1">
                   {subBrand.name}
-                  <span className="flex-1 h-px bg-neutral-800" />
-                  <span className="text-neutral-600 text-xs font-normal font-mono">
+                  <span className="flex-1 h-px bg-neutral-800/60" />
+                  <span className="text-neutral-700">
                     {subBrand.bottles.length}
                   </span>
                 </h2>
               )}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              <div className="flex flex-col">
                 {subBrand.bottles.map((bottle) => (
                   <BottleCard
                     key={bottle.id}

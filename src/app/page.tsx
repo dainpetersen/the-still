@@ -463,6 +463,61 @@ export default function Home() {
                 }}
               />
 
+              {/* Submit a Bottle — top-right overlay */}
+              <button
+                onClick={() => { if (!user) { setShowAuth(true); return; } setShowSubmit(true); }}
+                className="absolute top-4 right-4 z-10 px-3 py-1.5 rounded-sm text-xs font-medium transition-all"
+                style={{
+                  background: "rgba(244,238,224,0.92)",
+                  border: "1px solid rgba(90,40,160,0.3)",
+                  color: "rgba(90,40,160,0.75)",
+                  backdropFilter: "blur(8px)",
+                  fontFamily: "Georgia,serif",
+                  boxShadow: "0 2px 8px rgba(0,0,0,0.07)",
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(90,40,160,0.08)")}
+                onMouseLeave={(e) => (e.currentTarget.style.background = "rgba(244,238,224,0.92)")}
+              >
+                + Submit a Bottle
+              </button>
+
+              {/* Availability toggle — bottom-left overlay */}
+              <div
+                className="absolute bottom-4 left-5 z-10 flex items-center gap-2"
+              >
+                <span
+                  className="text-[9px] uppercase tracking-widest flex-shrink-0"
+                  style={{ color: "rgba(13,11,8,0.35)", fontFamily: "Georgia,serif" }}
+                >
+                  Show
+                </span>
+                <div
+                  className="flex rounded-sm overflow-hidden text-[11px]"
+                  style={{
+                    background: "rgba(244,238,224,0.92)",
+                    border: "1px solid rgba(13,11,8,0.15)",
+                    backdropFilter: "blur(8px)",
+                    boxShadow: "0 2px 8px rgba(0,0,0,0.07)",
+                  }}
+                >
+                  {([{ label: "All", value: true }, { label: "Current", value: false }]).map(({ label, value }, i) => (
+                    <button
+                      key={label}
+                      onClick={() => setShowDiscontinued(value)}
+                      className="px-3 py-1 transition-colors"
+                      style={{
+                        background: showDiscontinued === value ? "rgba(13,11,8,0.1)" : "transparent",
+                        color: showDiscontinued === value ? "#0d0b08" : "rgba(13,11,8,0.4)",
+                        fontWeight: showDiscontinued === value ? "600" : "400",
+                        borderRight: i === 0 ? "1px solid rgba(13,11,8,0.15)" : undefined,
+                      }}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               {/* Search — top-left overlay */}
               <div
                 className="absolute top-4 left-5 z-10"
@@ -594,58 +649,6 @@ export default function Home() {
             </div>
           </div>
 
-
-          {/* Availability filter */}
-          <div
-            className="rounded-sm p-3"
-            style={{ background: "rgba(244,238,224,0.92)", border: "1px solid rgba(0,0,0,0.14)" }}
-          >
-            <p
-              className="text-xs uppercase tracking-widest mb-2"
-              style={{ color: "rgba(13,11,8,0.45)", fontFamily: "Georgia,serif", letterSpacing: "0.13em" }}
-            >
-              Availability
-            </p>
-            <div className="flex rounded-sm overflow-hidden text-xs" style={{ border: "1px solid rgba(13,11,8,0.15)" }}>
-              {[
-                { label: "All", value: true },
-                { label: "Current", value: false },
-              ].map(({ label, value }, i) => (
-                <button
-                  key={label}
-                  onClick={() => setShowDiscontinued(value)}
-                  className="flex-1 py-1.5 transition-colors"
-                  style={{
-                    background: showDiscontinued === value ? "rgba(13,11,8,0.1)" : "transparent",
-                    color: showDiscontinued === value ? "#0d0b08" : "rgba(13,11,8,0.4)",
-                    fontWeight: showDiscontinued === value ? "600" : "400",
-                    borderRight: i === 0 ? "1px solid rgba(13,11,8,0.15)" : undefined,
-                  }}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-            <p className="text-xs mt-2" style={{ color: "rgba(13,11,8,0.3)", fontFamily: "Georgia,serif", fontStyle: "italic" }}>
-              {showDiscontinued ? "Includes discontinued bottles" : "Hiding discontinued bottles"}
-            </p>
-          </div>
-
-          {/* Community submission CTA */}
-          <button
-            onClick={() => { if (!user) { setShowAuth(true); return; } setShowSubmit(true); }}
-            className="w-full py-2.5 px-3 rounded-sm text-sm font-medium transition-all"
-            style={{
-              border: "1px solid rgba(90,40,160,0.3)",
-              background: "rgba(90,40,160,0.05)",
-              color: "rgba(90,40,160,0.75)",
-              fontFamily: "Georgia,serif",
-            }}
-            onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(90,40,160,0.1)")}
-            onMouseLeave={(e) => (e.currentTarget.style.background = "rgba(90,40,160,0.05)")}
-          >
-            + Submit a Bottle
-          </button>
 
           {/* Legend key */}
           <div className="space-y-1.5 px-1">

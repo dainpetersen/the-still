@@ -35,30 +35,32 @@ interface ReviewEntry {
 
 const STARS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 
+const RARITY_STYLES: Record<string, { bg: string; text: string; border: string }> = {
+  common:    { bg: "rgba(13,11,8,0.05)",   text: "rgba(13,11,8,0.55)",  border: "rgba(13,11,8,0.15)" },
+  limited:   { bg: "rgba(180,120,0,0.08)", text: "rgba(140,90,0,0.9)",  border: "rgba(180,120,0,0.25)" },
+  rare:      { bg: "rgba(160,60,0,0.08)",  text: "rgba(130,50,0,0.9)",  border: "rgba(160,60,0,0.25)" },
+  allocated: { bg: "rgba(139,21,21,0.08)", text: "#8b1515",             border: "rgba(139,21,21,0.25)" },
+  unicorn:   { bg: "rgba(90,40,160,0.08)", text: "rgba(90,40,160,0.9)", border: "rgba(90,40,160,0.25)" },
+};
+
 export default function RatingModal({ bottle, onClose, onRatingSubmitted, onFlag, userId }: Props) {
-  const [rating, setRating] = useState(0);
-  const [hovered, setHovered] = useState(0);
-  const [nose, setNose] = useState("");
-  const [palate, setPalate] = useState("");
-  const [finish, setFinish] = useState("");
+  const [rating, setRating]       = useState(0);
+  const [hovered, setHovered]     = useState(0);
+  const [nose, setNose]           = useState("");
+  const [palate, setPalate]       = useState("");
+  const [finish, setFinish]       = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const [reviews, setReviews] = useState<ReviewEntry[]>([]);
+  const [error, setError]         = useState<string | null>(null);
+  const [reviews, setReviews]     = useState<ReviewEntry[]>([]);
   const [loadingReviews, setLoadingReviews] = useState(false);
 
   useEffect(() => {
     if (!bottle) return;
-    setRating(0);
-    setHovered(0);
-    setNose("");
-    setPalate("");
-    setFinish("");
-    setSubmitted(false);
-    setError(null);
+    setRating(0); setHovered(0);
+    setNose(""); setPalate(""); setFinish("");
+    setSubmitted(false); setError(null);
     setLoadingReviews(true);
-
     fetchBottleRatings(bottle.id)
       .then((data) => setReviews(data as ReviewEntry[]))
       .catch(() => setReviews([]))
@@ -88,166 +90,258 @@ export default function RatingModal({ bottle, onClose, onRatingSubmitted, onFlag
       });
       setSubmitted(true);
       onRatingSubmitted();
-      // Refresh reviews
       fetchBottleRatings(bottle!.id)
         .then((data) => setReviews(data as ReviewEntry[]))
         .catch(() => {});
-    } catch (e) {
+    } catch {
       setError("Failed to submit rating. Please try again.");
     } finally {
       setSubmitting(false);
     }
   }
 
-  const rarityColors: Record<string, string> = {
-    common: "bg-gray-600 text-gray-200",
-    limited: "bg-yellow-700 text-yellow-100",
-    rare: "bg-orange-700 text-orange-100",
-    allocated: "bg-red-800 text-red-100",
-    unicorn: "bg-purple-800 text-purple-100",
-  };
+  const rarityStyle = bottle.rarity
+    ? (RARITY_STYLES[bottle.rarity] ?? RARITY_STYLES.common)
+    : null;
+
+  const active = hovered || rating;
 
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ background: "rgba(0,0,0,0.75)" }}
+      style={{ background: "rgba(13,11,8,0.45)", backdropFilter: "blur(3px)" }}
       onClick={onClose}
     >
       <div
-        className="relative w-full max-w-lg rounded-xl overflow-y-auto max-h-[90vh]"
+        className="relative w-full max-w-lg rounded-sm overflow-y-auto max-h-[90vh]"
         style={{
-          background: "linear-gradient(135deg, #1a1209 0%, #0f0f1a 100%)",
-          border: "1px solid rgba(245,158,11,0.4)",
-          boxShadow: "0 20px 60px rgba(0,0,0,0.8)",
+          background: "#f4eed8",
+          border: "1px solid rgba(13,11,8,0.18)",
+          boxShadow: "0 8px 40px rgba(0,0,0,0.22)",
         }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="px-6 pt-6 pb-4" style={{ borderBottom: "1px solid rgba(245,158,11,0.2)" }}>
+        <div
+          className="px-6 pt-6 pb-4"
+          style={{ borderBottom: "1px solid rgba(13,11,8,0.1)" }}
+        >
+          {/* Close */}
           <button
             onClick={onClose}
-            className="absolute top-4 right-4 text-gray-400 hover:text-white text-2xl leading-none"
+            className="absolute top-4 right-5 text-xl leading-none transition-opacity hover:opacity-60"
+            style={{ color: "rgba(13,11,8,0.4)" }}
           >
             ×
           </button>
-          <h2 className="text-lg font-bold text-amber-400 pr-8 leading-tight">{bottle.name}</h2>
-          {bottle.brandId && (
-            <Link
-              href={`/brands/${bottle.brandId}`}
-              className="inline-block mt-1 text-xs text-gray-500 hover:text-amber-400 transition-colors"
-              onClick={onClose}
-            >
-              {bottle.brandName ?? "View distillery"} →
-            </Link>
-          )}
-          {onFlag && (
-            <button
-              onClick={() => { onClose(); onFlag(); }}
-              className="mt-1 text-xs text-gray-600 hover:text-gray-400 transition-colors"
-              title="Report incorrect information"
-            >
-              ⚑ Report an error
-            </button>
-          )}
-          <div className="flex flex-wrap gap-2 mt-2 text-sm">
+
+          {/* Bottle name */}
+          <h2
+            className="text-xl pr-8 leading-tight"
+            style={{
+              fontFamily: "Georgia,serif",
+              fontWeight: 400,
+              color: "#0d0b08",
+            }}
+          >
+            {bottle.name}
+          </h2>
+
+          {/* Distillery link */}
+          <div className="flex items-center gap-3 mt-1 flex-wrap">
+            {bottle.brandId && (
+              <Link
+                href={`/brands/${bottle.brandId}`}
+                className="text-xs transition-colors"
+                style={{ color: "#8b1515", fontFamily: "Georgia,serif", fontStyle: "italic" }}
+                onClick={onClose}
+              >
+                {bottle.brandName ?? "View distillery"} →
+              </Link>
+            )}
+            {onFlag && (
+              <button
+                onClick={() => { onClose(); onFlag?.(); }}
+                className="text-xs transition-opacity hover:opacity-70"
+                style={{ color: "rgba(13,11,8,0.35)" }}
+                title="Report incorrect information"
+              >
+                ⚑ Report error
+              </button>
+            )}
+          </div>
+
+          {/* Stats row */}
+          <div className="flex flex-wrap gap-2 mt-3">
             {bottle.price !== undefined && (
-              <span className="text-gray-300">💰 ${bottle.price.toLocaleString()}</span>
+              <span
+                className="text-xs font-mono px-2 py-0.5 rounded-sm"
+                style={{ background: "rgba(13,11,8,0.06)", color: "rgba(13,11,8,0.7)", border: "1px solid rgba(13,11,8,0.1)" }}
+              >
+                ${bottle.price.toLocaleString()}
+              </span>
             )}
             {bottle.abv !== undefined && (
-              <span className="text-gray-300">🔥 {bottle.abv}% ABV</span>
+              <span
+                className="text-xs font-mono px-2 py-0.5 rounded-sm"
+                style={{ background: "rgba(13,11,8,0.06)", color: "rgba(13,11,8,0.7)", border: "1px solid rgba(13,11,8,0.1)" }}
+              >
+                {bottle.abv}% ABV
+              </span>
             )}
             {bottle.age !== undefined && (
-              <span className="text-gray-300">⏳ {bottle.age} Year</span>
-            )}
-            {bottle.rarity && (
               <span
-                className={`px-2 py-0.5 rounded text-xs font-semibold ${
-                  rarityColors[bottle.rarity] ?? "bg-gray-700 text-gray-300"
-                }`}
+                className="text-xs font-mono px-2 py-0.5 rounded-sm"
+                style={{ background: "rgba(13,11,8,0.06)", color: "rgba(13,11,8,0.7)", border: "1px solid rgba(13,11,8,0.1)" }}
               >
-                {bottle.rarity.charAt(0).toUpperCase() + bottle.rarity.slice(1)}
+                {bottle.age} yr
+              </span>
+            )}
+            {bottle.rarity && rarityStyle && (
+              <span
+                className="text-xs font-mono px-2 py-0.5 rounded-sm capitalize"
+                style={{
+                  background: rarityStyle.bg,
+                  color: rarityStyle.text,
+                  border: `1px solid ${rarityStyle.border}`,
+                }}
+              >
+                {bottle.rarity}
               </span>
             )}
           </div>
+
+          {/* Description */}
           {bottle.description && (
-            <p className="mt-2 text-xs text-gray-400 italic">{bottle.description}</p>
+            <p
+              className="mt-2 text-xs leading-relaxed"
+              style={{ color: "rgba(13,11,8,0.5)", fontFamily: "Georgia,serif", fontStyle: "italic" }}
+            >
+              {bottle.description}
+            </p>
           )}
+
+          {/* Community average */}
           {avgRating !== null && (
-            <p className="mt-2 text-sm text-amber-300 font-semibold">
-              ★ {avgRating} / 10 &nbsp;·&nbsp; {reviews.length} review{reviews.length !== 1 ? "s" : ""}
+            <p
+              className="mt-2 text-sm font-semibold"
+              style={{ color: "#8b1515", fontFamily: "Georgia,serif" }}
+            >
+              ★ {avgRating} / 10
+              <span
+                className="font-normal ml-1.5"
+                style={{ color: "rgba(13,11,8,0.4)", fontSize: "11px" }}
+              >
+                {reviews.length} review{reviews.length !== 1 ? "s" : ""}
+              </span>
             </p>
           )}
         </div>
 
         {/* Rating form */}
-        <div className="px-6 py-4">
+        <div className="px-6 py-5">
           {submitted ? (
             <div className="text-center py-4">
-              <div className="text-4xl mb-2">🥃</div>
-              <p className="text-amber-400 font-semibold text-lg">Rating submitted!</p>
-              <p className="text-gray-400 text-sm mt-1">
-                You rated this <span className="text-white font-bold">{rating}/10</span>
+              <div className="text-3xl mb-3">🥃</div>
+              <p
+                className="font-semibold text-lg"
+                style={{ fontFamily: "Georgia,serif", color: "#0d0b08" }}
+              >
+                Rating submitted
+              </p>
+              <p className="text-sm mt-1" style={{ color: "rgba(13,11,8,0.5)" }}>
+                You rated this{" "}
+                <span style={{ fontWeight: 700, color: "#8b1515" }}>{rating}/10</span>
               </p>
               <button
                 onClick={() => setSubmitted(false)}
-                className="mt-4 text-xs text-gray-500 underline hover:text-gray-300"
+                className="mt-4 text-xs underline transition-opacity hover:opacity-60"
+                style={{ color: "rgba(13,11,8,0.4)" }}
               >
                 Edit my rating
               </button>
             </div>
           ) : (
             <>
-              <p className="text-sm text-gray-400 mb-3">Rate this bottle (1–10):</p>
+              <p
+                className="text-xs mb-3 uppercase tracking-widest"
+                style={{ color: "rgba(13,11,8,0.4)", fontFamily: "Georgia,serif", letterSpacing: "0.13em" }}
+              >
+                Your Rating
+              </p>
 
-              {/* Star-like numeric rating */}
-              <div className="flex gap-1 mb-4">
-                {STARS.map((n) => (
-                  <button
-                    key={n}
-                    className={`w-8 h-8 rounded text-sm font-bold transition-all ${
-                      n <= (hovered || rating)
-                        ? "bg-amber-500 text-black"
-                        : "bg-gray-800 text-gray-500 hover:bg-gray-700"
-                    }`}
-                    onMouseEnter={() => setHovered(n)}
-                    onMouseLeave={() => setHovered(0)}
-                    onClick={() => setRating(n)}
-                  >
-                    {n}
-                  </button>
-                ))}
+              {/* 1–10 rating buttons */}
+              <div className="flex gap-1 mb-5">
+                {STARS.map((n) => {
+                  const isActive = n <= active;
+                  const isSelected = n === rating;
+                  return (
+                    <button
+                      key={n}
+                      className="flex-1 h-8 rounded-sm text-sm font-bold transition-all"
+                      style={{
+                        background: isActive ? "rgba(139,21,21,0.1)" : "rgba(13,11,8,0.04)",
+                        border: isActive
+                          ? `1px solid ${isSelected ? "#8b1515" : "rgba(139,21,21,0.4)"}`
+                          : "1px solid rgba(13,11,8,0.12)",
+                        color: isActive ? "#8b1515" : "rgba(13,11,8,0.35)",
+                      }}
+                      onMouseEnter={() => setHovered(n)}
+                      onMouseLeave={() => setHovered(0)}
+                      onClick={() => setRating(n)}
+                    >
+                      {n}
+                    </button>
+                  );
+                })}
               </div>
 
-              {/* Optional tasting notes */}
-              <div className="space-y-2">
+              {/* Tasting notes */}
+              <div className="space-y-3">
                 {[
                   { label: "Nose", value: nose, setter: setNose },
                   { label: "Palate", value: palate, setter: setPalate },
                   { label: "Finish", value: finish, setter: setFinish },
                 ].map(({ label, value, setter }) => (
                   <div key={label}>
-                    <label className="block text-xs text-gray-500 mb-1">{label} (optional)</label>
+                    <label
+                      className="block text-xs mb-1"
+                      style={{ color: "rgba(13,11,8,0.45)", fontFamily: "Georgia,serif" }}
+                    >
+                      {label}{" "}
+                      <span style={{ color: "rgba(13,11,8,0.28)" }}>(optional)</span>
+                    </label>
                     <input
                       type="text"
                       value={value}
                       onChange={(e) => setter(e.target.value)}
                       placeholder={`Describe the ${label.toLowerCase()}…`}
-                      className="w-full bg-gray-900 border border-gray-700 rounded px-3 py-1.5 text-sm text-gray-200 placeholder-gray-600 focus:outline-none focus:border-amber-500"
+                      className="w-full rounded-sm px-3 py-1.5 text-sm outline-none transition-all"
+                      style={{
+                        background: "rgba(255,255,255,0.6)",
+                        border: "1px solid rgba(13,11,8,0.15)",
+                        color: "#0d0b08",
+                      }}
+                      onFocus={(e) => (e.currentTarget.style.borderColor = "rgba(13,11,8,0.4)")}
+                      onBlur={(e) => (e.currentTarget.style.borderColor = "rgba(13,11,8,0.15)")}
                     />
                   </div>
                 ))}
               </div>
 
-              {error && <p className="mt-2 text-red-400 text-xs">{error}</p>}
+              {error && (
+                <p className="mt-3 text-xs" style={{ color: "#8b1515" }}>{error}</p>
+              )}
 
               <button
                 onClick={handleSubmit}
                 disabled={rating === 0 || submitting}
-                className={`mt-4 w-full py-2 rounded font-semibold text-sm transition-all ${
+                className="mt-5 w-full py-2 rounded-sm text-sm font-semibold transition-all"
+                style={
                   rating === 0 || submitting
-                    ? "bg-gray-700 text-gray-500 cursor-not-allowed"
-                    : "bg-amber-500 hover:bg-amber-400 text-black"
-                }`}
+                    ? { background: "rgba(13,11,8,0.07)", color: "rgba(13,11,8,0.3)", cursor: "not-allowed" }
+                    : { background: "#0d0b08", color: "#f4eed8", cursor: "pointer" }
+                }
               >
                 {submitting ? "Submitting…" : "Submit Rating"}
               </button>
@@ -257,40 +351,58 @@ export default function RatingModal({ bottle, onClose, onRatingSubmitted, onFlag
 
         {/* Community reviews */}
         {reviews.length > 0 && (
-          <div className="px-6 pb-6">
-            <h3
-              className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3"
-              style={{ borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: "12px" }}
+          <div
+            className="px-6 pb-6"
+            style={{ borderTop: "1px solid rgba(13,11,8,0.08)" }}
+          >
+            <p
+              className="text-xs uppercase tracking-widest pt-4 mb-3"
+              style={{ color: "rgba(13,11,8,0.35)", fontFamily: "Georgia,serif", letterSpacing: "0.13em" }}
             >
               Community Reviews
-            </h3>
+            </p>
             {loadingReviews ? (
-              <p className="text-gray-600 text-sm">Loading…</p>
+              <p className="text-sm" style={{ color: "rgba(13,11,8,0.35)" }}>Loading…</p>
             ) : (
-              <div className="space-y-3 max-h-48 overflow-y-auto pr-1">
+              <div className="space-y-2.5 max-h-52 overflow-y-auto pr-1">
                 {reviews.map((r, i) => (
-                  <div key={i} className="bg-gray-900 rounded p-3">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-amber-400 font-bold text-sm">★ {r.rating}/10</span>
-                      <span className="text-gray-600 text-xs">
-                        {new Date(r.created_at).toLocaleDateString()}
+                  <div
+                    key={i}
+                    className="rounded-sm p-3"
+                    style={{
+                      background: "rgba(13,11,8,0.03)",
+                      border: "1px solid rgba(13,11,8,0.08)",
+                    }}
+                  >
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <span
+                        className="font-semibold text-sm"
+                        style={{ color: "#8b1515", fontFamily: "Georgia,serif" }}
+                      >
+                        ★ {r.rating}/10
+                      </span>
+                      <span
+                        className="text-xs"
+                        style={{ color: "rgba(13,11,8,0.3)" }}
+                      >
+                        {new Date(r.created_at).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })}
                       </span>
                     </div>
-                    {r.nose && (
-                      <p className="text-xs text-gray-400">
-                        <span className="text-gray-500">Nose:</span> {r.nose}
+                    {[
+                      { key: "nose",   val: r.nose },
+                      { key: "palate", val: r.palate },
+                      { key: "finish", val: r.finish },
+                    ].filter(({ val }) => val).map(({ key, val }) => (
+                      <p key={key} className="text-xs leading-relaxed">
+                        <span
+                          className="capitalize"
+                          style={{ color: "rgba(13,11,8,0.4)", fontFamily: "Georgia,serif", fontStyle: "italic" }}
+                        >
+                          {key}:{" "}
+                        </span>
+                        <span style={{ color: "rgba(13,11,8,0.7)" }}>{val}</span>
                       </p>
-                    )}
-                    {r.palate && (
-                      <p className="text-xs text-gray-400">
-                        <span className="text-gray-500">Palate:</span> {r.palate}
-                      </p>
-                    )}
-                    {r.finish && (
-                      <p className="text-xs text-gray-400">
-                        <span className="text-gray-500">Finish:</span> {r.finish}
-                      </p>
-                    )}
+                    ))}
                   </div>
                 ))}
               </div>

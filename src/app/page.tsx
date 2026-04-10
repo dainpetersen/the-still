@@ -294,12 +294,8 @@ export default function Home() {
       >
         <Logo />
 
-        {/* Branding + live stats + one-liner — desktop only */}
+        {/* Live stats + one-liner — desktop only */}
         <div className="hidden md:flex items-center gap-3 min-w-0">
-          <span className="text-xs font-semibold flex-shrink-0" style={{ color: "rgba(13,11,8,0.45)", fontFamily: "Georgia,serif" }}>
-            Common Cask
-          </span>
-          <span className="flex-shrink-0" style={{ color: "rgba(13,11,8,0.2)", fontSize: 13 }}>|</span>
           <div className="flex items-center gap-2 text-xs flex-shrink-0">
             <Link href="/brands" style={{ color: "rgba(13,11,8,0.55)" }} className="hover:opacity-80 transition-opacity">
               <span className="font-semibold" style={{ color: "#0d0b08" }}>{viewStats.distilleries}</span>
@@ -456,10 +452,10 @@ export default function Home() {
                 }}
               />
 
-              {/* Search — centered overlay at top of chart */}
+              {/* Search — top-left overlay */}
               <div
-                className="absolute top-5 left-1/2 -translate-x-1/2 z-10"
-                style={{ width: "min(480px, 70%)" }}
+                className="absolute top-4 left-5 z-10"
+                style={{ width: "220px" }}
               >
                 <div className="relative">
                   {/* Search icon */}
@@ -475,7 +471,7 @@ export default function Home() {
                     type="text"
                     value={searchQuery}
                     onChange={(e) => { setSearchQuery(e.target.value); setSelectedGroup(null); }}
-                    placeholder="Search bottles, brands, styles…"
+                    placeholder="Search bottles, brands…"
                     className="search-input w-full rounded-full pl-9 pr-9 py-2.5 text-sm outline-none"
                     style={{
                       background: "rgba(244,238,224,0.94)",

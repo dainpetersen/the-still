@@ -17,7 +17,7 @@ export default function Logo() {
       />
       <span
         className="font-bold tracking-widest uppercase"
-        style={{ fontSize: "22px", color: "#0d0b08", letterSpacing: "0.12em", lineHeight: 1, fontFamily: "Georgia,serif" }}
+        style={{ fontSize: "22px", color: "#8b1515", letterSpacing: "0.12em", lineHeight: 1, fontFamily: "Georgia,serif" }}
       >
         CASK
       </span>

@@ -9,6 +9,7 @@ export const WHISKEY_DATA: Brand[] = [
     country: "USA",
     region: "Frankfort, KY",
     state: "Kentucky",
+    description: "A National Historic Landmark in Frankfort, KY and one of the oldest continuously operating distilleries in America. Owned by Sazerac, Buffalo Trace produces the flagship Buffalo Trace, Eagle Rare, W.L. Weller, E.H. Taylor Jr. Collection, and the annual Buffalo Trace Antique Collection (BTAC). Master Distiller Harlen Wheatley.",
     subBrands: [
       {
         id: "buffalo-trace",
@@ -434,6 +435,7 @@ export const WHISKEY_DATA: Brand[] = [
     country: "USA",
     region: "Bardstown, KY",
     state: "Kentucky",
+    description: "Founded in 1935 in Bardstown, KY by the Shapira brothers. The largest independent, family-owned producer of bourbon in the United States; distillation now happens at the Bernheim facility in Louisville. Portfolio includes Elijah Craig, Evan Williams, Larceny, Henry McKenna, and Old Fitzgerald.",
     subBrands: [
       {
         id: "elijah-craig",
@@ -646,6 +648,7 @@ export const WHISKEY_DATA: Brand[] = [
     country: "USA",
     region: "Lawrenceburg, KY",
     state: "Kentucky",
+    description: "Lawrenceburg, KY distillery owned by Campari since 2009. Master Distillers Jimmy Russell (active since 1954 — the longest-tenured Master Distiller in the industry) and his son Eddie Russell. Known for deep-char #4 barrels and robust, high-proof bourbons including Russell's Reserve and the Rare Breed line.",
     subBrands: [
       {
         id: "wild-turkey-core",
@@ -799,6 +802,7 @@ export const WHISKEY_DATA: Brand[] = [
     country: "USA",
     region: "Lawrenceburg, KY",
     state: "Kentucky",
+    description: "Lawrenceburg, KY distillery owned by Kirin (Japan). Uniquely produces ten distinct bourbon recipes by combining two mashbills (high-rye 35% and low-rye 20%) with five proprietary yeast strains. Master Distiller Brent Elliott. Known for the Small Batch, Single Barrel, and highly-allocated annual Limited Edition Small Batch releases.",
     subBrands: [
       {
         id: "four-roses-core",
@@ -905,6 +909,7 @@ export const WHISKEY_DATA: Brand[] = [
     country: "USA",
     region: "Louisville, KY",
     state: "Kentucky",
+    description: "Louisville, KY. Founded in 1870 by George Garvin Brown. One of the largest American-owned spirits companies, still majority-controlled by the Brown family. Owns Jack Daniel's, Woodford Reserve, Old Forester, and King of Kentucky.",
     subBrands: [
       {
         id: "woodford-reserve",
@@ -1174,6 +1179,7 @@ export const WHISKEY_DATA: Brand[] = [
     country: "USA",
     region: "Clermont, KY",
     state: "Kentucky",
+    description: "Clermont, KY. The American bourbon business of Suntory Global Spirits (formerly Beam Suntory), tracing its distilling roots to Jacob Beam in 1795. Portfolio includes Jim Beam, Booker's, Baker's, Basil Hayden's, Knob Creek, Old Overholt, and Maker's Mark. Seventh-generation Beam family member Fred Noe serves as Master Distiller emeritus.",
     subBrands: [
       {
         id: "knob-creek",
@@ -1621,6 +1627,7 @@ export const WHISKEY_DATA: Brand[] = [
     country: "USA",
     region: "Louisville, KY",
     state: "Kentucky",
+    description: "Louisville, KY. A revived historic brand — the original Pennsylvania Michter's shuttered in 1989 — relaunched by Joseph Magliocco and Dick Newman in the late 1990s. Now operates the Shively distillery (2015) and the Fort Nelson distillery (2019) in downtown Louisville. Known for low-barrel-entry proof, heat-cycled warehouses, and toasted-barrel finishing.",
     subBrands: [
       {
         id: "michters-us1",
@@ -1775,6 +1782,7 @@ export const WHISKEY_DATA: Brand[] = [
     region: "Park City, UT",
     state: "Utah",
     isNDP: true,
+    description: "Park City, UT. Founded in 2006 by David Perkins, the first legal distillery in Utah since 1870. Originally built its reputation as a blender of sourced whiskey (notably from MGP Indiana); now operates a full distillery in Wanship. Known for Rendezvous Rye, Double Rye!, and the annual A Midwinter Night's Dram. Owned by Constellation Brands since 2016.",
     subBrands: [
       {
         id: "high-west-core",
@@ -1984,6 +1992,7 @@ export const WHISKEY_DATA: Brand[] = [
     country: "USA",
     region: "Bardstown, KY",
     state: "Kentucky",
+    description: "Bardstown, KY distillery founded in 1936 by Thompson Willett and revived in the 1980s by son-in-law Even Kulsveen. For decades released sourced whiskey under the Kentucky Bourbon Distillers label; resumed distilling its own spirit in 2012. Known for the cult-favorite Family Estate Small Batch, Family Estate Single Barrel, and Pot Still Reserve.",
     subBrands: [
       {
         id: "willett-pot-still",
@@ -2075,6 +2084,7 @@ export const WHISKEY_DATA: Brand[] = [
     region: "Louisville, KY",
     state: "Kentucky",
     isNDP: true,
+    description: "Louisville, KY. Founded in 2010 by the late Brown-Forman Master Distiller Lincoln Henderson along with his son and grandson. The first American bourbon finished in port wine barrels. Acquired by Bacardi in 2015; the downtown Main Street distillery opened in 2016.",
     subBrands: [
       {
         id: "angels-envy-core",
@@ -2998,6 +3008,7 @@ export const WHISKEY_DATA: Brand[] = [
     region: "Fort Lee, NJ",
     state: "New Jersey",
     isNDP: true,
+    description: "Founded in 2018 in Fort Lee, NJ by Michael Paladini, Danny Polise, and Kerry Jacobs, named after Paladini's daughter. Blends four-grain bourbon sourced primarily from MGP Indiana. Acquired by MGP Ingredients / Luxco in 2023.",
     subBrands: [
       {
         id: "penelope-core",
@@ -3289,6 +3300,7 @@ export const WHISKEY_DATA: Brand[] = [
     region: "Weston, MO",
     state: "Missouri",
     source: "community",
+    description: "Weston, MO. Founded in 1856 by Ben Holladay (the \"Stagecoach King\"), making it one of the oldest distilleries west of the Mississippi still operating at its original site. Uses limestone spring water sourced directly from the property. Known for the Ben Holladay Soft Red Wheat Bottled-in-Bond Bourbon.",
     subBrands: [
       {
         id: "holladay-reddit",
@@ -3483,6 +3495,7 @@ export const WHISKEY_DATA: Brand[] = [
     region: "Baltimore, MD",
     state: "Maryland",
     isNDP: false,
+    description: "Baltimore, MD. Founded in 2013 by Under Armour founder Kevin Plank, named after his Sagamore Farm thoroughbred operation. Focused on reviving Maryland-style rye whiskey. Its Port Covington distillery opened in 2017; early releases were sourced from MGP Indiana while house distillate aged.",
     subBrands: [
       {
         id: "sagamore-core",
@@ -3820,6 +3833,7 @@ export const WHISKEY_DATA: Brand[] = [
     country: "USA",
     region: "Vallejo, CA",
     state: "California",
+    description: "Vallejo, CA distillery founded in 2015 by Derek Benham. Initially built its reputation blending and finishing sourced California rye and bourbon; now releases a mix of sourced and own-distillate expressions. Plants a tree for every bottle sold. Known for the Pipe Dream, Lost Monarch, and Emerald Giant lines.",
     subBrands: [
       {
         id: "redwood-empire-pipe-dream",
@@ -4068,6 +4082,7 @@ export const WHISKEY_DATA: Brand[] = [
     country: "USA",
     region: "Louisville, KY",
     state: "Kentucky",
+    description: "Louisville, KY. Originally founded in Henderson, KY in 1889; revived in 2014 by Corky Taylor and his son Carson. Distilled, barreled, aged, and bottled under one roof on Main Street Louisville. Every bottle is non-chill filtered with no sweeteners, flavorings, or coloring added — a sweet mash, low-barrel-entry-proof approach.",
     subBrands: [
       {
         id: "peerless-bourbon",
@@ -5447,6 +5462,7 @@ export const WHISKEY_DATA: Brand[] = [
     region: "Bardstown, KY",
     state: "Kentucky",
     isNDP: false,
+    description: "Bardstown, KY. One of the oldest continuously operating distilleries in Kentucky, tracing roots to 1879. Owned by Sazerac. Named for 1792 — the year Kentucky became the 15th state. Produces the 1792 Bourbon line (Small Batch, Single Barrel, Full Proof, Bottled-in-Bond, Sweet Wheat) alongside Very Old Barton and Kentucky Gentleman.",
     subBrands: [
       {
         id: "1792-core",
@@ -5570,6 +5586,7 @@ export const WHISKEY_DATA: Brand[] = [
     region: "Louisville, KY",
     state: "Kentucky",
     isNDP: true,
+    description: "Kentucky-based non-distiller producer founded in 1997 by Trey Zoeller and his father Chet. Owned by Pernod Ricard (via Castle Brands). Known for experimental finishing and blending — notably the Ocean series (bourbon aged at sea), the Presidential Select age-stated bottlings, and wine-barrel finished expressions.",
     subBrands: [
       {
         id: "jeffersons-core",
@@ -5680,6 +5697,7 @@ export const WHISKEY_DATA: Brand[] = [
     region: "Louisville, KY",
     state: "Kentucky",
     isNDP: true,
+    description: "Louisville, KY. Founded in 2013 by Joe Beatrice. Independent blending house specializing in cask-strength, non-chill-filtered, batch-numbered releases sourced from distilleries in Kentucky, Indiana, and Tennessee. Known for the flagship Bourbon and Rye batches plus highly-allocated named releases like Dovetail, Seagrass, and Armida.",
     subBrands: [
       {
         id: "barrell-core",

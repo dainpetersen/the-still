@@ -14,7 +14,9 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://commoncask.com";
+// .trim() guards against stray whitespace in the Vercel env var, which was
+// producing "\thttps://commoncask.com" in canonical tags and JSON-LD URLs.
+const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://commoncask.com").trim();
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),

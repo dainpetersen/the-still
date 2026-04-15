@@ -5,7 +5,7 @@ import type { Metadata } from "next";
 import { WHISKEY_DATA } from "@/data/whiskeys";
 import type { Bottle, WhiskeyStyle } from "@/types/whiskey";
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://commoncask.com";
+const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://commoncask.com").trim();
 
 export async function generateStaticParams() {
   return WHISKEY_DATA.map((brand) => ({ id: brand.id }));
@@ -239,7 +239,7 @@ export default async function BrandPage({
     "@context": "https://schema.org",
     "@type": brand.isNDP ? "Organization" : "LocalBusiness",
     name: brand.name,
-    description: `American whiskey producer based in ${brand.region}.`,
+    description: brand.description ?? `American whiskey producer based in ${brand.region}.`,
     address: {
       "@type": "PostalAddress",
       addressLocality: brand.region,
@@ -308,6 +308,18 @@ export default async function BrandPage({
                   </span>
                 )}
               </div>
+              {brand.description && (
+                <p
+                  className="mt-6 max-w-2xl leading-relaxed"
+                  style={{
+                    fontFamily: "'Georgia', 'Times New Roman', serif",
+                    fontSize: "15px",
+                    color: "rgba(13,11,8,0.72)",
+                  }}
+                >
+                  {brand.description}
+                </p>
+              )}
             </div>
           </div>
           {/* Column headers */}
@@ -332,19 +344,26 @@ export default async function BrandPage({
           {brand.subBrands.map((subBrand) => (
             <section key={subBrand.id}>
               {showSubBrandHeaders && (
-                <h2
-                  className="flex items-center gap-3 text-[11px] font-mono uppercase tracking-[0.15em] mb-1"
-                  style={{ color: "rgba(13,11,8,0.4)" }}
-                >
-                  {subBrand.name}
+                <div className="flex items-center gap-3 mb-1">
+                  <h2
+                    className="text-[11px] font-mono uppercase tracking-[0.15em]"
+                    style={{ color: "rgba(13,11,8,0.4)" }}
+                  >
+                    {subBrand.name}
+                  </h2>
                   <span
+                    aria-hidden="true"
                     className="flex-1 h-px"
                     style={{ background: "rgba(13,11,8,0.12)" }}
                   />
-                  <span style={{ color: "rgba(13,11,8,0.25)" }}>
+                  <span
+                    aria-label={`${subBrand.bottles.length} bottles`}
+                    className="text-[11px] font-mono"
+                    style={{ color: "rgba(13,11,8,0.25)" }}
+                  >
                     {subBrand.bottles.length}
                   </span>
-                </h2>
+                </div>
               )}
               <div className="flex flex-col">
                 {subBrand.bottles.map((bottle) => (

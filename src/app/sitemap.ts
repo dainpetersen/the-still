@@ -1,7 +1,7 @@
 import type { MetadataRoute } from "next";
 import { WHISKEY_DATA } from "@/data/whiskeys";
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://commoncask.com";
+const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://commoncask.com").trim();
 
 // Date each brand page was last meaningfully updated.
 // Stable dates prevent Google from treating every deploy as a content change.

@@ -47,3 +47,42 @@ body::before {
 .search-input::placeholder {
   color: rgba(13, 11, 8, 0.3);
 }
+
+/* ── Catalog pages (distillery + bottle pages, home directory) ───────────── */
+.cc-serif {
+  font-family: Georgia, "Times New Roman", serif;
+}
+.cc-mono-label {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(13, 11, 8, 0.55);
+}
+.cc-link {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: rgba(13, 11, 8, 0.25);
+  text-underline-offset: 3px;
+  transition: color 0.15s, text-decoration-color 0.15s;
+}
+.cc-link:hover {
+  color: #8b1515;
+  text-decoration-color: #8b1515;
+}
+.cc-row {
+  border-bottom: 1px solid rgba(13, 11, 8, 0.1);
+  transition: background 0.15s;
+}
+.cc-row:hover {
+  background: rgba(13, 11, 8, 0.03);
+}
+.cc-card {
+  border: 1px solid rgba(13, 11, 8, 0.14);
+  background: rgba(244, 238, 224, 0.7);
+  transition: border-color 0.15s, background 0.15s;
+}
+a.cc-card:hover {
+  border-color: rgba(139, 21, 21, 0.45);
+  background: rgba(244, 238, 224, 1);
+}

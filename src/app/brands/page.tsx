@@ -1,157 +1,123 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { WHISKEY_DATA } from "@/data/whiskeys";
-import type { WhiskeyStyle } from "@/types/whiskey";
+import { bottleCount, getCatalog } from "@/lib/catalog";
+import { stateFromRegion } from "@/lib/mergeCatalog";
+import { OG_IMAGES, absoluteUrl } from "@/lib/site";
+import type { Brand } from "@/types/whiskey";
+import SiteHeader from "@/components/site/SiteHeader";
+import SiteFooter from "@/components/site/SiteFooter";
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://commoncask.com";
+export const revalidate = 3600;
 
-export const metadata: Metadata = {
-  title: "All Distilleries",
-  description: `Browse all ${WHISKEY_DATA.length} American whiskey distilleries and producers in the Common Cask catalog. Filter by state, style, and more.`,
-  openGraph: {
-    title: "All Distilleries | Common Cask",
-    description: `Browse all ${WHISKEY_DATA.length} American whiskey distilleries and producers.`,
-    url: `${SITE_URL}/brands`,
-  },
-  alternates: { canonical: `${SITE_URL}/brands` },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const { brands, bottles } = await getCatalog();
+  const description = `All ${brands.length} American whiskey distilleries and producers in the Common Cask catalog, grouped by state — ${bottles.length} bourbons, ryes and single malts with prices, proof and community ratings.`;
+  return {
+    title: "American Whiskey Distilleries by State",
+    description,
+    alternates: { canonical: "/brands" },
+    openGraph: {
+      title: "American Whiskey Distilleries by State | Common Cask",
+      description,
+      url: absoluteUrl("/brands"),
+      images: OG_IMAGES,
+    },
+  };
+}
 
-const STYLE_DOT: Record<WhiskeyStyle, string> = {
-  Bourbon: "bg-amber-500",
-  "Wheated Bourbon": "bg-yellow-500",
-  "High Rye Bourbon": "bg-orange-500",
-  "Rye Whiskey": "bg-emerald-500",
-  "Wheat Whiskey": "bg-lime-500",
-  "Tennessee Whiskey": "bg-sky-500",
-  "Blended American": "bg-violet-500",
-  "American Single Malt": "bg-teal-500",
-};
+export default async function BrandsIndexPage() {
+  const catalog = await getCatalog();
+  const brands = catalog.brands.filter((b) => catalog.brandPaths.has(b.id));
 
-export default function BrandsIndexPage() {
-  // Group by state, sort states alphabetically; unknown last
-  const byState = new Map<string, typeof WHISKEY_DATA>();
-  for (const brand of WHISKEY_DATA) {
-    const key = brand.state ?? brand.country ?? "Other";
+  const stateOf = (b: Brand) => b.state ?? stateFromRegion(b.region) ?? "Elsewhere";
+  const byState = new Map<string, Brand[]>();
+  for (const brand of brands) {
+    const key = stateOf(brand);
     if (!byState.has(key)) byState.set(key, []);
     byState.get(key)!.push(brand);
   }
-  const sortedStates = [...byState.keys()].sort((a, b) => {
-    if (a === "Other") return 1;
-    if (b === "Other") return -1;
-    return a.localeCompare(b);
+  // Biggest states first — Kentucky leads, single-distillery states follow A–Z.
+  const states = [...byState.keys()].sort((a, b) => {
+    if (a === "Elsewhere") return 1;
+    if (b === "Elsewhere") return -1;
+    return byState.get(b)!.length - byState.get(a)!.length || a.localeCompare(b);
   });
 
-  const totalBottles = WHISKEY_DATA.reduce(
-    (sum, b) => sum + b.subBrands.reduce((s, sb) => s + sb.bottles.length, 0),
-    0
-  );
+  const ratingsFor = (b: Brand) =>
+    (catalog.brandBottles.get(b.id) ?? []).reduce((sum, e) => sum + (e.rating?.count ?? 0), 0);
 
   return (
-    <div className="min-h-screen bg-neutral-950 text-neutral-100">
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-10">
-        {/* Back */}
-        <Link
-          href="/"
-          className="inline-flex items-center gap-1.5 text-neutral-600 hover:text-neutral-300 text-[10px] font-mono uppercase tracking-widest transition-colors mb-10"
-        >
-          ← Explorer
-        </Link>
+    <div className="min-h-screen" style={{ background: "#f0e8d8", color: "#0d0b08" }}>
+      <SiteHeader />
 
-        {/* Header */}
-        <header className="mb-10 pb-7 border-b border-neutral-800">
-          <h1 className="text-xl sm:text-2xl font-semibold text-neutral-100 tracking-tight">
-            All Distilleries
+      <main className="max-w-5xl mx-auto px-5 sm:px-8 pt-10">
+        <header className="pb-8" style={{ borderBottom: "1px solid rgba(13,11,8,0.15)" }}>
+          <h1
+            className="cc-serif leading-[1.05] tracking-tight"
+            style={{ fontSize: "clamp(2.2rem, 5vw, 3.4rem)", fontWeight: 400, textWrap: "balance" }}
+          >
+            American whiskey distilleries
           </h1>
-          <p className="text-neutral-600 text-[10px] font-mono mt-3 tracking-wide">
-            {WHISKEY_DATA.length} distilleries · {totalBottles} expressions
+          <p className="cc-serif mt-4 max-w-2xl text-[17px] leading-[1.65]" style={{ color: "rgba(13,11,8,0.8)" }}>
+            {brands.length} distilleries and independent bottlers across {states.filter((s) => s !== "Elsewhere").length}{" "}
+            states, covering {catalog.bottles.length} bottles. Pick a producer to see its full lineup with proof, age,
+            suggested retail price and community ratings.
           </p>
         </header>
 
-        {/* By state */}
-        <div className="flex flex-col gap-10">
-          {sortedStates.map((state) => {
-            const brands = byState.get(state)!;
+        <div className="flex flex-col gap-10 mt-8">
+          {states.map((state) => {
+            const list = byState.get(state)!.sort((a, b) => bottleCount(catalog, b) - bottleCount(catalog, a));
             return (
               <section key={state}>
-                <h2 className="flex items-center gap-3 text-[10px] font-mono uppercase tracking-widest text-neutral-600 mb-4">
-                  {state}
-                  <span className="flex-1 h-px bg-neutral-800" />
-                  <span className="text-neutral-800">{brands.length}</span>
-                </h2>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-                  {brands.map((brand) => {
-                    const bottleCount = brand.subBrands.reduce(
-                      (s, sb) => s + sb.bottles.length,
-                      0
-                    );
-                    // Collect unique styles
-                    const styles = [
-                      ...new Set(
-                        brand.subBrands
-                          .flatMap((sb) => sb.bottles.map((b) => b.style))
-                          .filter((s): s is WhiskeyStyle => Boolean(s))
-                      ),
-                    ];
-
+                <div className="flex items-center gap-3 mb-4">
+                  <h2 className="cc-serif text-[22px]" style={{ fontWeight: 400 }}>{state}</h2>
+                  <span aria-hidden="true" className="flex-1 h-px" style={{ background: "rgba(13,11,8,0.12)" }} />
+                  <span className="cc-mono-label" aria-label={`${list.length} producers`}>{list.length}</span>
+                </div>
+                <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                  {list.map((brand) => {
+                    const count = bottleCount(catalog, brand);
+                    const ratings = ratingsFor(brand);
                     return (
-                      <Link
-                        key={brand.id}
-                        href={`/brands/${brand.id}`}
-                        className="group flex flex-col gap-2.5 bg-neutral-900 hover:bg-neutral-800/80 border border-neutral-800 hover:border-neutral-700 rounded-sm p-4 transition-colors"
-                      >
-                        <div className="flex items-start justify-between gap-2">
-                          <h3 className="text-neutral-100 text-[13px] font-medium leading-snug group-hover:text-amber-400 transition-colors">
-                            {brand.name}
-                          </h3>
-                          {brand.isNDP && (
-                            <span className="text-[8px] font-mono uppercase tracking-widest px-1 py-0.5 border border-neutral-700 text-neutral-600 rounded-sm flex-shrink-0 mt-0.5">
-                              NDP
+                      <li key={brand.id}>
+                        <Link
+                          href={catalog.brandPaths.get(brand.id)!}
+                          className="cc-card flex flex-col gap-1.5 rounded-sm p-4 h-full"
+                        >
+                          <span className="flex items-start justify-between gap-2">
+                            <h3 className="text-[16px] font-medium leading-snug">{brand.name}</h3>
+                            {brand.isNDP && (
+                              <span
+                                className="cc-mono-label px-1 rounded-sm flex-shrink-0"
+                                style={{ border: "1px solid rgba(13,11,8,0.25)" }}
+                                title="Non-distilling producer"
+                              >
+                                NDP
+                              </span>
+                            )}
+                          </span>
+                          {brand.region && (
+                            <span className="cc-serif text-[14px]" style={{ fontStyle: "italic", color: "rgba(13,11,8,0.6)" }}>
+                              {brand.region}
                             </span>
                           )}
-                        </div>
-
-                        <p className="text-neutral-600 text-[11px]">
-                          {brand.region}
-                        </p>
-
-                        <div className="flex items-center justify-between">
-                          {/* Style dots */}
-                          <div className="flex gap-1 items-center">
-                            {styles.map((s) => (
-                              <span
-                                key={s}
-                                title={s}
-                                className={`w-[5px] h-[5px] rounded-full ${STYLE_DOT[s] ?? "bg-neutral-600"}`}
-                              />
-                            ))}
-                          </div>
-                          <span className="text-neutral-700 text-[10px] font-mono">
-                            {bottleCount}{" "}
-                            {bottleCount === 1 ? "expression" : "expressions"}
+                          <span className="font-mono text-[12px] mt-auto pt-1" style={{ color: "rgba(13,11,8,0.6)" }}>
+                            {count} {count === 1 ? "bottle" : "bottles"}
+                            {ratings > 0 ? ` · ${ratings.toLocaleString("en-US")} ratings` : ""}
                           </span>
-                        </div>
-                      </Link>
+                        </Link>
+                      </li>
                     );
                   })}
-                </div>
+                </ul>
               </section>
             );
           })}
         </div>
+      </main>
 
-        {/* Footer */}
-        <footer className="mt-16 pt-6 border-t border-neutral-900 flex items-center justify-between">
-          <Link
-            href="/"
-            className="text-[10px] font-mono text-neutral-700 hover:text-neutral-500 transition-colors uppercase tracking-widest"
-          >
-            ← Explorer
-          </Link>
-          <span className="text-[10px] font-mono text-neutral-800">
-            Common Cask
-          </span>
-        </footer>
-      </div>
+      <SiteFooter />
     </div>
   );
 }

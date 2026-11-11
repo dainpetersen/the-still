@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import Script from "next/script";
+import { SITE_NAME, SITE_URL } from "@/lib/site";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -14,73 +15,48 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://commoncask.com";
+const DESCRIPTION =
+  "Explore American whiskey by distillery, style, price and rarity. Hundreds of bourbons, ryes and single malts with proof, suggested retail price and community ratings — no paid rankings.";
 
 export const metadata: Metadata = {
+  // Relative canonical / Open Graph URLs on every page resolve against this.
   metadataBase: new URL(SITE_URL),
   title: {
     default: "Common Cask — American Whiskey Explorer",
     template: "%s | Common Cask",
   },
-  description:
-    "Explore and discover American whiskey. Browse hundreds of bourbons, ryes, and craft whiskeys from distilleries across the US — rated and reviewed by the community.",
-  keywords: [
-    "bourbon",
-    "rye whiskey",
-    "American whiskey",
-    "whiskey catalog",
-    "craft distillery",
-    "whiskey ratings",
-    "bourbon guide",
-    "Kentucky bourbon",
-    "single barrel bourbon",
-  ],
-  authors: [{ name: "Common Cask" }],
-  creator: "Common Cask",
+  description: DESCRIPTION,
+  applicationName: SITE_NAME,
+  authors: [{ name: SITE_NAME }],
+  creator: SITE_NAME,
   openGraph: {
     type: "website",
-    siteName: "Common Cask",
+    siteName: SITE_NAME,
     title: "Common Cask — American Whiskey Explorer",
-    description:
-      "Explore and discover American whiskey. Browse hundreds of bourbons, ryes, and craft whiskeys from distilleries across the US.",
+    description: DESCRIPTION,
     url: SITE_URL,
     locale: "en_US",
   },
-  twitter: {
-    card: "summary_large_image",
-    title: "Common Cask — American Whiskey Explorer",
-    description:
-      "Explore and discover American whiskey. Browse hundreds of bourbons, ryes, and craft whiskeys from distilleries across the US.",
-  },
+  // Only the card type: title, description and image fall back to each
+  // page's Open Graph tags, so sub-pages don't inherit the home page's.
+  twitter: { card: "summary_large_image" },
   robots: {
     index: true,
     follow: true,
-    googleBot: {
-      index: true,
-      follow: true,
-    },
+    googleBot: { index: true, follow: true, "max-image-preview": "large", "max-snippet": -1 },
   },
-  alternates: {
-    canonical: SITE_URL,
-  },
+  // No canonical here on purpose: a canonical set in the root layout is
+  // inherited by every page that doesn't override it, which would tell Google
+  // those pages are duplicates of the home page. Each page sets its own.
 };
 
 const jsonLd = {
   "@context": "https://schema.org",
   "@type": "WebSite",
-  name: "Common Cask",
+  name: SITE_NAME,
   url: SITE_URL,
-  description:
-    "Explore and discover American whiskey. Browse hundreds of bourbons, ryes, and craft whiskeys from distilleries across the US — rated and reviewed by the community.",
+  description: DESCRIPTION,
   inLanguage: "en-US",
-  potentialAction: {
-    "@type": "SearchAction",
-    target: {
-      "@type": "EntryPoint",
-      urlTemplate: `${SITE_URL}/?q={search_term_string}`,
-    },
-    "query-input": "required name=search_term_string",
-  },
 };
 
 export default function RootLayout({

@@ -28,7 +28,7 @@ interface Props {
 }
 
 const PAGE = 40;
-const MUTED = "rgba(13,11,8,0.6)";
+const MUTED = "rgb(var(--ink-rgb) / 0.6)";
 
 const SORTS: { value: SortKey; label: string }[] = [
   { value: "rating", label: "Top rated" },
@@ -113,9 +113,9 @@ export default function MobileBottleList({ brands, ratings, searchQuery, onSearc
         className="sticky z-30 px-4 pt-3 pb-2"
         style={{
           top: 49,
-          background: "rgba(240,232,216,0.97)",
+          background: "rgb(var(--bg-rgb) / 0.97)",
           backdropFilter: "blur(8px)",
-          borderBottom: "1px solid rgba(13,11,8,0.1)",
+          borderBottom: "1px solid rgb(var(--ink-rgb) / 0.1)",
         }}
       >
         <div className="flex gap-2">
@@ -129,9 +129,9 @@ export default function MobileBottleList({ brands, ratings, searchQuery, onSearc
               className="search-input w-full rounded-sm px-3 py-2.5 outline-none"
               style={{
                 fontSize: 16, // below 16px iOS zooms the page on focus
-                background: "rgba(255,255,255,0.6)",
-                border: "1px solid rgba(13,11,8,0.25)",
-                color: "#0d0b08",
+                background: "var(--field-bg)",
+                border: "1px solid rgb(var(--ink-rgb) / 0.25)",
+                color: "var(--ink)",
               }}
             />
           </label>
@@ -143,9 +143,9 @@ export default function MobileBottleList({ brands, ratings, searchQuery, onSearc
               className="h-full rounded-sm px-2 outline-none"
               style={{
                 fontSize: 16,
-                background: "rgba(255,255,255,0.6)",
-                border: "1px solid rgba(13,11,8,0.25)",
-                color: "#0d0b08",
+                background: "var(--field-bg)",
+                border: "1px solid rgb(var(--ink-rgb) / 0.25)",
+                color: "var(--ink)",
                 maxWidth: 150,
               }}
             >
@@ -168,8 +168,8 @@ export default function MobileBottleList({ brands, ratings, searchQuery, onSearc
                 className="flex-shrink-0 rounded-full px-3 py-1.5 text-[13px] whitespace-nowrap"
                 style={
                   active
-                    ? { background: "#0d0b08", color: "#f4eed8", border: "1px solid #0d0b08" }
-                    : { background: "transparent", color: "rgba(13,11,8,0.75)", border: "1px solid rgba(13,11,8,0.25)" }
+                    ? { background: "var(--ink)", color: "var(--panel)", border: "1px solid var(--ink)" }
+                    : { background: "transparent", color: "rgb(var(--ink-rgb) / 0.75)", border: "1px solid rgb(var(--ink-rgb) / 0.25)" }
                 }
               >
                 {s ?? "All styles"}
@@ -199,22 +199,22 @@ export default function MobileBottleList({ brands, ratings, searchQuery, onSearc
               row.age ? `${row.age} yr` : null,
             ].filter(Boolean);
             return (
-              <li key={row.id} style={{ borderBottom: "1px solid rgba(13,11,8,0.1)" }}>
+              <li key={row.id} style={{ borderBottom: "1px solid rgb(var(--ink-rgb) / 0.1)" }}>
                 <button
                   type="button"
                   onClick={() => onSelect(row.id)}
-                  className="w-full flex items-start gap-3 text-left px-4 py-3 active:bg-black/[0.05]"
+                  className="w-full flex items-start gap-3 text-left px-4 py-3 active:bg-ink/5"
                 >
                   {ranked && (
                     <span
                       className="text-[13px] font-bold tabular-nums w-6 text-right flex-shrink-0 mt-0.5"
-                      style={{ color: i < 3 ? "#8b1515" : "rgba(13,11,8,0.45)", fontFamily: "Georgia,serif" }}
+                      style={{ color: i < 3 ? "var(--accent)" : "rgb(var(--ink-rgb) / 0.45)", fontFamily: "Georgia,serif" }}
                     >
                       {i + 1}
                     </span>
                   )}
                   <span className="flex-1 min-w-0">
-                    <span className="block text-[16px] leading-snug" style={{ color: "#0d0b08" }}>
+                    <span className="block text-[16px] leading-snug" style={{ color: "var(--ink)" }}>
                       {row.name}
                     </span>
                     <span
@@ -231,7 +231,7 @@ export default function MobileBottleList({ brands, ratings, searchQuery, onSearc
                   <span className="flex-shrink-0 text-right pt-0.5">
                     {row.rating ? (
                       <>
-                        <span className="block text-[18px] leading-none tabular-nums" style={{ color: "#8b1515", fontFamily: "Georgia,serif" }}>
+                        <span className="block text-[18px] leading-none tabular-nums" style={{ color: "var(--accent)", fontFamily: "Georgia,serif" }}>
                           {row.rating.avg.toFixed(1)}
                         </span>
                         <span className="block text-[11px] mt-1 tabular-nums" style={{ color: MUTED }}>
@@ -239,7 +239,7 @@ export default function MobileBottleList({ brands, ratings, searchQuery, onSearc
                         </span>
                       </>
                     ) : (
-                      <span className="text-[12px]" style={{ color: "rgba(13,11,8,0.45)" }}>unrated</span>
+                      <span className="text-[12px]" style={{ color: "var(--ink-muted)" }}>unrated</span>
                     )}
                   </span>
                 </button>
@@ -254,7 +254,7 @@ export default function MobileBottleList({ brands, ratings, searchQuery, onSearc
           <button
             onClick={() => setShown((n) => n + PAGE)}
             className="w-full rounded-sm py-3 text-[15px] font-semibold"
-            style={{ border: "1px solid rgba(13,11,8,0.3)", color: "#0d0b08", background: "transparent" }}
+            style={{ border: "1px solid rgb(var(--ink-rgb) / 0.3)", color: "var(--ink)", background: "transparent" }}
           >
             Show {Math.min(PAGE, visible.length - shown)} more
           </button>

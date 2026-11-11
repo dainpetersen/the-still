@@ -19,13 +19,13 @@ function RankedItem({ entry, rank }: { entry: BottleEntry; rank?: number }) {
     <li className="cc-row">
       <Link href={entry.path} className="flex items-baseline gap-3 py-2.5">
         {rank !== undefined && (
-          <span className="font-mono tabular-nums text-[12px] w-5 text-right flex-shrink-0" style={{ color: "rgba(13,11,8,0.45)" }}>
+          <span className="font-mono tabular-nums text-[12px] w-5 text-right flex-shrink-0" style={{ color: "var(--ink-muted)" }}>
             {rank}
           </span>
         )}
         <span className="flex-1 min-w-0">
           <span className="block text-[15px] leading-snug">{entry.bottle.name}</span>
-          <span className="cc-serif block text-[13px]" style={{ fontStyle: "italic", color: "rgba(13,11,8,0.6)" }}>
+          <span className="cc-serif block text-[13px]" style={{ fontStyle: "italic", color: "rgb(var(--ink-rgb) / 0.6)" }}>
             {entry.brand.name}
           </span>
         </span>
@@ -55,7 +55,7 @@ export default function HomeDirectory({ catalog }: { catalog: Catalog }) {
   const ratingTotal = Object.values(catalog.ratings).reduce((sum, r) => sum + r.count, 0);
 
   return (
-    <div style={{ borderTop: "1px solid rgba(13,11,8,0.12)" }}>
+    <div style={{ borderTop: "1px solid rgb(var(--ink-rgb) / 0.12)" }}>
       <div className="max-w-5xl mx-auto px-5 sm:px-8 py-12">
         <section className="max-w-3xl">
           <h1
@@ -64,19 +64,19 @@ export default function HomeDirectory({ catalog }: { catalog: Catalog }) {
           >
             A community catalog of American whiskey
           </h1>
-          <p className="cc-serif mt-4 text-[18px] leading-[1.65]" style={{ color: "rgba(13,11,8,0.8)" }}>
+          <p className="cc-serif mt-4 text-[18px] leading-[1.65]" style={{ color: "rgb(var(--ink-rgb) / 0.8)" }}>
             Common Cask maps {bottles.length} bottles from {brands.length} distilleries and independent bottlers —
             bourbon, rye, wheated bourbon, Tennessee whiskey and American single malt — each with its proof, age,
             suggested retail price, rarity and a community rating out of 10
             {ratingTotal > 0 ? `, drawn from ${ratingTotal.toLocaleString("en-US")} ratings` : ""}. No sponsored
             placements and no paid rankings.
           </p>
-          <p className="mt-3 text-[15px] leading-relaxed" style={{ color: "rgba(13,11,8,0.7)" }}>
+          <p className="mt-3 text-[15px] leading-relaxed" style={{ color: "rgb(var(--ink-rgb) / 0.7)" }}>
             Use the explorer above to search, sort and group every bottle, and select one to see its details or
             rate it. Most ratings are scores from public whiskey reviews on Reddit; the rest come from members
             here. <Link href="/about#ratings" className="cc-link">How ratings work</Link>.
           </p>
-          <p className="mt-3 text-[15px] leading-relaxed" style={{ color: "rgba(13,11,8,0.7)" }}>
+          <p className="mt-3 text-[15px] leading-relaxed" style={{ color: "rgb(var(--ink-rgb) / 0.7)" }}>
             Missing something? Sign in and use <em>Submit a Bottle</em> — every entry is reviewed before it goes
             live.
           </p>
@@ -86,7 +86,7 @@ export default function HomeDirectory({ catalog }: { catalog: Catalog }) {
           {topRated.length > 0 && (
             <section>
               <h2 className="cc-serif text-[24px]" style={{ fontWeight: 400 }}>Top-rated bottles</h2>
-              <p className="text-[13px] mt-1" style={{ color: "rgba(13,11,8,0.55)" }}>
+              <p className="text-[13px] mt-1" style={{ color: "var(--ink-muted)" }}>
                 Ranked by average rating; a bottle needs at least {MIN_RATINGS_TO_RANK} ratings to qualify.
               </p>
               <ol className="mt-3">
@@ -100,14 +100,14 @@ export default function HomeDirectory({ catalog }: { catalog: Catalog }) {
           {byStyle.length > 0 && (
             <section>
               <h2 className="cc-serif text-[24px]" style={{ fontWeight: 400 }}>Best by style</h2>
-              <p className="text-[13px] mt-1" style={{ color: "rgba(13,11,8,0.55)" }}>
+              <p className="text-[13px] mt-1" style={{ color: "var(--ink-muted)" }}>
                 The three highest-rated bottles in each style.
               </p>
               <div className="mt-3 flex flex-col gap-5">
                 {byStyle.map((group) => (
                   <div key={group.style}>
                     <h3 className="cc-mono-label">
-                      {group.style} <span style={{ color: "rgba(13,11,8,0.4)" }}>· {group.total} bottles</span>
+                      {group.style} <span style={{ color: "var(--ink-muted)" }}>· {group.total} bottles</span>
                     </h3>
                     <ul>
                       {group.best.map((e) => (
@@ -128,7 +128,7 @@ export default function HomeDirectory({ catalog }: { catalog: Catalog }) {
               <li key={brand.id} className="cc-row">
                 <Link href={catalog.brandPaths.get(brand.id)!} className="flex items-baseline justify-between gap-3 py-2.5">
                   <span className="text-[15px]">{brand.name}</span>
-                  <span className="font-mono text-[12px] flex-shrink-0" style={{ color: "rgba(13,11,8,0.55)" }}>
+                  <span className="font-mono text-[12px] flex-shrink-0" style={{ color: "var(--ink-muted)" }}>
                     {bottleCount(catalog, brand)}
                   </span>
                 </Link>

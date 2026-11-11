@@ -160,9 +160,9 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
 
 function Spec({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="py-3" style={{ borderBottom: "1px solid rgba(13,11,8,0.1)" }}>
+    <div className="py-3" style={{ borderBottom: "1px solid rgb(var(--ink-rgb) / 0.1)" }}>
       <dt className="cc-mono-label">{label}</dt>
-      <dd className="mt-1 text-[17px]" style={{ color: "#0d0b08" }}>{children}</dd>
+      <dd className="mt-1 text-[17px]" style={{ color: "var(--ink)" }}>{children}</dd>
     </div>
   );
 }
@@ -173,8 +173,8 @@ function BottleLink({ entry, showBrand }: { entry: BottleEntry; showBrand?: bool
     <li>
       <Link href={entry.path} className="cc-card flex items-center gap-3 rounded-sm px-4 py-3 h-full">
         <span className="flex-1 min-w-0">
-          <span className="block text-[15px] leading-snug" style={{ color: "#0d0b08" }}>{bottle.name}</span>
-          <span className="block text-[13px] mt-0.5" style={{ color: "rgba(13,11,8,0.6)" }}>
+          <span className="block text-[15px] leading-snug" style={{ color: "var(--ink)" }}>{bottle.name}</span>
+          <span className="block text-[13px] mt-0.5" style={{ color: "rgb(var(--ink-rgb) / 0.6)" }}>
             {[showBrand ? brand.name : null, bottle.abv > 0 ? `${proofOf(bottle.abv)} proof` : null, bottle.price > 0 ? `$${bottle.price.toLocaleString("en-US")}` : null]
               .filter(Boolean)
               .join(" · ")}
@@ -220,7 +220,7 @@ export default async function BottlePage({ params }: Params) {
   const explorerHref = `/?q=${encodeURIComponent(bottle.name)}`;
 
   return (
-    <div className="min-h-screen" style={{ background: "#f0e8d8", color: "#0d0b08" }}>
+    <div className="min-h-screen" style={{ background: "var(--bg)", color: "var(--ink)" }}>
       <SiteHeader />
 
       <main className="max-w-5xl mx-auto px-5 sm:px-8 pt-8">
@@ -234,14 +234,14 @@ export default async function BottlePage({ params }: Params) {
         />
 
         <article>
-          <header className="pb-8" style={{ borderBottom: "1px solid rgba(13,11,8,0.15)" }}>
+          <header className="pb-8" style={{ borderBottom: "1px solid rgb(var(--ink-rgb) / 0.15)" }}>
             <h1
               className="cc-serif leading-[1.08] tracking-tight"
               style={{ fontSize: "clamp(2rem, 5vw, 3.25rem)", fontWeight: 400, textWrap: "balance" }}
             >
               {bottle.name}
             </h1>
-            <p className="cc-serif mt-3 text-[17px]" style={{ fontStyle: "italic", color: "rgba(13,11,8,0.65)" }}>
+            <p className="cc-serif mt-3 text-[17px]" style={{ fontStyle: "italic", color: "rgb(var(--ink-rgb) / 0.65)" }}>
               {bottle.style ? `${bottle.style} · ` : ""}
               <Link href={entry.brandPath} className="cc-link">{brand.name}</Link>
               {brand.region ? ` · ${brand.region}` : ""}
@@ -251,14 +251,14 @@ export default async function BottlePage({ params }: Params) {
           <div className="grid gap-x-12 gap-y-10 md:grid-cols-[minmax(0,1fr)_300px] mt-8">
             {/* Left: prose */}
             <div className="min-w-0">
-              <p className="cc-serif text-[18px] leading-[1.65]" style={{ color: "rgba(13,11,8,0.85)" }}>
+              <p className="cc-serif text-[18px] leading-[1.65]" style={{ color: "rgb(var(--ink-rgb) / 0.85)" }}>
                 {summarize(entry)}
               </p>
 
               {bottle.description && (
                 <section className="mt-8">
                   <h2 className="cc-mono-label">Tasting notes</h2>
-                  <p className="cc-serif mt-2 text-[18px] leading-[1.65]" style={{ fontStyle: "italic", color: "rgba(13,11,8,0.8)" }}>
+                  <p className="cc-serif mt-2 text-[18px] leading-[1.65]" style={{ fontStyle: "italic", color: "rgb(var(--ink-rgb) / 0.8)" }}>
                     {bottle.description}
                   </p>
                 </section>
@@ -267,7 +267,7 @@ export default async function BottlePage({ params }: Params) {
               {notes.length > 0 && (
                 <section className="mt-8">
                   <h2 className="cc-mono-label">How it compares</h2>
-                  <ul className="mt-2 space-y-2 text-[16px] leading-relaxed" style={{ color: "rgba(13,11,8,0.8)" }}>
+                  <ul className="mt-2 space-y-2 text-[16px] leading-relaxed" style={{ color: "rgb(var(--ink-rgb) / 0.8)" }}>
                     {notes.map((n) => (
                       <li key={n}>{n}</li>
                     ))}
@@ -281,35 +281,35 @@ export default async function BottlePage({ params }: Params) {
               <section
                 aria-label="Community rating"
                 className="rounded-sm p-5"
-                style={{ border: "1px solid rgba(13,11,8,0.14)", background: "rgba(244,238,224,0.7)" }}
+                style={{ border: "1px solid rgb(var(--ink-rgb) / 0.14)", background: "rgb(var(--panel-rgb) / 0.7)" }}
               >
                 <h2 className="cc-mono-label">Community rating</h2>
                 {rating && rating.count > 0 ? (
                   <>
                     <p className="mt-2 flex items-baseline gap-2">
-                      <span className="cc-serif tabular-nums" style={{ fontSize: "3rem", lineHeight: 1, color: "#8b1515" }}>
+                      <span className="cc-serif tabular-nums" style={{ fontSize: "3rem", lineHeight: 1, color: "var(--accent)" }}>
                         {rating.avg.toFixed(1)}
                       </span>
-                      <span className="text-[15px]" style={{ color: "rgba(13,11,8,0.55)" }}>/ 10</span>
+                      <span className="text-[15px]" style={{ color: "var(--ink-muted)" }}>/ 10</span>
                     </p>
-                    <p className="mt-2 text-[14px]" style={{ color: "rgba(13,11,8,0.65)" }}>
+                    <p className="mt-2 text-[14px]" style={{ color: "rgb(var(--ink-rgb) / 0.65)" }}>
                       Average of {rating.count.toLocaleString("en-US")} {rating.count === 1 ? "rating" : "ratings"}
                       {isRanked ? "" : ` — needs ${MIN_RATINGS_TO_RANK} to be ranked`}.
                     </p>
                   </>
                 ) : (
-                  <p className="mt-2 text-[15px]" style={{ color: "rgba(13,11,8,0.65)" }}>
+                  <p className="mt-2 text-[15px]" style={{ color: "rgb(var(--ink-rgb) / 0.65)" }}>
                     No ratings yet. Be the first to score it.
                   </p>
                 )}
                 <Link
                   href={explorerHref}
                   className="mt-4 inline-block rounded-sm px-4 py-2.5 text-[14px] font-semibold"
-                  style={{ background: "#8b1515", color: "#f4eee0" }}
+                  style={{ background: "var(--accent)", color: "var(--panel)" }}
                 >
                   Rate it in the Explorer →
                 </Link>
-                <p className="mt-4 text-[13px] leading-snug" style={{ color: "rgba(13,11,8,0.6)" }}>
+                <p className="mt-4 text-[13px] leading-snug" style={{ color: "rgb(var(--ink-rgb) / 0.6)" }}>
                   Ratings combine scores from public Reddit whiskey reviews with ratings from Common Cask
                   members. <Link href="/about#ratings" className="cc-link">How ratings work</Link>
                 </p>
@@ -318,7 +318,7 @@ export default async function BottlePage({ params }: Params) {
               <dl className="mt-6">
                 {bottle.abv > 0 && (
                   <Spec label="Proof">
-                    {proofOf(bottle.abv)} <span style={{ color: "rgba(13,11,8,0.55)" }}>({bottle.abv}% ABV)</span>
+                    {proofOf(bottle.abv)} <span style={{ color: "var(--ink-muted)" }}>({bottle.abv}% ABV)</span>
                   </Spec>
                 )}
                 <Spec label="Age">{bottle.age ? `${bottle.age} years` : "No age statement"}</Spec>

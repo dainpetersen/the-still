@@ -47,18 +47,18 @@ export default async function BrandsIndexPage() {
     (catalog.brandBottles.get(b.id) ?? []).reduce((sum, e) => sum + (e.rating?.count ?? 0), 0);
 
   return (
-    <div className="min-h-screen" style={{ background: "#f0e8d8", color: "#0d0b08" }}>
+    <div className="min-h-screen" style={{ background: "var(--bg)", color: "var(--ink)" }}>
       <SiteHeader />
 
       <main className="max-w-5xl mx-auto px-5 sm:px-8 pt-10">
-        <header className="pb-8" style={{ borderBottom: "1px solid rgba(13,11,8,0.15)" }}>
+        <header className="pb-8" style={{ borderBottom: "1px solid rgb(var(--ink-rgb) / 0.15)" }}>
           <h1
             className="cc-serif leading-[1.05] tracking-tight"
             style={{ fontSize: "clamp(2.2rem, 5vw, 3.4rem)", fontWeight: 400, textWrap: "balance" }}
           >
             American whiskey distilleries
           </h1>
-          <p className="cc-serif mt-4 max-w-2xl text-[17px] leading-[1.65]" style={{ color: "rgba(13,11,8,0.8)" }}>
+          <p className="cc-serif mt-4 max-w-2xl text-[17px] leading-[1.65]" style={{ color: "rgb(var(--ink-rgb) / 0.8)" }}>
             {brands.length} distilleries and independent bottlers across {states.filter((s) => s !== "Elsewhere").length}{" "}
             states, covering {catalog.bottles.length} bottles. Pick a producer to see its full lineup with proof, age,
             suggested retail price and community ratings.
@@ -72,7 +72,7 @@ export default async function BrandsIndexPage() {
               <section key={state}>
                 <div className="flex items-center gap-3 mb-4">
                   <h2 className="cc-serif text-[22px]" style={{ fontWeight: 400 }}>{state}</h2>
-                  <span aria-hidden="true" className="flex-1 h-px" style={{ background: "rgba(13,11,8,0.12)" }} />
+                  <span aria-hidden="true" className="flex-1 h-px" style={{ background: "rgb(var(--ink-rgb) / 0.12)" }} />
                   <span className="cc-mono-label" aria-label={`${list.length} producers`}>{list.length}</span>
                 </div>
                 <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
@@ -90,7 +90,7 @@ export default async function BrandsIndexPage() {
                             {brand.isNDP && (
                               <span
                                 className="cc-mono-label px-1 rounded-sm flex-shrink-0"
-                                style={{ border: "1px solid rgba(13,11,8,0.25)" }}
+                                style={{ border: "1px solid rgb(var(--ink-rgb) / 0.25)" }}
                                 title="Non-distilling producer"
                               >
                                 NDP
@@ -98,11 +98,11 @@ export default async function BrandsIndexPage() {
                             )}
                           </span>
                           {brand.region && (
-                            <span className="cc-serif text-[14px]" style={{ fontStyle: "italic", color: "rgba(13,11,8,0.6)" }}>
+                            <span className="cc-serif text-[14px]" style={{ fontStyle: "italic", color: "rgb(var(--ink-rgb) / 0.6)" }}>
                               {brand.region}
                             </span>
                           )}
-                          <span className="font-mono text-[12px] mt-auto pt-1" style={{ color: "rgba(13,11,8,0.6)" }}>
+                          <span className="font-mono text-[12px] mt-auto pt-1" style={{ color: "rgb(var(--ink-rgb) / 0.6)" }}>
                             {count} {count === 1 ? "bottle" : "bottles"}
                             {ratings > 0 ? ` · ${ratings.toLocaleString("en-US")} ratings` : ""}
                           </span>

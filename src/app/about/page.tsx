@@ -30,7 +30,7 @@ function Section({ id, title, children }: { id?: string; title: string; children
       </h2>
       <div
         className="cc-serif mt-3 space-y-4 text-[17px] leading-[1.7]"
-        style={{ color: "rgba(13,11,8,0.82)" }}
+        style={{ color: "rgb(var(--ink-rgb) / 0.82)" }}
       >
         {children}
       </div>
@@ -44,18 +44,18 @@ export default async function AboutPage() {
   const n = (value: number) => value.toLocaleString("en-US");
 
   return (
-    <div className="min-h-screen" style={{ background: "#f0e8d8", color: "#0d0b08" }}>
+    <div className="min-h-screen" style={{ background: "var(--bg)", color: "var(--ink)" }}>
       <SiteHeader />
 
       <main className="max-w-3xl mx-auto px-5 sm:px-8 pt-10">
-        <header className="pb-8" style={{ borderBottom: "1px solid rgba(13,11,8,0.15)" }}>
+        <header className="pb-8" style={{ borderBottom: "1px solid rgb(var(--ink-rgb) / 0.15)" }}>
           <h1
             className="cc-serif leading-[1.05] tracking-tight"
             style={{ fontSize: "clamp(2.2rem, 5vw, 3.4rem)", fontWeight: 400, textWrap: "balance" }}
           >
             About Common Cask
           </h1>
-          <p className="cc-serif mt-4 text-[18px] leading-[1.65]" style={{ color: "rgba(13,11,8,0.82)" }}>
+          <p className="cc-serif mt-4 text-[18px] leading-[1.65]" style={{ color: "rgb(var(--ink-rgb) / 0.82)" }}>
             Common Cask is an independent catalog of American whiskey: {n(bottles.length)} bottles from{" "}
             {n(brands.length)} distilleries and independent bottlers, each with its proof, age, suggested retail
             price, rarity and a community rating. Nobody pays to be listed, ranked or featured.

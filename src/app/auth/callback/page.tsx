@@ -29,8 +29,8 @@ function CallbackHandler() {
   return (
     <div
       style={{
-        background: "linear-gradient(160deg, #0a0608 0%, #0f0a18 50%, #080a0f 100%)",
-        color: "#f5f5f5",
+        background: "var(--bg)",
+        color: "var(--ink)",
         minHeight: "100vh",
         display: "flex",
         alignItems: "center",
@@ -38,7 +38,7 @@ function CallbackHandler() {
         fontFamily: "sans-serif",
       }}
     >
-      <p style={{ color: "rgba(245,158,11,0.8)", fontSize: "0.9rem" }}>Signing you in…</p>
+      <p style={{ color: "rgb(var(--accent-rgb) / 0.8)", fontSize: "0.9rem" }}>Signing you in…</p>
     </div>
   );
 }
@@ -49,7 +49,7 @@ export default function AuthCallback() {
       fallback={
         <div
           style={{
-            background: "linear-gradient(160deg, #0a0608 0%, #0f0a18 50%, #080a0f 100%)",
+            background: "var(--bg)",
             minHeight: "100vh",
           }}
         />

@@ -25,13 +25,13 @@ export default function Breadcrumbs({ trail, currentPath }: { trail: Crumb[]; cu
       <ol className="flex flex-wrap items-center gap-x-2 gap-y-1 cc-mono-label">
         {trail.map((c, i) => (
           <li key={i} className="flex items-center gap-2">
-            {i > 0 && <span aria-hidden="true" style={{ color: "rgba(13,11,8,0.3)" }}>/</span>}
+            {i > 0 && <span aria-hidden="true" style={{ color: "rgb(var(--ink-rgb) / 0.3)" }}>/</span>}
             {c.path ? (
               <Link href={c.path} className="cc-link" style={{ textDecoration: "none" }}>
                 {c.name}
               </Link>
             ) : (
-              <span aria-current="page" style={{ color: "rgba(13,11,8,0.8)" }}>{c.name}</span>
+              <span aria-current="page" style={{ color: "rgb(var(--ink-rgb) / 0.8)" }}>{c.name}</span>
             )}
           </li>
         ))}

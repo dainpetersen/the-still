@@ -1,13 +1,85 @@
 @import "tailwindcss";
 
+/*
+ * ── Themes ───────────────────────────────────────────────────────────────────
+ * Every colour in the UI comes from the variables below. Components use them
+ * as `var(--ink)` or, where they need a tint, `rgb(var(--ink-rgb) / 0.6)`:
+ * "ink at 60%" is dark text on paper and light text on the dark ground, so
+ * one expression is right in both themes.
+ *
+ * <html data-theme> is set before first paint by the script in layout.tsx:
+ * the visitor's saved choice if they made one, otherwise their device setting.
+ * Paper is the fallback when that script can't run.
+ */
 :root {
-  --background: #f0e8d8;
-  --foreground: #0d0b08;
+  color-scheme: light;
+
+  --bg-rgb: 240 232 216;        /* the page */
+  --panel-rgb: 244 238 224;     /* cards, dialogs, raised controls */
+  --ink-rgb: 13 11 8;           /* text, rules, and tints of both */
+  --accent-rgb: 139 21 21;      /* ratings, logo, primary buttons */
+  --brown-rgb: 90 60 20;        /* logo small type, scrollbar */
+  --community-rgb: 90 40 160;   /* community-submitted entries */
+  --danger-rgb: 160 40 40;
+  --success-rgb: 21 110 60;
+  --warm-rgb: 140 80 0;         /* limited / rare tags */
+
+  --on-accent: #f4eee0;         /* text on an accent-coloured button */
+  --field-bg: rgb(255 255 255 / 0.6);
+  --scrim: rgb(13 11 8 / 0.45); /* behind dialogs */
+  --bubble-line: rgb(13 11 8 / 0.45);
 }
 
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  --bg-rgb: 21 17 12;
+  --panel-rgb: 30 24 18;
+  --ink-rgb: 239 230 212;
+  --accent-rgb: 224 160 64;
+  --brown-rgb: 200 170 120;
+  --community-rgb: 184 156 245;
+  --danger-rgb: 240 128 112;
+  --success-rgb: 110 200 140;
+  --warm-rgb: 232 172 92;
+
+  --on-accent: #15110c;
+  --field-bg: rgb(239 230 212 / 0.06);
+  --scrim: rgb(0 0 0 / 0.62);
+  --bubble-line: rgb(0 0 0 / 0.5);
+}
+
+:root {
+  --bg: rgb(var(--bg-rgb));
+  --panel: rgb(var(--panel-rgb));
+  --ink: rgb(var(--ink-rgb));
+  --accent: rgb(var(--accent-rgb));
+  --ink-muted: rgb(var(--ink-rgb) / 0.62);
+  --line: rgb(var(--ink-rgb) / 0.14);
+  --line-strong: rgb(var(--ink-rgb) / 0.3);
+}
+
+/* Tailwind colour utilities on the same variables: text-ink, bg-panel, border-line, bg-accent/10 … */
+@theme inline {
+  --color-paper: var(--bg);
+  --color-panel: var(--panel);
+  --color-ink: var(--ink);
+  --color-muted: var(--ink-muted);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-accent: var(--accent);
+  --color-on-accent: var(--on-accent);
+  --color-danger: rgb(var(--danger-rgb));
+  --color-community: rgb(var(--community-rgb));
+  --color-success: rgb(var(--success-rgb));
+}
+
+/* `dark:` utilities follow the chosen theme rather than only the device setting. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
 body {
-  background: var(--background);
-  color: var(--foreground);
+  background: var(--bg);
+  color: var(--ink);
   font-family: system-ui, -apple-system, sans-serif;
 }
 
@@ -36,16 +108,16 @@ body::before {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(90, 60, 20, 0.3);
+  background: rgb(var(--brown-rgb) / 0.3);
   border-radius: 2px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(90, 60, 20, 0.6);
+  background: rgb(var(--brown-rgb) / 0.6);
 }
 
 /* Search input placeholder */
 .search-input::placeholder {
-  color: rgba(13, 11, 8, 0.5);
+  color: var(--ink-muted);
 }
 
 /* ── Catalog pages (distillery + bottle pages, home directory) ───────────── */
@@ -57,32 +129,32 @@ body::before {
   font-size: 11px;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: rgba(13, 11, 8, 0.55);
+  color: var(--ink-muted);
 }
 .cc-link {
   color: inherit;
   text-decoration: underline;
-  text-decoration-color: rgba(13, 11, 8, 0.25);
+  text-decoration-color: rgb(var(--ink-rgb) / 0.25);
   text-underline-offset: 3px;
   transition: color 0.15s, text-decoration-color 0.15s;
 }
 .cc-link:hover {
-  color: #8b1515;
-  text-decoration-color: #8b1515;
+  color: var(--accent);
+  text-decoration-color: var(--accent);
 }
 .cc-row {
-  border-bottom: 1px solid rgba(13, 11, 8, 0.1);
+  border-bottom: 1px solid rgb(var(--ink-rgb) / 0.1);
   transition: background 0.15s;
 }
 .cc-row:hover {
-  background: rgba(13, 11, 8, 0.03);
+  background: rgb(var(--ink-rgb) / 0.03);
 }
 .cc-card {
-  border: 1px solid rgba(13, 11, 8, 0.14);
-  background: rgba(244, 238, 224, 0.7);
+  border: 1px solid rgb(var(--ink-rgb) / 0.14);
+  background: rgb(var(--panel-rgb) / 0.7);
   transition: border-color 0.15s, background 0.15s;
 }
 a.cc-card:hover {
-  border-color: rgba(139, 21, 21, 0.45);
-  background: rgba(244, 238, 224, 1);
+  border-color: rgb(var(--accent-rgb) / 0.45);
+  background: rgb(var(--panel-rgb) / 1);
 }

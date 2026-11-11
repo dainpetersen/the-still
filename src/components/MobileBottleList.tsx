@@ -112,7 +112,7 @@ export default function MobileBottleList({ brands, ratings, searchQuery, onSearc
       <div
         className="sticky z-30 px-4 pt-3 pb-2"
         style={{
-          top: 49,
+          top: 52, // the header's height
           background: "rgb(var(--bg-rgb) / 0.97)",
           backdropFilter: "blur(8px)",
           borderBottom: "1px solid rgb(var(--ink-rgb) / 0.1)",

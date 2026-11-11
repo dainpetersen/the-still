@@ -6,7 +6,7 @@ import ThemeToggle from "@/components/ThemeToggle";
 export default function SiteHeader() {
   return (
     <header style={{ borderBottom: "1px solid rgb(var(--ink-rgb) / 0.12)" }}>
-      <div className="max-w-5xl mx-auto px-5 sm:px-8 py-3 flex items-center gap-6">
+      <div className="max-w-5xl mx-auto px-5 sm:px-8 h-[52px] flex items-center gap-6">
         <Link href="/" aria-label="Common Cask — home">
           <Logo />
         </Link>

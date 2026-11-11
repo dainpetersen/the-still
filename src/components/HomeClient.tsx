@@ -239,7 +239,7 @@ export default function HomeClient({ children, initialRatings }: Props) {
     >
       {/* Header — sticky so it stays visible when scrolling into sections */}
       <header
-        className="sticky top-0 z-40 px-6 py-3 flex items-center gap-4 flex-shrink-0"
+        className="sticky top-0 z-40 px-4 sm:px-6 h-[52px] flex items-center gap-4 flex-shrink-0"
         style={{
           borderBottom: "1px solid rgb(var(--ink-rgb) / 0.12)",
           background: "rgb(var(--bg-rgb) / 0.94)",
@@ -365,7 +365,7 @@ export default function HomeClient({ children, initialRatings }: Props) {
       </header>
 
       {/* ── Phones: a searchable list of every bottle ── */}
-      <div className="md:hidden" style={{ minHeight: "calc(100vh - 49px)" }}>
+      <div className="md:hidden" style={{ minHeight: "calc(100vh - 52px)" }}>
         <MobileBottleList
           brands={displayBrands}
           ratings={ratings}
@@ -376,7 +376,7 @@ export default function HomeClient({ children, initialRatings }: Props) {
       </div>
 
       {/* ── Wider screens: leaderboard + bubble chart + sidebar, one viewport tall ── */}
-      <div className="hidden md:flex" style={{ height: "calc(100vh - 49px)" }}>
+      <div className="hidden md:flex" style={{ height: "calc(100vh - 52px)" }}>
             {/* Left leaderboard panel */}
             <div className="w-60 flex-shrink-0 hidden lg:block">
               <TopRatedLeaderboard

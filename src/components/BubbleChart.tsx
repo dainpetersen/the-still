@@ -12,6 +12,7 @@ import {
 } from "@/types/whiskey";
 import { getAgeTier, getPriceTier } from "@/data/whiskeys";
 import { buildDistilleryColors } from "@/lib/distilleryColors";
+import { NO_DATA_COLOR, buildPriceScale, type PriceScale } from "@/lib/colorScales";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -100,21 +101,19 @@ function computeRadius(node: BubbleNode, mode: BubbleSizeMode): number {
 function getColorFn(
   mode: ColorMode,
   ratings: Record<string, { avg: number; count: number }>,
+  priceScale: PriceScale,
   distColors?: Map<string, string>
 ): (d: BubbleNode) => string {
-  // Newspaper palette: warm parchment tones → dark ink/sepia
-  const priceScale  = d3.scaleSequentialLog(d3.interpolate("#e4d4a8", "#1a0800")).domain([15, 3500]).clamp(true);
   const ratingScale = d3.scaleSequential(d3.interpolate("#c8b880", "#6b1200")).domain([1, 10]);
   const rarityScale = d3.scaleSequential(d3.interpolate("#ddd0b0", "#5c0a0a")).domain([0, 100]);
-  const NO_DATA     = "#c8bca0"; // neutral parchment for unrated/no-data bubbles
 
   return (d: BubbleNode) => {
     if (mode === "brand")  return distColors?.get(d.brandName) ?? "#8a7055";
-    if (mode === "price")  return d.price ? priceScale(d.price) : NO_DATA;
+    if (mode === "price")  return priceScale.color(d.price);
     if (mode === "rarity") return rarityScale(d.rarityScore ?? 0);
     // rating
     const r = ratings[d.id] ?? (d.avgRating ? { avg: d.avgRating } : null);
-    return r ? ratingScale(r.avg) : NO_DATA;
+    return r ? ratingScale(r.avg) : NO_DATA_COLOR;
   };
 }
 
@@ -152,6 +151,77 @@ function computeCentroids(
     });
   });
   return map;
+}
+
+/**
+ * Space the chart keeps clear of bubbles in the grouped views: the search box
+ * and "Submit a Bottle" sit along the top, the availability toggle along the
+ * bottom, and each cluster's label needs a line above it.
+ */
+const INSET = { top: 80, right: 16, bottom: 52, left: 16 };
+
+type Cell = { key?: string; children?: Cell[] };
+
+/**
+ * Where each group's cluster should settle.
+ *
+ * Distillery view: one cloud — every group is pulled close to the centre.
+ *
+ * Other views: the chart area is divided in proportion to how much room each
+ * group's bubbles need (a treemap), and each cluster heads for the middle of
+ * its own cell. An even grid gave three single malts the same space as 380
+ * bourbons, so the big clusters spilled over their neighbours and labels
+ * ended up sitting on the wrong group.
+ */
+function layoutCentroids(
+  groups: string[],
+  nodes: BubbleNode[],
+  w: number,
+  h: number,
+  mode: GroupMode
+): Map<string, { x: number; y: number }> {
+  if (mode === "distillery") {
+    const grid = computeCentroids(groups, w, h);
+    for (const [key, pos] of grid) {
+      grid.set(key, { x: w / 2 + (pos.x - w / 2) * 0.2, y: h / 2 + (pos.y - h / 2) * 0.2 });
+    }
+    return grid;
+  }
+
+  const weight = new Map<string, number>();
+  for (const n of nodes) weight.set(n.groupKey, (weight.get(n.groupKey) ?? 0) + n.r * n.r);
+  const total = d3.sum(weight.values());
+  const floor = total * 0.035; // even a one-bottle group gets room for its label
+
+  // Age and price tiers read in their natural order; the rest go largest first.
+  const ordered =
+    mode === "ageTier" || mode === "priceTier"
+      ? groups
+      : [...groups].sort((a, b) => (weight.get(b) ?? 0) - (weight.get(a) ?? 0));
+
+  const root = d3
+    .hierarchy<Cell>({ children: ordered.map((key) => ({ key })) })
+    .sum((d) => (d.key ? Math.max(weight.get(d.key) ?? 0, floor) : 0));
+  const innerW = Math.max(1, w - INSET.left - INSET.right);
+  const innerH = Math.max(1, h - INSET.top - INSET.bottom);
+  const laidOut = d3.treemap<Cell>().tile(d3.treemapSquarify.ratio(1)).size([innerW, innerH])(root);
+
+  const map = new Map<string, { x: number; y: number }>();
+  for (const leaf of laidOut.leaves()) {
+    if (!leaf.data.key) continue;
+    map.set(leaf.data.key, {
+      x: INSET.left + (leaf.x0 + leaf.x1) / 2,
+      y: INSET.top + (leaf.y0 + leaf.y1) / 2 + 8, // a little low: the label sits above
+    });
+  }
+  return map;
+}
+
+/** Escape text before it goes into the tooltip's HTML. */
+function esc(text: string | number | undefined | null): string {
+  return String(text ?? "").replace(/[&<>"']/g, (c) =>
+    c === "&" ? "&amp;" : c === "<" ? "&lt;" : c === ">" ? "&gt;" : c === '"' ? "&quot;" : "&#39;"
+  );
 }
 
 // Estimated radius of a packed cluster (for label positioning)
@@ -279,6 +349,8 @@ export default function BubbleChart({
   const wrapRef  = useRef<HTMLDivElement>(null);
   const simRef   = useRef<d3.Simulation<BubbleNode, undefined> | null>(null);
   const nodesRef = useRef<BubbleNode[]>([]);
+  /** Size the chart was last laid out for — lets the resize observer ignore no-op callbacks. */
+  const lastSizeRef = useRef<{ w: number; h: number } | null>(null);
 
   // Track previous values to know what changed
   const prevGroupModeRef = useRef<GroupMode | null>(null);
@@ -306,23 +378,24 @@ export default function BubbleChart({
     if (!tip) return;
     const r = ratingsRef.current[d.id];
     const ratingLine = r
-      ? `<div style="color:#7a3800;margin-top:4px;font-family:Georgia,serif;">★ ${r.avg.toFixed(1)} <span style="color:rgba(13,11,8,0.45);font-size:10px;">(${r.count} rating${r.count !== 1 ? "s" : ""})</span></div>`
-      : `<div style="color:rgba(13,11,8,0.35);margin-top:4px;font-size:10px;">Not yet rated</div>`;
+      ? `<div style="color:#7a3800;margin-top:5px;font-family:Georgia,serif;font-size:13px;">★ ${r.avg.toFixed(1)} <span style="color:rgba(13,11,8,0.6);font-size:12px;">(${r.count} rating${r.count !== 1 ? "s" : ""})</span></div>`
+      : `<div style="color:rgba(13,11,8,0.55);margin-top:5px;font-size:12px;">Not yet rated</div>`;
     const ageStr = d.age ? `${d.age}yr` : "NAS";
     const badges = [
-      d.source === "community" ? `<span style="color:#5a2890;font-size:10px;border:1px solid rgba(90,40,144,0.4);padding:1px 5px;border-radius:2px;">Community</span>` : "",
-      d.isNDP ? `<span style="color:rgba(90,50,10,0.8);font-size:10px;border:1px solid rgba(90,50,10,0.3);padding:1px 5px;border-radius:2px;">NDP</span>` : "",
+      d.source === "community" ? `<span style="color:#5a2890;font-size:11px;border:1px solid rgba(90,40,144,0.4);padding:1px 5px;border-radius:2px;">Community</span>` : "",
+      d.isNDP ? `<span style="color:rgba(90,50,10,0.85);font-size:11px;border:1px solid rgba(90,50,10,0.3);padding:1px 5px;border-radius:2px;">NDP</span>` : "",
     ].filter(Boolean).join(" ");
 
     tip.innerHTML = `
-      <div style="font-weight:700;font-size:13px;color:#0d0b08;margin-bottom:2px;font-family:Georgia,serif;">${d.name}</div>
-      <div style="font-size:11px;color:rgba(13,11,8,0.5);margin-bottom:4px;">${d.brandName} · ${d.subBrandName}</div>
-      <div style="font-size:11px;color:rgba(13,11,8,0.7);">$${d.price} · ${d.abv}% ABV · ${ageStr}</div>
-      <div style="font-size:11px;color:rgba(13,11,8,0.45);text-transform:capitalize;">${d.rarity}</div>
+      <div style="font-weight:700;font-size:14px;color:#0d0b08;margin-bottom:2px;font-family:Georgia,serif;">${esc(d.name)}</div>
+      <div style="font-size:12px;color:rgba(13,11,8,0.6);margin-bottom:4px;">${esc(d.brandName)} · ${esc(d.subBrandName)}</div>
+      <div style="font-size:12.5px;color:rgba(13,11,8,0.8);">$${esc(d.price)} · ${esc(d.abv)}% ABV · ${esc(ageStr)}</div>
+      <div style="font-size:12px;color:rgba(13,11,8,0.6);text-transform:capitalize;">${esc(d.rarity)}</div>
       ${ratingLine}
-      ${d.sourceDistillery ? `<div style="font-size:10px;color:rgba(13,11,8,0.35);margin-top:3px;">Source: ${d.sourceDistillery}</div>` : ""}
-      ${d.description ? `<div style="font-size:10px;color:rgba(13,11,8,0.5);margin-top:5px;max-width:220px;line-height:1.4;">${d.description.slice(0, 120)}${d.description.length > 120 ? "…" : ""}</div>` : ""}
-      ${badges ? `<div style="margin-top:5px;display:flex;gap:4px;">${badges}</div>` : ""}
+      ${d.sourceDistillery ? `<div style="font-size:12px;color:rgba(13,11,8,0.55);margin-top:3px;">Source: ${esc(d.sourceDistillery)}</div>` : ""}
+      ${d.description ? `<div style="font-size:12px;color:rgba(13,11,8,0.65);margin-top:6px;max-width:240px;line-height:1.45;">${esc(d.description.slice(0, 120))}${d.description.length > 120 ? "…" : ""}</div>` : ""}
+      ${badges ? `<div style="margin-top:6px;display:flex;gap:4px;">${badges}</div>` : ""}
+      <div style="font-size:11px;color:rgba(13,11,8,0.45);margin-top:6px;">Click for details</div>
     `;
     tip.style.display = "block";
     tip.style.opacity = "1";
@@ -410,27 +483,16 @@ export default function BubbleChart({
 
     const newNodes = buildNodes(brands, groupMode, sizeMode);
     const groups   = canonicalOrder([...new Set(newNodes.map((n) => n.groupKey))], groupMode);
-    const centroids = computeCentroids(groups, W, H);
+    const centroids = layoutCentroids(groups, newNodes, W, H, groupMode);
+    lastSizeRef.current = { w: W, h: H };
 
     const isDistilleryMode = groupMode === "distillery";
     const isBrandMode = colorMode === "brand";
     const distColors = distilleryColors ?? buildDistilleryColors(brands);
     const glowOpacity = isDistilleryMode ? 0.35 : 0;
 
-    // In distillery mode, pull all cluster centers close to chart center so all
-    // bubbles form one circular cloud. 0.20 (vs 0.10) gives each distillery a
-    // slightly more distinct home-base, which the custom cluster force below
-    // reinforces so same-brand bubbles end up touching.
-    if (isDistilleryMode) {
-      for (const [key, pos] of centroids) {
-        centroids.set(key, {
-          x: W / 2 + (pos.x - W / 2) * 0.20,
-          y: H / 2 + (pos.y - H / 2) * 0.20,
-        });
-      }
-    }
-
-    const colorFn = getColorFn(colorMode, ratingsRef.current, distColors);
+    const priceScale = buildPriceScale(newNodes.map((n) => n.price));
+    const colorFn = getColorFn(colorMode, ratingsRef.current, priceScale, distColors);
 
     const prevGroupMode = prevGroupModeRef.current;
     const prevSizeMode  = prevSizeModeRef.current;
@@ -501,9 +563,13 @@ export default function BubbleChart({
             .attr("text-anchor", "middle")
             .attr("fill", (d) => isDistilleryMode ? (distColors.get(d.key) ?? "#1a0e04") : "#1a0e04")
             .attr("opacity", 0)
-            .attr("font-size", "11px")
+            .attr("font-size", "12px")
             .attr("font-weight", "700")
             .attr("letter-spacing", "0.08em")
+            .attr("paint-order", "stroke")
+            .attr("stroke", "#f0e8d8")
+            .attr("stroke-width", 3)
+            .attr("stroke-linejoin", "round")
             .text((d) => d.key.toUpperCase())
             .call((e) => {
               // In distillery mode the end handler positions + reveals labels
@@ -521,9 +587,13 @@ export default function BubbleChart({
               .attr("text-anchor", "middle")
               .attr("fill", (d) => isDistilleryMode ? (distColors.get(d.key) ?? "#1a0e04") : "#1a0e04")
               .attr("opacity", 0)
-              .attr("font-size", "11px")
+              .attr("font-size", "12px")
               .attr("font-weight", "700")
               .attr("letter-spacing", "0.08em")
+              .attr("paint-order", "stroke")
+              .attr("stroke", "#f0e8d8")
+              .attr("stroke-width", 3)
+              .attr("stroke-linejoin", "round")
               .text((d) => d.key.toUpperCase())
               .call((e) => {
                 if (!isDistilleryMode) e.transition().duration(300).attr("opacity", 0.9);
@@ -597,28 +667,40 @@ export default function BubbleChart({
     // Stop previous sim
     if (simRef.current) simRef.current.stop();
 
-    // Transfer positions from old nodes if this is a groupMode change (not first render)
-    if (groupChanged && nodesRef.current.length > 0) {
-      const prevById = new Map(nodesRef.current.map((n) => [n.id, n]));
-      for (const n of newNodes) {
-        const prev = prevById.get(n.id);
-        if (prev) {
-          n.x = prev.x; n.y = prev.y;
-          n.vx = (prev.vx ?? 0) * 0.3;
-          n.vy = (prev.vy ?? 0) * 0.3;
-        }
+    // Carry positions over from the previous layout wherever a bottle was
+    // already on screen, whatever caused the rebuild. (They used to be kept
+    // only on a Group By change, so each data refresh during page load threw
+    // every bubble back to the centre and replayed the whole burst.)
+    const hadLayout = nodesRef.current.length > 0;
+    const prevById = new Map(nodesRef.current.map((n) => [n.id, n]));
+    for (const n of newNodes) {
+      const prev = prevById.get(n.id);
+      if (prev && prev.x != null && prev.y != null) {
+        n.x = prev.x;
+        n.y = prev.y;
+        n.vx = groupChanged ? (prev.vx ?? 0) * 0.3 : 0;
+        n.vy = groupChanged ? (prev.vy ?? 0) * 0.3 : 0;
       }
     }
-    // Initialize any node that still lacks a position (first render, Strict Mode remount,
-    // or new nodes added after a groupMode transfer). Burst from center so bubbles
-    // animate outward rather than flying in from the D3 golden-angle spiral near (0,0).
-    const cx = W / 2, cy = H / 2;
+    // Bottles new to the chart start scattered around their own group's target
+    // instead of stacked on one point, so they have little distance to travel.
+    const groupSize = new Map<string, number>();
+    for (const n of newNodes) groupSize.set(n.groupKey, (groupSize.get(n.groupKey) ?? 0) + 1);
     for (const n of newNodes) {
-      if (n.x == null || n.y == null) {
-        n.x  = cx + (Math.random() - 0.5) * 20;
-        n.y  = cy + (Math.random() - 0.5) * 20;
-        n.vx = 0; n.vy = 0;
-      }
+      if (n.x != null && n.y != null) continue;
+      const target = centroids.get(n.groupKey) ?? { x: W / 2, y: H / 2 };
+      // The distillery view squeezes every target toward the centre; fan the
+      // starting points back out so the cloud doesn't begin as one dense knot.
+      const fan = isDistilleryMode ? 3 : 1;
+      const cx = W / 2 + (target.x - W / 2) * fan;
+      const cy = H / 2 + (target.y - H / 2) * fan;
+      const spread = estimatedClusterRadius(groupSize.get(n.groupKey) ?? 1, 9);
+      const angle = Math.random() * Math.PI * 2;
+      const dist = Math.sqrt(Math.random()) * spread;
+      n.x = cx + Math.cos(angle) * dist;
+      n.y = cy + Math.sin(angle) * dist;
+      n.vx = 0;
+      n.vy = 0;
     }
 
     nodesRef.current = newNodes;
@@ -667,8 +749,35 @@ export default function BubbleChart({
       )
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       .force("cluster", clusteringForce as any)
-      .alphaDecay(0.022)   // ~30% fewer ticks vs 0.015; final positions equivalent
       .velocityDecay(0.3);
+
+    // Grouped views keep every bubble inside the area the overlays leave free.
+    if (!isDistilleryMode) {
+      simulation.force("bounds", () => {
+        const { w, h } = lastSizeRef.current ?? { w: W, h: H };
+        for (const n of newNodes) {
+          if (n.x == null || n.y == null) continue;
+          n.x = Math.max(INSET.left + n.r, Math.min(w - INSET.right - n.r, n.x));
+          n.y = Math.max(INSET.top + n.r, Math.min(h - INSET.bottom - n.r, n.y));
+        }
+      });
+    }
+
+    // ── Settle before painting, unless this is a Group By change ─────────────
+    // A Group By change is worth watching: the bubbles travel from one
+    // arrangement to another. A first load or a data refresh is not, so there
+    // the simulation is run to rest right here and the chart appears settled.
+    const animate = groupChanged;
+    if (animate) {
+      simulation.alphaDecay(0.045); // about 2.5 s of motion
+    } else {
+      simulation.stop();
+      simulation.alpha(hadLayout ? 0.3 : 1).alphaDecay(0.035);
+      const ticks = Math.ceil(
+        Math.log(simulation.alphaMin() / simulation.alpha()) / Math.log(1 - simulation.alphaDecay())
+      );
+      simulation.tick(ticks);
+    }
 
     simRef.current = simulation;
 
@@ -840,6 +949,66 @@ export default function BubbleChart({
     // D3 may fire ticks faster than 60 fps. Coalescing DOM mutations to at most
     // one per animation frame cuts setAttribute calls by 3–5× on slow engines
     // with zero visual change (node positions are still computed every tick).
+    // ── Grouped views: keep each label centred just above its own cluster ────
+    // Positions come from where the bubbles actually are, not from where the
+    // layout aimed them, so a label can't end up over a neighbouring group.
+    const placeGroupLabels = () => {
+      const liveW = svgRef.current?.clientWidth ?? W;
+      const extent = new Map<string, { sx: number; n: number; top: number }>();
+      for (const n of newNodes) {
+        if (n.x == null || n.y == null) continue;
+        const e = extent.get(n.groupKey) ?? { sx: 0, n: 0, top: Infinity };
+        e.sx += n.x;
+        e.n++;
+        e.top = Math.min(e.top, n.y - n.r);
+        extent.set(n.groupKey, e);
+      }
+
+      const placed: { el: SVGTextElement; x: number; y: number; w: number }[] = [];
+      root
+        .select<SVGGElement>("g.labels-layer")
+        .selectAll<SVGTextElement, { key: string }>("text.group-label")
+        .each(function (d) {
+          const e = extent.get(d.key);
+          if (!e) return;
+          placed.push({ el: this, x: e.sx / e.n, y: Math.max(16, e.top - 9), w: this.getComputedTextLength() });
+        });
+
+      // Two labels on the same line that would collide are nudged apart.
+      for (let pass = 0; pass < 3; pass++) {
+        for (let i = 0; i < placed.length; i++) {
+          for (let j = i + 1; j < placed.length; j++) {
+            const a = placed[i];
+            const b = placed[j];
+            if (Math.abs(a.y - b.y) > 15) continue;
+            const overlap = (a.w + b.w) / 2 + 10 - Math.abs(a.x - b.x);
+            if (overlap <= 0) continue;
+            const dir = a.x <= b.x ? -1 : 1;
+            a.x += (dir * overlap) / 2;
+            b.x -= (dir * overlap) / 2;
+          }
+        }
+      }
+
+      for (const l of placed) {
+        const x = Math.max(INSET.left + l.w / 2, Math.min(liveW - INSET.right - l.w / 2, l.x));
+        d3.select(l.el).attr("text-anchor", "middle").attr("x", x).attr("y", l.y);
+      }
+    };
+
+    const paint = () => {
+      bubblesG
+        .selectAll<SVGCircleElement, BubbleNode>("circle.bubble")
+        .attr("cx", (d) => d.x ?? 0)
+        .attr("cy", (d) => d.y ?? 0);
+      glowG.selectAll<SVGGElement, string>("g.clay-group").each(function () {
+        d3.select(this)
+          .selectAll<SVGCircleElement, BubbleNode>("circle.clay-bubble")
+          .attr("cx", (d) => d.x ?? 0)
+          .attr("cy", (d) => d.y ?? 0);
+      });
+    };
+
     let tickN = 0;
     let rafId: ReturnType<typeof requestAnimationFrame> | null = null;
     simulation.on("tick", () => {
@@ -847,39 +1016,23 @@ export default function BubbleChart({
       if (rafId !== null) return;
       rafId = requestAnimationFrame(() => {
         rafId = null;
-        bubblesG
-          .selectAll<SVGCircleElement, BubbleNode>("circle.bubble")
-          .attr("cx", (d) => d.x ?? 0)
-          .attr("cy", (d) => d.y ?? 0);
-        glowG.selectAll<SVGGElement, string>("g.clay-group").each(function () {
-          d3.select(this)
-            .selectAll<SVGCircleElement, BubbleNode>("circle.clay-bubble")
-            .attr("cx", (d) => d.x ?? 0)
-            .attr("cy", (d) => d.y ?? 0);
-        });
+        paint();
         if (tickN % 5 === 0) {
           updateHalos(halosG, newNodes, false);
+          if (!isDistilleryMode) placeGroupLabels();
         }
       });
     });
 
     // When sim settles, position labels + draw leader lines
-    simulation.on("end", () => {
+    const onSettled = () => {
       updateHalos(halosG, newNodes, false);
 
       const labelsLayer = root.select<SVGGElement>("g.labels-layer");
 
-      // ── Non-distillery: simple above-cluster label nudge ──────────────────
+      // ── Grouped views: label above each cluster ────────────────────────────
       if (!isDistilleryMode) {
-        const groupMinY = new Map<string, number>();
-        for (const n of newNodes) {
-          const curr = groupMinY.get(n.groupKey) ?? Infinity;
-          const top  = (n.y ?? 0) - n.r;
-          if (top < curr) groupMinY.set(n.groupKey, top);
-        }
-        labelsLayer
-          .selectAll<SVGTextElement, { key: string; x: number; y: number }>("text.group-label")
-          .attr("y", (d) => (groupMinY.get(d.key) ?? d.y) - 8);
+        placeGroupLabels();
         return;
       }
 
@@ -945,14 +1098,22 @@ export default function BubbleChart({
         });
 
       type LabelBox = { x1: number; y1: number; x2: number; y2: number };
+      type Placement = { lx: number; ly: number; anchor: "start" | "end" | "middle"; box: LabelBox };
       const placed: LabelBox[] = [];
 
-      function labelBox(θ: number, pad: number, tw: number): LabelBox {
-        const lx   = cX + (overallR + pad) * Math.cos(θ);
-        const ly   = cY + (overallR + pad) * Math.sin(θ) + 4;
+      // Where a label ends up for a given ring and vertical nudge, after being
+      // kept inside the chart. Collisions are tested on this final box.
+      function place(θ: number, pad: number, tw: number, dy: number): Placement {
         const cosθ = Math.cos(θ);
-        const x1   = cosθ > 0.2 ? lx : cosθ < -0.2 ? lx - tw : lx - tw / 2;
-        return { x1, y1: ly - LABEL_H / 2, x2: x1 + tw, y2: ly + LABEL_H / 2 };
+        const anchor = cosθ > 0.2 ? "start" : cosθ < -0.2 ? "end" : "middle";
+        let lx = cX + (overallR + pad) * cosθ;
+        let ly = cY + (overallR + pad) * Math.sin(θ) + dy;
+        if (anchor === "start")    lx = Math.max(SVG_MARG, Math.min(liveW - SVG_MARG - tw, lx));
+        else if (anchor === "end") lx = Math.max(SVG_MARG + tw, Math.min(liveW - SVG_MARG, lx));
+        else                       lx = Math.max(SVG_MARG + tw / 2, Math.min(liveW - SVG_MARG - tw / 2, lx));
+        ly = Math.max(SVG_MARG + LABEL_H / 2, Math.min(liveH - SVG_MARG - LABEL_H / 2, ly));
+        const x1 = anchor === "start" ? lx : anchor === "end" ? lx - tw : lx - tw / 2;
+        return { lx, ly, anchor, box: { x1, y1: ly - LABEL_H / 2, x2: x1 + tw, y2: ly + LABEL_H / 2 } };
       }
 
       function overlaps(a: LabelBox, b: LabelBox): boolean {
@@ -964,58 +1125,44 @@ export default function BubbleChart({
         );
       }
 
-      function inBounds(box: LabelBox): boolean {
-        return box.x1 >= SVG_MARG && box.x2 <= liveW - SVG_MARG &&
-               box.y1 >= SVG_MARG && box.y2 <= liveH - SVG_MARG;
+      // Candidate spots, nearest first: further rings out, and nudges up or
+      // down (which is what frees a label pinned against the left/right edge).
+      const candidates: { pad: number; dy: number; cost: number }[] = [];
+      for (let ring = 0; ring < 8; ring++) {
+        for (const step of [0, 1, -1, 2, -2, 3, -3, 4, -4]) {
+          candidates.push({
+            pad: BASE_PAD + ring * RING_STEP,
+            dy: step * (LABEL_H + BOX_GAP),
+            cost: ring * RING_STEP + Math.abs(step) * (LABEL_H + BOX_GAP) * 1.1,
+          });
+        }
       }
+      candidates.sort((a, b) => a.cost - b.cost);
 
       const sortedByAngle = [...angleMap.entries()].sort(([, a], [, b]) => a - b);
-      const padMap = new Map<string, number>();
+      const placements = new Map<string, Placement>();
       for (const [key, θ] of sortedByAngle) {
         const tw = textWidthMap.get(key) ?? key.length * 8;
-        let bestPad = BASE_PAD;
-        let bestInBounds = false;
-        for (let ring = 0; ring < 12; ring++) {
-          const pad = BASE_PAD + ring * RING_STEP;
-          const box = labelBox(θ, pad, tw);
-          const noOverlap = !placed.some((b) => overlaps(box, b));
-          const fits = inBounds(box);
-          if (noOverlap) {
-            // Prefer in-bounds; accept out-of-bounds only if no in-bounds slot found yet
-            if (fits || !bestInBounds) {
-              bestPad = pad;
-              bestInBounds = fits;
-            }
-            if (fits) break; // in-bounds non-overlapping slot found — done
+        let chosen = place(θ, BASE_PAD, tw, 0);
+        for (const c of candidates) {
+          const attempt = place(θ, c.pad, tw, c.dy);
+          if (!placed.some((b) => overlaps(attempt.box, b))) {
+            chosen = attempt;
+            break;
           }
         }
-        padMap.set(key, bestPad);
-        placed.push(labelBox(θ, bestPad, tw));
+        placements.set(key, chosen);
+        placed.push(chosen.box);
       }
 
-      // ── Pass 3: apply positions, clamping to SVG bounds ───────────────────
-      // After ring assignment, clamp the final (lx, ly) so every label's
-      // text box stays visible regardless of how tight the chart area is.
+      // ── Pass 3: apply positions ───────────────────────────────────────────
       labelsLayer
         .selectAll<SVGTextElement, { key: string; x: number; y: number }>("text.group-label")
         .each(function (d) {
-          const c = actualCentroids.get(d.key);
-          if (!c) return;
-
-          const θ    = angleMap.get(d.key) ?? 0;
-          const pad  = padMap.get(d.key) ?? BASE_PAD;
-          const cosθ = Math.cos(θ);
-          const anchor = cosθ > 0.2 ? "start" : cosθ < -0.2 ? "end" : "middle";
-
-          let lx = cX + (overallR + pad) * Math.cos(θ);
-          let ly = cY + (overallR + pad) * Math.sin(θ);
-
-          // Clamp so the text box stays within SVG bounds (use measured width)
-          const tw = textWidthMap.get(d.key) ?? d.key.length * 8;
-          if (anchor === "start")       { lx = Math.max(SVG_MARG, Math.min(liveW - SVG_MARG - tw, lx)); }
-          else if (anchor === "end")    { lx = Math.max(SVG_MARG + tw, Math.min(liveW - SVG_MARG, lx)); }
-          else /* "middle" */           { lx = Math.max(SVG_MARG + tw / 2, Math.min(liveW - SVG_MARG - tw / 2, lx)); }
-          ly = Math.max(SVG_MARG + LABEL_H / 2, Math.min(liveH - SVG_MARG - LABEL_H / 2, ly));
+          const spot = placements.get(d.key);
+          if (!spot) return;
+          const { lx, ly, anchor } = spot;
+          const θ = angleMap.get(d.key) ?? 0;
 
           const sel = selectedGroupRef.current;
           const targetOpacity = sel ? (sel === d.key ? 1.0 : 0.2) : 0.92;
@@ -1059,10 +1206,15 @@ export default function BubbleChart({
               .attr("x2", (d) => d.x2).attr("y2", (d) => d.y2),
           (exit) => exit.transition().duration(200).attr("opacity", 0).remove()
         );
-    });
+    };
+    simulation.on("end", onSettled);
 
-    if (groupChanged) {
+    if (animate) {
       simulation.alpha(0.7).restart();
+    } else {
+      // Already at rest: draw the final positions and labels straight away.
+      paint();
+      onSettled();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [brands, colorMode, groupMode, sizeMode, buildNodes, showTooltip, moveTooltip, hideTooltip]);
@@ -1076,20 +1228,16 @@ export default function BubbleChart({
       const W   = wrap.clientWidth;
       const H   = wrap.clientHeight;
       if (W === 0 || H === 0) return;
+      // The observer also fires once when it is attached; nothing changed then.
+      const last = lastSizeRef.current;
+      if (last && last.w === W && last.h === H) return;
+      lastSizeRef.current = { w: W, h: H };
       d3.select(svgRef.current).attr("width", W).attr("height", H);
 
       // Recompute centroids and update force targets
       if (sim && nodesRef.current.length > 0) {
         const groups    = canonicalOrder([...new Set(nodesRef.current.map((n) => n.groupKey))], groupMode);
-        const centroids = computeCentroids(groups, W, H);
-        if (groupMode === "distillery") {
-          for (const [key, pos] of centroids) {
-            centroids.set(key, {
-              x: W / 2 + (pos.x - W / 2) * 0.12,
-              y: H / 2 + (pos.y - H / 2) * 0.12,
-            });
-          }
-        }
+        const centroids = layoutCentroids(groups, nodesRef.current, W, H, groupMode);
         (sim.force("x") as d3.ForceX<BubbleNode>)
           .x((d) => centroids.get(d.groupKey)?.x ?? W / 2);
         (sim.force("y") as d3.ForceY<BubbleNode>)

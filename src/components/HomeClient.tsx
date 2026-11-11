@@ -25,13 +25,15 @@ import SubmissionModal from "@/components/SubmissionModal";
 import AuthModal from "@/components/AuthModal";
 import FlagModal from "@/components/FlagModal";
 import TopRatedLeaderboard from "@/components/TopRatedLeaderboard";
+import MobileBottleList from "@/components/MobileBottleList";
 import Logo from "@/components/Logo";
+import { sameRatings, type RatingMap } from "@/lib/ratings";
 
 const BubbleChart = dynamic(() => import("@/components/BubbleChart"), { ssr: false });
-const MobileStripChart = dynamic(() => import("@/components/MobileStripChart"), { ssr: false });
 
-interface BottleNode {
-  id?: string;
+/** What the bottle panel shows. Kept in state as one object so its identity is stable. */
+interface BottleInfo {
+  id: string;
   name: string;
   brandId?: string;
   brandName?: string;
@@ -40,20 +42,25 @@ interface BottleNode {
   age?: number;
   rarity?: string;
   description?: string;
-  type: string;
 }
 
-export default function HomeClient({ children }: { children?: React.ReactNode }) {
+interface Props {
+  children?: React.ReactNode;
+  /** Ratings as of the server render, so the first paint is already ranked. */
+  initialRatings?: RatingMap;
+}
+
+export default function HomeClient({ children, initialRatings }: Props) {
   const [colorMode, setColorMode]   = useState<ColorMode>("price");
   const [groupMode, setGroupMode]   = useState<GroupMode>("distillery");
   const [sizeMode,  setSizeMode]    = useState<BubbleSizeMode>("price");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
-  const [selectedBottle, setSelectedBottle] = useState<BottleNode | null>(null);
+  const [selectedBottle, setSelectedBottle] = useState<BottleInfo | null>(null);
   const [flaggedBottle, setFlaggedBottle] = useState<{ id: string; name: string } | null>(null);
   const [showSubmit, setShowSubmit] = useState(false);
   const [showAuth, setShowAuth] = useState(false);
-  const [ratings, setRatings] = useState<Record<string, { avg: number; count: number }>>({});
+  const [ratings, setRatings] = useState<RatingMap>(initialRatings ?? {});
   const [mergedBrands, setMergedBrands] = useState<Brand[]>(WHISKEY_DATA);
   const [communityCount, setCommunityCount] = useState(0);
 
@@ -65,12 +72,15 @@ export default function HomeClient({ children }: { children?: React.ReactNode })
   // ── Filtering state ───────────────────────────────────────────────────────
   const [showDiscontinued, setShowDiscontinued] = useState(true);
 
-  // ── Mobile detection ──────────────────────────────────────────────────────
-  const [isMobile, setIsMobile] = useState(false);
+  // ── Wide-screen detection ─────────────────────────────────────────────────
+  // CSS decides which layout is visible (phone list below md, explorer from md
+  // up), so nothing jumps after hydration. This flag only decides whether the
+  // bubble chart is worth mounting; it stays null until the browser reports.
+  const [isWide, setIsWide] = useState<boolean | null>(null);
   useEffect(() => {
-    const mq = window.matchMedia("(max-width: 767px)");
-    setIsMobile(mq.matches);
-    const fn = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    const mq = window.matchMedia("(min-width: 768px)");
+    setIsWide(mq.matches);
+    const fn = (e: MediaQueryListEvent) => setIsWide(e.matches);
     mq.addEventListener("change", fn);
     return () => mq.removeEventListener("change", fn);
   }, []);
@@ -122,6 +132,39 @@ export default function HomeClient({ children }: { children?: React.ReactNode })
     [displayBrands]
   );
 
+  // Prices on the chart — the price colour scale and its legend rank against these.
+  const prices = useMemo(
+    () => displayBrands.flatMap((b) => b.subBrands.flatMap((sb) => sb.bottles.map((bt) => bt.price))),
+    [displayBrands]
+  );
+
+  // ── Opening a bottle ──────────────────────────────────────────────────────
+  // Anyone can open a bottle's details; only rating it needs an account.
+  const openBottleById = useCallback(
+    (id: string) => {
+      for (const brand of mergedBrands) {
+        for (const sub of brand.subBrands) {
+          const bottle = sub.bottles.find((bt) => bt.id === id);
+          if (!bottle) continue;
+          setSelectedBottle({
+            id: bottle.id,
+            name: bottle.name,
+            brandId: brand.id,
+            brandName: brand.name,
+            price: bottle.price,
+            abv: bottle.abv,
+            age: bottle.age,
+            rarity: bottle.rarity,
+            description: bottle.description,
+          });
+          return;
+        }
+      }
+    },
+    [mergedBrands]
+  );
+  const closeBottle = useCallback(() => setSelectedBottle(null), []);
+
   // ── Data loading ──────────────────────────────────────────────────────────
   // Public reads now go through a dedicated anonymous Supabase client that
   // never carries a session token.  This sidesteps the PostgREST 401 that
@@ -134,7 +177,11 @@ export default function HomeClient({ children }: { children?: React.ReactNode })
         fetchCatalog(),
       ]);
 
-      setRatings(ratingsData);
+      // Keep the current object when nothing changed (or the fetch came back
+      // empty), so the chart isn't rebuilt for identical numbers.
+      setRatings((prev) =>
+        Object.keys(ratingsData).length === 0 || sameRatings(prev, ratingsData) ? prev : ratingsData
+      );
 
       // Supabase catalog merged with the static catalog — see mergeCatalog().
       const baseData = mergeCatalog(catalogData);
@@ -200,7 +247,7 @@ export default function HomeClient({ children }: { children?: React.ReactNode })
 
         {/* Live stats + one-liner — desktop only */}
         <div className="hidden md:flex items-center gap-3 min-w-0">
-          <div className="flex items-center gap-2 text-xs flex-shrink-0">
+          <div className="flex items-center gap-2 text-[13px] flex-shrink-0">
             <Link href="/brands" style={{ color: "rgba(13,11,8,0.55)" }} className="hover:opacity-80 transition-opacity">
               <span className="font-semibold" style={{ color: "#0d0b08" }}>{viewStats.distilleries}</span>
               {" "}distilleries
@@ -220,7 +267,7 @@ export default function HomeClient({ children }: { children?: React.ReactNode })
               </>
             )}
           </div>
-          <span className="text-xs hidden lg:block truncate" style={{ color: "rgba(13,11,8,0.3)", fontStyle: "italic" }}>
+          <span className="text-[13px] hidden lg:block truncate" style={{ color: "rgba(13,11,8,0.55)", fontStyle: "italic" }}>
             Community-driven American whiskey catalog · No paid rankings
           </span>
         </div>
@@ -266,7 +313,7 @@ export default function HomeClient({ children }: { children?: React.ReactNode })
                       {profile?.displayName ?? user.email}
                     </p>
                     {profile?.displayName && (
-                      <p className="text-xs truncate" style={{ color: "rgba(13,11,8,0.4)" }}>{user.email}</p>
+                      <p className="text-xs truncate" style={{ color: "rgba(13,11,8,0.6)" }}>{user.email}</p>
                     )}
                   </div>
                   <button
@@ -298,7 +345,7 @@ export default function HomeClient({ children }: { children?: React.ReactNode })
           ) : (
             <button
               onClick={() => setShowAuth(true)}
-              className="px-3 py-1.5 rounded-sm text-xs font-semibold transition-all"
+              className="px-3 py-1.5 rounded-sm text-[13px] font-semibold transition-all"
               style={{
                 border: "1px solid rgba(13,11,8,0.3)",
                 color: "rgba(13,11,8,0.7)",
@@ -313,64 +360,56 @@ export default function HomeClient({ children }: { children?: React.ReactNode })
         </div>
       </header>
 
-      {/* Hero layout — fills viewport height, first thing user sees */}
-      <div className="flex" style={{ height: "calc(100vh - 49px)" }}>
+      {/* ── Phones: a searchable list of every bottle ── */}
+      <div className="md:hidden" style={{ minHeight: "calc(100vh - 49px)" }}>
+        <MobileBottleList
+          brands={displayBrands}
+          ratings={ratings}
+          searchQuery={searchQuery}
+          onSearchChange={(q) => { setSearchQuery(q); setSelectedGroup(null); }}
+          onSelect={openBottleById}
+        />
+      </div>
 
-        {/* ── Mobile: full-width strip chart ── */}
-        {isMobile ? (
-          <div className="flex-1 min-h-0 overflow-hidden">
-            <MobileStripChart
-              brands={displayBrands}
-              ratings={ratings}
-              onBottleClick={(bottle) => {
-                if (!user) { setShowAuth(true); return; }
-                setSelectedBottle(bottle as unknown as BottleNode);
-              }}
-              searchQuery={searchQuery}
-              onSearchChange={(q) => { setSearchQuery(q); setSelectedGroup(null); }}
-            />
-          </div>
-        ) : (
-          <>
-            {/* ── Desktop: leaderboard + bubble chart + sidebar ── */}
-
+      {/* ── Wider screens: leaderboard + bubble chart + sidebar, one viewport tall ── */}
+      <div className="hidden md:flex" style={{ height: "calc(100vh - 49px)" }}>
             {/* Left leaderboard panel */}
-            <div className="w-44 flex-shrink-0 hidden lg:block">
+            <div className="w-60 flex-shrink-0 hidden lg:block">
               <TopRatedLeaderboard
                 brands={displayBrands}
                 ratings={ratings}
                 searchQuery={searchQuery}
                 groupMode={groupMode}
                 selectedGroup={selectedGroup}
+                onSelect={openBottleById}
               />
             </div>
 
             {/* Visualization */}
             <div className="flex-1 relative min-h-0">
-              <BubbleChart
-                brands={displayBrands}
-                colorMode={colorMode}
-                groupMode={groupMode}
-                sizeMode={sizeMode}
-                onBottleClick={(node) => {
-                  if (!user) { setShowAuth(true); return; }
-                  setSelectedBottle(node as unknown as BottleNode);
-                }}
-                ratings={ratings}
-                searchQuery={searchQuery}
-                distilleryColors={distilleryColors}
-                selectedGroup={selectedGroup}
-                onLabelClick={(key) => {
-                  setSelectedGroup(key);
-                  // Clear text search when a label filter is activated
-                  if (key) setSearchQuery("");
-                }}
-              />
+              {isWide && (
+                <BubbleChart
+                  brands={displayBrands}
+                  colorMode={colorMode}
+                  groupMode={groupMode}
+                  sizeMode={sizeMode}
+                  onBottleClick={(node) => openBottleById(node.id)}
+                  ratings={ratings}
+                  searchQuery={searchQuery}
+                  distilleryColors={distilleryColors}
+                  selectedGroup={selectedGroup}
+                  onLabelClick={(key) => {
+                    setSelectedGroup(key);
+                    // Clear text search when a label filter is activated
+                    if (key) setSearchQuery("");
+                  }}
+                />
+              )}
 
               {/* Submit a Bottle — top-right overlay */}
               <button
                 onClick={() => { if (!user) { setShowAuth(true); return; } setShowSubmit(true); }}
-                className="absolute top-4 right-4 z-10 px-3 py-1.5 rounded-sm text-xs font-medium transition-all"
+                className="absolute top-4 right-4 z-10 px-3 py-1.5 rounded-sm text-[13px] font-medium transition-all"
                 style={{
                   background: "rgba(244,238,224,0.92)",
                   border: "1px solid rgba(90,40,160,0.3)",
@@ -390,13 +429,13 @@ export default function HomeClient({ children }: { children?: React.ReactNode })
                 className="absolute bottom-4 left-5 z-10 flex items-center gap-2"
               >
                 <span
-                  className="text-[9px] uppercase tracking-widest flex-shrink-0"
-                  style={{ color: "rgba(13,11,8,0.35)", fontFamily: "Georgia,serif" }}
+                  className="text-[11px] uppercase tracking-widest flex-shrink-0"
+                  style={{ color: "rgba(13,11,8,0.6)", fontFamily: "Georgia,serif" }}
                 >
                   Show
                 </span>
                 <div
-                  className="flex rounded-sm overflow-hidden text-[11px]"
+                  className="flex rounded-sm overflow-hidden text-[13px]"
                   style={{
                     background: "rgba(244,238,224,0.92)",
                     border: "1px solid rgba(13,11,8,0.15)",
@@ -411,7 +450,7 @@ export default function HomeClient({ children }: { children?: React.ReactNode })
                       className="px-3 py-1 transition-colors"
                       style={{
                         background: showDiscontinued === value ? "rgba(13,11,8,0.1)" : "transparent",
-                        color: showDiscontinued === value ? "#0d0b08" : "rgba(13,11,8,0.4)",
+                        color: showDiscontinued === value ? "#0d0b08" : "rgba(13,11,8,0.6)",
                         fontWeight: showDiscontinued === value ? "600" : "400",
                         borderRight: i === 0 ? "1px solid rgba(13,11,8,0.15)" : undefined,
                       }}
@@ -459,7 +498,7 @@ export default function HomeClient({ children }: { children?: React.ReactNode })
                     <button
                       onClick={() => setSearchQuery("")}
                       className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs leading-none"
-                      style={{ color: "rgba(13,11,8,0.4)" }}
+                      style={{ color: "rgba(13,11,8,0.6)" }}
                     >✕</button>
                   )}
                 </div>
@@ -483,12 +522,12 @@ export default function HomeClient({ children }: { children?: React.ReactNode })
           >
             <p
               className="text-xs uppercase tracking-widest mb-2"
-              style={{ color: "rgba(13,11,8,0.45)", fontFamily: "Georgia,serif", letterSpacing: "0.13em" }}
+              style={{ color: "rgba(13,11,8,0.6)", fontFamily: "Georgia,serif", letterSpacing: "0.13em" }}
             >
               Size By
             </p>
             <div
-              className="flex rounded-sm overflow-hidden text-xs"
+              className="flex rounded-sm overflow-hidden text-[13px]"
               style={{ border: "1px solid rgba(13,11,8,0.15)" }}
             >
               {(["price", "rating", "uniform"] as BubbleSizeMode[]).map((m) => (
@@ -498,7 +537,7 @@ export default function HomeClient({ children }: { children?: React.ReactNode })
                   className="flex-1 py-1.5 transition-colors"
                   style={{
                     background: sizeMode === m ? "rgba(13,11,8,0.1)" : "transparent",
-                    color: sizeMode === m ? "#0d0b08" : "rgba(13,11,8,0.4)",
+                    color: sizeMode === m ? "#0d0b08" : "rgba(13,11,8,0.6)",
                     fontWeight: sizeMode === m ? "600" : "400",
                     borderRight: m !== "uniform" ? "1px solid rgba(13,11,8,0.15)" : undefined,
                   }}
@@ -513,6 +552,7 @@ export default function HomeClient({ children }: { children?: React.ReactNode })
             colorMode={colorMode}
             onColorModeChange={setColorMode}
             distilleryColors={distilleryColors}
+            prices={prices}
           />
 
           {/* Stats panel */}
@@ -525,7 +565,7 @@ export default function HomeClient({ children }: { children?: React.ReactNode })
           >
             <p
               className="text-xs uppercase tracking-widest mb-3"
-              style={{ color: "rgba(13,11,8,0.45)", fontFamily: "Georgia,serif", letterSpacing: "0.13em" }}
+              style={{ color: "rgba(13,11,8,0.6)", fontFamily: "Georgia,serif", letterSpacing: "0.13em" }}
             >
               Collection
             </p>
@@ -537,7 +577,7 @@ export default function HomeClient({ children }: { children?: React.ReactNode })
                 ["Rated", Object.keys(ratings).length],
               ].map(([label, val]) => (
                 <div key={String(label)} className="flex justify-between">
-                  <span style={{ color: "rgba(13,11,8,0.45)" }}>{label}</span>
+                  <span style={{ color: "rgba(13,11,8,0.6)" }}>{label}</span>
                   <span className="font-semibold" style={{ color: "#0d0b08" }}>{val}</span>
                 </div>
               ))}
@@ -556,7 +596,7 @@ export default function HomeClient({ children }: { children?: React.ReactNode })
 
           {/* Legend key */}
           <div className="space-y-1.5 px-1">
-            <div className="flex items-center gap-2 text-xs" style={{ color: "rgba(13,11,8,0.45)" }}>
+            <div className="flex items-center gap-2 text-xs" style={{ color: "rgba(13,11,8,0.6)" }}>
               <svg width="16" height="10" className="flex-shrink-0">
                 <rect
                   x="0" y="0" width="16" height="10" rx="1"
@@ -565,10 +605,10 @@ export default function HomeClient({ children }: { children?: React.ReactNode })
               </svg>
               <span>Community entry</span>
             </div>
-            <div className="flex items-center gap-2 text-xs" style={{ color: "rgba(13,11,8,0.45)" }}>
+            <div className="flex items-center gap-2 text-xs" style={{ color: "rgba(13,11,8,0.6)" }}>
               <span
-                className="font-mono text-[9px] px-1 rounded-sm flex-shrink-0"
-                style={{ background: "rgba(13,11,8,0.07)", color: "rgba(13,11,8,0.5)", border: "1px solid rgba(13,11,8,0.15)" }}
+                className="font-mono text-[11px] px-1 rounded-sm flex-shrink-0"
+                style={{ background: "rgba(13,11,8,0.07)", color: "rgba(13,11,8,0.65)", border: "1px solid rgba(13,11,8,0.15)" }}
               >
                 NDP
               </span>
@@ -576,34 +616,27 @@ export default function HomeClient({ children }: { children?: React.ReactNode })
             </div>
           </div>
         </aside>
-          </>
-        )}
       </div>
 
       {/* Server-rendered catalog directory + footer (crawlable) */}
       {children}
 
-      {/* Rating Modal */}
-      {selectedBottle && selectedBottle.id && (
+      {/* Bottle details — open to everyone; the rating form inside needs sign-in */}
+      {selectedBottle && (
         <RatingModal
-          bottle={{
-            id: selectedBottle.id,
-            name: selectedBottle.name,
-            brandId: selectedBottle.brandId,
-            brandName: selectedBottle.brandName,
-            price: selectedBottle.price,
-            abv: selectedBottle.abv,
-            age: selectedBottle.age,
-            rarity: selectedBottle.rarity,
-            description: selectedBottle.description,
-          }}
-          onClose={() => setSelectedBottle(null)}
+          bottle={selectedBottle}
+          onClose={closeBottle}
           onRatingSubmitted={loadData}
-          onFlag={() => {
-            if (selectedBottle?.id) setFlaggedBottle({ id: selectedBottle.id, name: selectedBottle.name });
-            setSelectedBottle(null);
-          }}
+          onFlag={
+            user
+              ? () => {
+                  setFlaggedBottle({ id: selectedBottle.id, name: selectedBottle.name });
+                  setSelectedBottle(null);
+                }
+              : undefined
+          }
           userId={user?.id}
+          onSignIn={() => setShowAuth(true)}
         />
       )}
 

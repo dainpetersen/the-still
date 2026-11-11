@@ -1,4 +1,10 @@
-import { fetchAllAverageRatings, fetchApprovedSubmissions, fetchCatalog } from "@/lib/supabase";
+import {
+  fetchAllAverageRatings,
+  fetchApprovedSubmissions,
+  fetchCatalog,
+  fetchRatingSourceCounts,
+} from "@/lib/supabase";
+import { MIN_RATINGS_TO_RANK, type Rating } from "@/lib/ratings";
 import { mergeApprovedSubmissions } from "@/lib/mergeSubmissions";
 import { mergeCatalog } from "@/lib/mergeCatalog";
 import type { Bottle, Brand, SubBrand } from "@/types/whiskey";
@@ -10,10 +16,8 @@ import type { Bottle, Brand, SubBrand } from "@/types/whiskey";
  * bottle a visitor can see (not just the ones in whiskeys.ts).
  */
 
-export interface Rating {
-  avg: number;
-  count: number;
-}
+export { MIN_RATINGS_TO_RANK };
+export type { Rating };
 
 export interface BottleEntry {
   bottle: Bottle;
@@ -45,16 +49,17 @@ export interface Catalog {
   brandBottles: Map<string, BottleEntry[]>;
   /** brand id → "/brands/<slug>" */
   brandPaths: Map<string, string>;
+  /** Keyed by catalog id (the explorer links by id; slugs can differ). */
+  brandById: Map<string, Brand>;
   ratings: Record<string, Rating>;
+  /**
+   * Total ratings, and how many were imported from public Reddit reviews
+   * rather than entered here. Null when the counts couldn't be loaded.
+   */
+  ratingSources: { total: number; imported: number } | null;
   /** Bottles with enough ratings to rank, best first. */
   ranked: BottleEntry[];
 }
-
-/**
- * A bottle needs this many ratings before it is ranked or called "top rated".
- * One enthusiastic 10/10 shouldn't outrank a bottle with a hundred ratings.
- */
-export const MIN_RATINGS_TO_RANK = 5;
 
 /** How long one server instance reuses a loaded catalog. */
 const TTL_MS = 10 * 60 * 1000;
@@ -96,13 +101,16 @@ function claimSlug(id: string, readable: string, taken: Set<string>): string {
 async function load(): Promise<Catalog> {
   let brands: Brand[];
   let ratings: Record<string, Rating> = {};
+  let ratingSources: Catalog["ratingSources"] = null;
   try {
-    const [ratingsData, approvedSubs, catalogData] = await Promise.all([
+    const [ratingsData, approvedSubs, catalogData, sources] = await Promise.all([
       fetchAllAverageRatings(),
       fetchApprovedSubmissions(),
       fetchCatalog(),
+      fetchRatingSourceCounts().catch(() => null),
     ]);
     ratings = ratingsData;
+    ratingSources = sources;
     const base = mergeCatalog(catalogData);
     brands = approvedSubs.length > 0 ? mergeApprovedSubmissions(base, approvedSubs) : base;
   } catch {
@@ -115,6 +123,7 @@ async function load(): Promise<Catalog> {
   const bottleBySlug = new Map<string, BottleEntry>();
   const bottleById = new Map<string, BottleEntry>();
   const brandPaths = new Map<string, string>();
+  const brandById = new Map<string, Brand>();
   const bottleAliases = new Map<string, BottleEntry>();
 
   // Hand-written ids claim their slugs first, so a community entry can never
@@ -130,6 +139,7 @@ async function load(): Promise<Catalog> {
     const brandSlug = claimSlug(brand.id, brand.name, brandSlugsTaken);
     if (brandBySlug.has(brandSlug)) continue;
     brandBySlug.set(brandSlug, brand);
+    brandById.set(brand.id, brand);
     const brandPath = `/brands/${brandSlug}`;
     brandPaths.set(brand.id, brandPath);
 
@@ -193,7 +203,7 @@ async function load(): Promise<Catalog> {
         a.bottle.name.localeCompare(b.bottle.name)
     );
 
-  return { brands, bottles, brandBySlug, bottleBySlug, bottleAliases, bottleById, brandBottles, brandPaths, ratings, ranked };
+  return { brands, bottles, brandBySlug, bottleBySlug, bottleAliases, bottleById, brandBottles, brandPaths, brandById, ratings, ratingSources, ranked };
 }
 
 export function getCatalog(): Promise<Catalog> {

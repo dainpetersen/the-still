@@ -36,7 +36,11 @@ async function findBottle(params: Params["params"]): Promise<{ catalog: Catalog;
   // A duplicate catalog row's slug shows the page of the bottle that represents
   // it; that page's canonical is its own URL, so the two are never indexed as
   // separate pages. (Nothing links to these slugs and they aren't in the sitemap.)
-  return { catalog, entry: catalog.bottleBySlug.get(slug) ?? catalog.bottleAliases.get(slug) };
+  // The explorer links by catalog id, which for community entries isn't the slug.
+  return {
+    catalog,
+    entry: catalog.bottleBySlug.get(slug) ?? catalog.bottleAliases.get(slug) ?? catalog.bottleById.get(slug),
+  };
 }
 
 // ── Copy helpers ──────────────────────────────────────────────────────────────
@@ -305,6 +309,10 @@ export default async function BottlePage({ params }: Params) {
                 >
                   Rate it in the Explorer →
                 </Link>
+                <p className="mt-4 text-[13px] leading-snug" style={{ color: "rgba(13,11,8,0.6)" }}>
+                  Ratings combine scores from public Reddit whiskey reviews with ratings from Common Cask
+                  members. <Link href="/about#ratings" className="cc-link">How ratings work</Link>
+                </p>
               </section>
 
               <dl className="mt-6">

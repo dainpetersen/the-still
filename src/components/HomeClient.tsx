@@ -27,7 +27,9 @@ import FlagModal from "@/components/FlagModal";
 import TopRatedLeaderboard from "@/components/TopRatedLeaderboard";
 import MobileBottleList from "@/components/MobileBottleList";
 import Logo from "@/components/Logo";
+import ThemeToggle from "@/components/ThemeToggle";
 import { sameRatings, type RatingMap } from "@/lib/ratings";
+import { useTheme } from "@/lib/theme";
 
 const BubbleChart = dynamic(() => import("@/components/BubbleChart"), { ssr: false });
 
@@ -63,6 +65,7 @@ export default function HomeClient({ children, initialRatings }: Props) {
   const [ratings, setRatings] = useState<RatingMap>(initialRatings ?? {});
   const [mergedBrands, setMergedBrands] = useState<Brand[]>(WHISKEY_DATA);
   const [communityCount, setCommunityCount] = useState(0);
+  const theme = useTheme();
 
   // ── Auth state ────────────────────────────────────────────────────────────
   const [user, setUser] = useState<User | null>(null);
@@ -232,14 +235,14 @@ export default function HomeClient({ children, initialRatings }: Props) {
   return (
     <main
       className="flex flex-col"
-      style={{ background: "#f0e8d8", color: "#0d0b08" }}
+      style={{ background: "var(--bg)", color: "var(--ink)" }}
     >
       {/* Header — sticky so it stays visible when scrolling into sections */}
       <header
         className="sticky top-0 z-40 px-6 py-3 flex items-center gap-4 flex-shrink-0"
         style={{
-          borderBottom: "1px solid rgba(0,0,0,0.12)",
-          background: "rgba(240,232,216,0.94)",
+          borderBottom: "1px solid rgb(var(--ink-rgb) / 0.12)",
+          background: "rgb(var(--bg-rgb) / 0.94)",
           backdropFilter: "blur(8px)",
         }}
       >
@@ -248,31 +251,32 @@ export default function HomeClient({ children, initialRatings }: Props) {
         {/* Live stats + one-liner — desktop only */}
         <div className="hidden md:flex items-center gap-3 min-w-0">
           <div className="flex items-center gap-2 text-[13px] flex-shrink-0">
-            <Link href="/brands" style={{ color: "rgba(13,11,8,0.55)" }} className="hover:opacity-80 transition-opacity">
-              <span className="font-semibold" style={{ color: "#0d0b08" }}>{viewStats.distilleries}</span>
+            <Link href="/brands" style={{ color: "var(--ink-muted)" }} className="hover:opacity-80 transition-opacity">
+              <span className="font-semibold" style={{ color: "var(--ink)" }}>{viewStats.distilleries}</span>
               {" "}distilleries
             </Link>
-            <span style={{ color: "rgba(13,11,8,0.2)" }}>·</span>
-            <span style={{ color: "rgba(13,11,8,0.55)" }}>
-              <span className="font-semibold" style={{ color: "#0d0b08" }}>{viewStats.bottles}</span>
+            <span style={{ color: "rgb(var(--ink-rgb) / 0.2)" }}>·</span>
+            <span style={{ color: "var(--ink-muted)" }}>
+              <span className="font-semibold" style={{ color: "var(--ink)" }}>{viewStats.bottles}</span>
               {" "}bottles
             </span>
             {Object.keys(ratings).length > 0 && (
               <>
-                <span style={{ color: "rgba(13,11,8,0.2)" }}>·</span>
-                <span style={{ color: "rgba(13,11,8,0.55)" }}>
-                  <span className="font-semibold" style={{ color: "#0d0b08" }}>{Object.keys(ratings).length}</span>
+                <span style={{ color: "rgb(var(--ink-rgb) / 0.2)" }}>·</span>
+                <span style={{ color: "var(--ink-muted)" }}>
+                  <span className="font-semibold" style={{ color: "var(--ink)" }}>{Object.keys(ratings).length}</span>
                   {" "}rated
                 </span>
               </>
             )}
           </div>
-          <span className="text-[13px] hidden lg:block truncate" style={{ color: "rgba(13,11,8,0.55)", fontStyle: "italic" }}>
+          <span className="text-[13px] hidden lg:block truncate" style={{ color: "var(--ink-muted)", fontStyle: "italic" }}>
             Community-driven American whiskey catalog · No paid rankings
           </span>
         </div>
 
         <div className="ml-auto flex items-center gap-3">
+          <ThemeToggle />
 
           {/* Auth control */}
           {user ? (
@@ -281,9 +285,9 @@ export default function HomeClient({ children, initialRatings }: Props) {
                 onClick={() => setShowUserMenu((v) => !v)}
                 className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-all"
                 style={{
-                  background: (profile?.avatarUrl ?? user.user_metadata?.avatar_url) ? "transparent" : "rgba(13,11,8,0.08)",
-                  border: "1px solid rgba(13,11,8,0.25)",
-                  color: "#0d0b08",
+                  background: (profile?.avatarUrl ?? user.user_metadata?.avatar_url) ? "transparent" : "rgb(var(--ink-rgb) / 0.08)",
+                  border: "1px solid rgb(var(--ink-rgb) / 0.25)",
+                  color: "var(--ink)",
                   overflow: "hidden",
                 }}
                 title={profile?.displayName ?? user.email ?? "Account"}
@@ -303,25 +307,25 @@ export default function HomeClient({ children, initialRatings }: Props) {
                 <div
                   className="absolute right-0 top-10 w-44 rounded-sm py-2 z-50"
                   style={{
-                    background: "rgba(244,238,224,0.97)",
-                    border: "1px solid rgba(0,0,0,0.15)",
+                    background: "rgb(var(--panel-rgb) / 0.97)",
+                    border: "1px solid rgb(var(--ink-rgb) / 0.15)",
                     boxShadow: "2px 4px 16px rgba(0,0,0,0.12)",
                   }}
                 >
-                  <div className="px-4 py-2 border-b" style={{ borderColor: "rgba(0,0,0,0.08)" }}>
-                    <p className="text-xs font-semibold truncate" style={{ color: "#0d0b08" }}>
+                  <div className="px-4 py-2 border-b" style={{ borderColor: "rgb(var(--ink-rgb) / 0.08)" }}>
+                    <p className="text-xs font-semibold truncate" style={{ color: "var(--ink)" }}>
                       {profile?.displayName ?? user.email}
                     </p>
                     {profile?.displayName && (
-                      <p className="text-xs truncate" style={{ color: "rgba(13,11,8,0.6)" }}>{user.email}</p>
+                      <p className="text-xs truncate" style={{ color: "rgb(var(--ink-rgb) / 0.6)" }}>{user.email}</p>
                     )}
                   </div>
                   <button
                     onClick={() => { setShowUserMenu(false); setShowAuth(true); }}
                     className="w-full text-left px-4 py-2 text-sm transition-colors"
-                    style={{ color: "rgba(13,11,8,0.6)" }}
-                    onMouseEnter={(e) => (e.currentTarget.style.color = "#0d0b08")}
-                    onMouseLeave={(e) => (e.currentTarget.style.color = "rgba(13,11,8,0.6)")}
+                    style={{ color: "rgb(var(--ink-rgb) / 0.6)" }}
+                    onMouseEnter={(e) => (e.currentTarget.style.color = "var(--ink)")}
+                    onMouseLeave={(e) => (e.currentTarget.style.color = "rgb(var(--ink-rgb) / 0.6)")}
                   >
                     Edit Profile
                   </button>
@@ -333,9 +337,9 @@ export default function HomeClient({ children, initialRatings }: Props) {
                       signOut().catch(() => {});
                     }}
                     className="w-full text-left px-4 py-2 text-sm transition-colors"
-                    style={{ color: "rgba(160,40,40,0.7)" }}
-                    onMouseEnter={(e) => (e.currentTarget.style.color = "rgba(160,40,40,1)")}
-                    onMouseLeave={(e) => (e.currentTarget.style.color = "rgba(160,40,40,0.7)")}
+                    style={{ color: "rgb(var(--danger-rgb) / 0.7)" }}
+                    onMouseEnter={(e) => (e.currentTarget.style.color = "rgb(var(--danger-rgb) / 1)")}
+                    onMouseLeave={(e) => (e.currentTarget.style.color = "rgb(var(--danger-rgb) / 0.7)")}
                   >
                     Sign Out
                   </button>
@@ -347,11 +351,11 @@ export default function HomeClient({ children, initialRatings }: Props) {
               onClick={() => setShowAuth(true)}
               className="px-3 py-1.5 rounded-sm text-[13px] font-semibold transition-all"
               style={{
-                border: "1px solid rgba(13,11,8,0.3)",
-                color: "rgba(13,11,8,0.7)",
+                border: "1px solid rgb(var(--ink-rgb) / 0.3)",
+                color: "rgb(var(--ink-rgb) / 0.7)",
                 background: "transparent",
               }}
-              onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(13,11,8,0.06)")}
+              onMouseEnter={(e) => (e.currentTarget.style.background = "rgb(var(--ink-rgb) / 0.06)")}
               onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
             >
               Sign In
@@ -395,6 +399,7 @@ export default function HomeClient({ children, initialRatings }: Props) {
                   sizeMode={sizeMode}
                   onBottleClick={(node) => openBottleById(node.id)}
                   ratings={ratings}
+                  theme={theme}
                   searchQuery={searchQuery}
                   distilleryColors={distilleryColors}
                   selectedGroup={selectedGroup}
@@ -411,15 +416,15 @@ export default function HomeClient({ children, initialRatings }: Props) {
                 onClick={() => { if (!user) { setShowAuth(true); return; } setShowSubmit(true); }}
                 className="absolute top-4 right-4 z-10 px-3 py-1.5 rounded-sm text-[13px] font-medium transition-all"
                 style={{
-                  background: "rgba(244,238,224,0.92)",
-                  border: "1px solid rgba(90,40,160,0.3)",
-                  color: "rgba(90,40,160,0.75)",
+                  background: "rgb(var(--panel-rgb) / 0.92)",
+                  border: "1px solid rgb(var(--community-rgb) / 0.3)",
+                  color: "rgb(var(--community-rgb) / 0.75)",
                   backdropFilter: "blur(8px)",
                   fontFamily: "Georgia,serif",
                   boxShadow: "0 2px 8px rgba(0,0,0,0.07)",
                 }}
-                onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(90,40,160,0.08)")}
-                onMouseLeave={(e) => (e.currentTarget.style.background = "rgba(244,238,224,0.92)")}
+                onMouseEnter={(e) => (e.currentTarget.style.background = "rgb(var(--community-rgb) / 0.08)")}
+                onMouseLeave={(e) => (e.currentTarget.style.background = "rgb(var(--panel-rgb) / 0.92)")}
               >
                 + Submit a Bottle
               </button>
@@ -430,15 +435,15 @@ export default function HomeClient({ children, initialRatings }: Props) {
               >
                 <span
                   className="text-[11px] uppercase tracking-widest flex-shrink-0"
-                  style={{ color: "rgba(13,11,8,0.6)", fontFamily: "Georgia,serif" }}
+                  style={{ color: "rgb(var(--ink-rgb) / 0.6)", fontFamily: "Georgia,serif" }}
                 >
                   Show
                 </span>
                 <div
                   className="flex rounded-sm overflow-hidden text-[13px]"
                   style={{
-                    background: "rgba(244,238,224,0.92)",
-                    border: "1px solid rgba(13,11,8,0.15)",
+                    background: "rgb(var(--panel-rgb) / 0.92)",
+                    border: "1px solid rgb(var(--ink-rgb) / 0.15)",
                     backdropFilter: "blur(8px)",
                     boxShadow: "0 2px 8px rgba(0,0,0,0.07)",
                   }}
@@ -449,10 +454,10 @@ export default function HomeClient({ children, initialRatings }: Props) {
                       onClick={() => setShowDiscontinued(value)}
                       className="px-3 py-1 transition-colors"
                       style={{
-                        background: showDiscontinued === value ? "rgba(13,11,8,0.1)" : "transparent",
-                        color: showDiscontinued === value ? "#0d0b08" : "rgba(13,11,8,0.6)",
+                        background: showDiscontinued === value ? "rgb(var(--ink-rgb) / 0.1)" : "transparent",
+                        color: showDiscontinued === value ? "var(--ink)" : "rgb(var(--ink-rgb) / 0.6)",
                         fontWeight: showDiscontinued === value ? "600" : "400",
-                        borderRight: i === 0 ? "1px solid rgba(13,11,8,0.15)" : undefined,
+                        borderRight: i === 0 ? "1px solid rgb(var(--ink-rgb) / 0.15)" : undefined,
                       }}
                     >
                       {label}
@@ -471,7 +476,7 @@ export default function HomeClient({ children, initialRatings }: Props) {
                   <svg
                     className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"
                     width="14" height="14" viewBox="0 0 16 16" fill="none"
-                    style={{ color: searchQuery ? "rgba(13,11,8,0.6)" : "rgba(13,11,8,0.28)" }}
+                    style={{ color: searchQuery ? "rgb(var(--ink-rgb) / 0.6)" : "rgb(var(--ink-rgb) / 0.28)" }}
                   >
                     <circle cx="6.5" cy="6.5" r="5" stroke="currentColor" strokeWidth="1.5"/>
                     <path d="M10.5 10.5L14 14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
@@ -483,22 +488,22 @@ export default function HomeClient({ children, initialRatings }: Props) {
                     placeholder="Search bottles, brands…"
                     className="search-input w-full rounded-full pl-9 pr-9 py-2.5 text-sm outline-none"
                     style={{
-                      background: "rgba(244,238,224,0.94)",
+                      background: "rgb(var(--panel-rgb) / 0.94)",
                       backdropFilter: "blur(12px)",
                       border: searchQuery
-                        ? "1.5px solid rgba(13,11,8,0.4)"
-                        : "1.5px solid rgba(13,11,8,0.18)",
-                      color: "#0d0b08",
+                        ? "1.5px solid rgb(var(--ink-rgb) / 0.4)"
+                        : "1.5px solid rgb(var(--ink-rgb) / 0.18)",
+                      color: "var(--ink)",
                       boxShadow: searchQuery
-                        ? "0 0 0 3px rgba(13,11,8,0.05), 0 4px 16px rgba(0,0,0,0.1)"
-                        : "0 4px 16px rgba(0,0,0,0.08)",
+                        ? "0 0 0 3px rgb(var(--ink-rgb) / 0.05), 0 4px 16px rgb(var(--ink-rgb) / 0.1)"
+                        : "0 4px 16px rgb(var(--ink-rgb) / 0.08)",
                     }}
                   />
                   {searchQuery && (
                     <button
                       onClick={() => setSearchQuery("")}
                       className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs leading-none"
-                      style={{ color: "rgba(13,11,8,0.6)" }}
+                      style={{ color: "rgb(var(--ink-rgb) / 0.6)" }}
                     >✕</button>
                   )}
                 </div>
@@ -508,7 +513,7 @@ export default function HomeClient({ children, initialRatings }: Props) {
             {/* Sidebar */}
             <aside
               className="w-56 flex-shrink-0 p-4 flex flex-col gap-4 overflow-y-auto"
-              style={{ borderLeft: "1px solid rgba(13,11,8,0.1)" }}
+              style={{ borderLeft: "1px solid rgb(var(--ink-rgb) / 0.1)" }}
             >
           <GroupControl groupMode={groupMode} onChange={handleGroupModeChange} />
 
@@ -516,19 +521,19 @@ export default function HomeClient({ children, initialRatings }: Props) {
           <div
             className="rounded-sm p-3"
             style={{
-              background: "rgba(244,238,224,0.92)",
-              border: "1px solid rgba(0,0,0,0.14)",
+              background: "rgb(var(--panel-rgb) / 0.92)",
+              border: "1px solid rgb(var(--ink-rgb) / 0.14)",
             }}
           >
             <p
               className="text-xs uppercase tracking-widest mb-2"
-              style={{ color: "rgba(13,11,8,0.6)", fontFamily: "Georgia,serif", letterSpacing: "0.13em" }}
+              style={{ color: "rgb(var(--ink-rgb) / 0.6)", fontFamily: "Georgia,serif", letterSpacing: "0.13em" }}
             >
               Size By
             </p>
             <div
               className="flex rounded-sm overflow-hidden text-[13px]"
-              style={{ border: "1px solid rgba(13,11,8,0.15)" }}
+              style={{ border: "1px solid rgb(var(--ink-rgb) / 0.15)" }}
             >
               {(["price", "rating", "uniform"] as BubbleSizeMode[]).map((m) => (
                 <button
@@ -536,10 +541,10 @@ export default function HomeClient({ children, initialRatings }: Props) {
                   onClick={() => setSizeMode(m)}
                   className="flex-1 py-1.5 transition-colors"
                   style={{
-                    background: sizeMode === m ? "rgba(13,11,8,0.1)" : "transparent",
-                    color: sizeMode === m ? "#0d0b08" : "rgba(13,11,8,0.6)",
+                    background: sizeMode === m ? "rgb(var(--ink-rgb) / 0.1)" : "transparent",
+                    color: sizeMode === m ? "var(--ink)" : "rgb(var(--ink-rgb) / 0.6)",
                     fontWeight: sizeMode === m ? "600" : "400",
-                    borderRight: m !== "uniform" ? "1px solid rgba(13,11,8,0.15)" : undefined,
+                    borderRight: m !== "uniform" ? "1px solid rgb(var(--ink-rgb) / 0.15)" : undefined,
                   }}
                 >
                   {m === "price" ? "Price" : m === "rating" ? "Rating" : "Equal"}
@@ -553,19 +558,20 @@ export default function HomeClient({ children, initialRatings }: Props) {
             onColorModeChange={setColorMode}
             distilleryColors={distilleryColors}
             prices={prices}
+            theme={theme}
           />
 
           {/* Stats panel */}
           <div
             className="rounded-sm p-4"
             style={{
-              background: "rgba(244,238,224,0.92)",
-              border: "1px solid rgba(0,0,0,0.14)",
+              background: "rgb(var(--panel-rgb) / 0.92)",
+              border: "1px solid rgb(var(--ink-rgb) / 0.14)",
             }}
           >
             <p
               className="text-xs uppercase tracking-widest mb-3"
-              style={{ color: "rgba(13,11,8,0.6)", fontFamily: "Georgia,serif", letterSpacing: "0.13em" }}
+              style={{ color: "rgb(var(--ink-rgb) / 0.6)", fontFamily: "Georgia,serif", letterSpacing: "0.13em" }}
             >
               Collection
             </p>
@@ -577,17 +583,17 @@ export default function HomeClient({ children, initialRatings }: Props) {
                 ["Rated", Object.keys(ratings).length],
               ].map(([label, val]) => (
                 <div key={String(label)} className="flex justify-between">
-                  <span style={{ color: "rgba(13,11,8,0.6)" }}>{label}</span>
-                  <span className="font-semibold" style={{ color: "#0d0b08" }}>{val}</span>
+                  <span style={{ color: "rgb(var(--ink-rgb) / 0.6)" }}>{label}</span>
+                  <span className="font-semibold" style={{ color: "var(--ink)" }}>{val}</span>
                 </div>
               ))}
               {communityCount > 0 && (
                 <div
                   className="flex justify-between pt-1"
-                  style={{ borderTop: "1px solid rgba(90,40,160,0.15)" }}
+                  style={{ borderTop: "1px solid rgb(var(--community-rgb) / 0.15)" }}
                 >
-                  <span className="text-xs" style={{ color: "rgba(90,40,160,0.7)" }}>Community</span>
-                  <span className="font-semibold text-xs" style={{ color: "rgba(90,40,160,0.7)" }}>+{communityCount}</span>
+                  <span className="text-xs" style={{ color: "rgb(var(--community-rgb) / 0.7)" }}>Community</span>
+                  <span className="font-semibold text-xs" style={{ color: "rgb(var(--community-rgb) / 0.7)" }}>+{communityCount}</span>
                 </div>
               )}
             </div>
@@ -596,19 +602,19 @@ export default function HomeClient({ children, initialRatings }: Props) {
 
           {/* Legend key */}
           <div className="space-y-1.5 px-1">
-            <div className="flex items-center gap-2 text-xs" style={{ color: "rgba(13,11,8,0.6)" }}>
+            <div className="flex items-center gap-2 text-xs" style={{ color: "rgb(var(--ink-rgb) / 0.6)" }}>
               <svg width="16" height="10" className="flex-shrink-0">
                 <rect
                   x="0" y="0" width="16" height="10" rx="1"
-                  fill="none" stroke="rgba(90,40,160,0.5)" strokeWidth="1.5" strokeDasharray="4,2"
+                  fill="none" stroke="rgb(var(--community-rgb) / 0.5)" strokeWidth="1.5" strokeDasharray="4,2"
                 />
               </svg>
               <span>Community entry</span>
             </div>
-            <div className="flex items-center gap-2 text-xs" style={{ color: "rgba(13,11,8,0.6)" }}>
+            <div className="flex items-center gap-2 text-xs" style={{ color: "rgb(var(--ink-rgb) / 0.6)" }}>
               <span
                 className="font-mono text-[11px] px-1 rounded-sm flex-shrink-0"
-                style={{ background: "rgba(13,11,8,0.07)", color: "rgba(13,11,8,0.65)", border: "1px solid rgba(13,11,8,0.15)" }}
+                style={{ background: "rgb(var(--ink-rgb) / 0.07)", color: "rgb(var(--ink-rgb) / 0.65)", border: "1px solid rgb(var(--ink-rgb) / 0.15)" }}
               >
                 NDP
               </span>

@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import * as d3 from "d3";
 import { ColorMode } from "@/types/whiskey";
-import { PRICE_RAMP, buildPriceScale } from "@/lib/colorScales";
+import { buildPriceScale, chartPalette, priceRamp, type ChartTheme } from "@/lib/colorScales";
 
 interface Props {
   colorMode: ColorMode;
@@ -11,6 +11,8 @@ interface Props {
   distilleryColors?: Map<string, string>;
   /** Prices of the bottles on the chart — the price colours are ranked from these. */
   prices: number[];
+  /** Which theme is showing; the chart's colours differ between them. */
+  theme: ChartTheme;
 }
 
 const MODES: { value: ColorMode; label: string; emoji: string }[] = [
@@ -22,7 +24,7 @@ const MODES: { value: ColorMode; label: string; emoji: string }[] = [
 
 const BAR_WIDTH = 160;
 const BAR_HEIGHT = 10;
-const LABEL_COLOR = "rgba(13,11,8,0.6)";
+const LABEL_COLOR = "var(--ink-muted)";
 
 /** "$45", "$3.5k" — short enough for five values to share the bar's width. */
 function formatPrice(value: number): string {
@@ -58,9 +60,12 @@ function Note({ children }: { children: React.ReactNode }) {
  * Price is coloured by rank, so the bar is marked at the quartiles: each
  * quarter of the bar holds a quarter of the bottles.
  */
-function PriceLegend({ prices }: { prices: number[] }) {
-  const ticks = useMemo(() => buildPriceScale(prices).ticks, [prices]);
-  const stops = useMemo(() => d3.range(0, 1.0001, 0.125).map((t) => PRICE_RAMP(t)), []);
+function PriceLegend({ prices, theme }: { prices: number[]; theme: ChartTheme }) {
+  const ticks = useMemo(() => buildPriceScale(prices, theme).ticks, [prices, theme]);
+  const stops = useMemo(() => {
+    const ramp = priceRamp(theme);
+    return d3.range(0, 1.0001, 0.125).map((t) => ramp(t));
+  }, [theme]);
   if (ticks.length === 0) return null;
 
   return (
@@ -79,22 +84,18 @@ function PriceLegend({ prices }: { prices: number[] }) {
   );
 }
 
-function RangeLegend({ colorMode }: { colorMode: "rating" | "rarity" }) {
-  const scale =
-    colorMode === "rating"
-      ? d3.scaleSequential(d3.interpolate("#c8b880", "#6b1200")).domain([0, 1])
-      : d3.scaleSequential(d3.interpolate("#ddd0b0", "#5c0a0a")).domain([0, 1]);
-  const stops = [0, 0.25, 0.5, 0.75, 1].map((t) => scale(t));
+function RangeLegend({ colorMode, theme }: { colorMode: "rating" | "rarity"; theme: ChartTheme }) {
+  const stops = chartPalette(theme)[colorMode];
   const [min, max] = colorMode === "rating" ? ["1", "10"] : ["Common", "Unicorn"];
 
   return (
     <div className="mt-3">
-      <Bar id={`legend-gradient-${colorMode}`} stops={stops} />
+      <Bar id={`legend-gradient-${colorMode}`} stops={[...stops]} />
       <div className="flex justify-between mt-1 text-[11px]" style={{ width: BAR_WIDTH, color: LABEL_COLOR }}>
         <span>{min}</span>
         <span>{max}</span>
       </div>
-      {colorMode === "rating" && <Note>Pale grey-tan = not yet rated.</Note>}
+      {colorMode === "rating" && <Note>Dull, flat-coloured bubbles are not yet rated.</Note>}
     </div>
   );
 }
@@ -105,7 +106,7 @@ function BrandLegend({ distilleryColors }: { distilleryColors: Map<string, strin
       {[...distilleryColors.entries()].map(([name, color]) => (
         <div key={name} className="flex items-center gap-2">
           <div className="flex-shrink-0 rounded-full" style={{ width: 8, height: 8, background: color }} />
-          <span className="text-[12px] truncate" style={{ color: "rgba(13,11,8,0.7)" }}>
+          <span className="text-[12px] truncate" style={{ color: "rgb(var(--ink-rgb) / 0.75)" }}>
             {name}
           </span>
         </div>
@@ -114,13 +115,13 @@ function BrandLegend({ distilleryColors }: { distilleryColors: Map<string, strin
   );
 }
 
-export default function ColorLegend({ colorMode, onColorModeChange, distilleryColors, prices }: Props) {
+export default function ColorLegend({ colorMode, onColorModeChange, distilleryColors, prices, theme }: Props) {
   return (
     <div
       className="rounded-sm p-4 select-none"
       style={{
-        background: "rgba(244,238,224,0.92)",
-        border: "1px solid rgba(0,0,0,0.14)",
+        background: "rgb(var(--panel-rgb) / 0.92)",
+        border: "1px solid var(--line)",
         backdropFilter: "blur(4px)",
       }}
     >
@@ -140,8 +141,8 @@ export default function ColorLegend({ colorMode, onColorModeChange, distilleryCo
             className="flex items-center gap-2 px-3 py-1.5 rounded-sm text-sm font-medium transition-all text-left"
             style={
               colorMode === m.value
-                ? { background: "rgba(13,11,8,0.1)", color: "#0d0b08", border: "1px solid rgba(13,11,8,0.25)" }
-                : { background: "transparent", color: "rgba(13,11,8,0.6)", border: "1px solid transparent" }
+                ? { background: "rgb(var(--ink-rgb) / 0.1)", color: "var(--ink)", border: "1px solid rgb(var(--ink-rgb) / 0.25)" }
+                : { background: "transparent", color: "var(--ink-muted)", border: "1px solid transparent" }
             }
           >
             <span aria-hidden="true">{m.emoji}</span>
@@ -150,8 +151,8 @@ export default function ColorLegend({ colorMode, onColorModeChange, distilleryCo
         ))}
       </div>
 
-      {colorMode === "price" && <PriceLegend prices={prices} />}
-      {(colorMode === "rating" || colorMode === "rarity") && <RangeLegend colorMode={colorMode} />}
+      {colorMode === "price" && <PriceLegend prices={prices} theme={theme} />}
+      {(colorMode === "rating" || colorMode === "rarity") && <RangeLegend colorMode={colorMode} theme={theme} />}
       {colorMode === "brand" && distilleryColors && <BrandLegend distilleryColors={distilleryColors} />}
     </div>
   );

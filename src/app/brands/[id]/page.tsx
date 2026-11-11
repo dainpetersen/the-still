@@ -74,16 +74,16 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
 
 // ── Style accent colours ──────────────────────────────────────────────────────
 const STYLE_ACCENT: Record<WhiskeyStyle, { badge: string; bar: string }> = {
-  Bourbon: { badge: "bg-amber-800/10 text-amber-900 border-amber-700/30", bar: "bg-amber-700" },
-  "Wheated Bourbon": { badge: "bg-yellow-800/10 text-yellow-900 border-yellow-700/30", bar: "bg-yellow-700" },
-  "High Rye Bourbon": { badge: "bg-orange-800/10 text-orange-900 border-orange-700/30", bar: "bg-orange-700" },
-  "Rye Whiskey": { badge: "bg-emerald-800/10 text-emerald-900 border-emerald-700/30", bar: "bg-emerald-700" },
-  "Wheat Whiskey": { badge: "bg-lime-800/10 text-lime-900 border-lime-700/30", bar: "bg-lime-700" },
-  "Tennessee Whiskey": { badge: "bg-sky-800/10 text-sky-900 border-sky-700/30", bar: "bg-sky-700" },
-  "Blended American": { badge: "bg-violet-800/10 text-violet-900 border-violet-700/30", bar: "bg-violet-700" },
-  "American Single Malt": { badge: "bg-teal-800/10 text-teal-900 border-teal-700/30", bar: "bg-teal-700" },
+  Bourbon: { badge: "bg-amber-800/10 text-amber-900 border-amber-700/30 dark:bg-amber-300/10 dark:text-amber-300 dark:border-amber-300/30", bar: "bg-amber-700 dark:bg-amber-400" },
+  "Wheated Bourbon": { badge: "bg-yellow-800/10 text-yellow-900 border-yellow-700/30 dark:bg-yellow-300/10 dark:text-yellow-300 dark:border-yellow-300/30", bar: "bg-yellow-700 dark:bg-yellow-400" },
+  "High Rye Bourbon": { badge: "bg-orange-800/10 text-orange-900 border-orange-700/30 dark:bg-orange-300/10 dark:text-orange-300 dark:border-orange-300/30", bar: "bg-orange-700 dark:bg-orange-400" },
+  "Rye Whiskey": { badge: "bg-emerald-800/10 text-emerald-900 border-emerald-700/30 dark:bg-emerald-300/10 dark:text-emerald-300 dark:border-emerald-300/30", bar: "bg-emerald-700 dark:bg-emerald-400" },
+  "Wheat Whiskey": { badge: "bg-lime-800/10 text-lime-900 border-lime-700/30 dark:bg-lime-300/10 dark:text-lime-300 dark:border-lime-300/30", bar: "bg-lime-700 dark:bg-lime-400" },
+  "Tennessee Whiskey": { badge: "bg-sky-800/10 text-sky-900 border-sky-700/30 dark:bg-sky-300/10 dark:text-sky-300 dark:border-sky-300/30", bar: "bg-sky-700 dark:bg-sky-400" },
+  "Blended American": { badge: "bg-violet-800/10 text-violet-900 border-violet-700/30 dark:bg-violet-300/10 dark:text-violet-300 dark:border-violet-300/30", bar: "bg-violet-700 dark:bg-violet-400" },
+  "American Single Malt": { badge: "bg-teal-800/10 text-teal-900 border-teal-700/30 dark:bg-teal-300/10 dark:text-teal-300 dark:border-teal-300/30", bar: "bg-teal-700 dark:bg-teal-400" },
 };
-const FALLBACK_ACCENT = { badge: "bg-stone-400/10 text-stone-800 border-stone-500/30", bar: "bg-stone-500" };
+const FALLBACK_ACCENT = { badge: "bg-stone-400/10 text-stone-800 border-stone-500/30 dark:text-stone-300 dark:border-stone-400/30", bar: "bg-stone-500" };
 
 // ── Bottle row ────────────────────────────────────────────────────────────────
 function BottleRow({ entry }: { entry: BottleEntry }) {
@@ -104,7 +104,7 @@ function BottleRow({ entry }: { entry: BottleEntry }) {
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <h3 className="text-[16px] font-medium leading-snug" style={{ color: "#0d0b08" }}>
+            <h3 className="text-[16px] font-medium leading-snug" style={{ color: "var(--ink)" }}>
               {bottle.name}
             </h3>
             {bottle.style && (
@@ -113,13 +113,13 @@ function BottleRow({ entry }: { entry: BottleEntry }) {
               </span>
             )}
           </div>
-          <span className="block mt-1 font-mono text-[12px]" style={{ color: "rgba(13,11,8,0.6)" }}>
+          <span className="block mt-1 font-mono text-[12px]" style={{ color: "rgb(var(--ink-rgb) / 0.6)" }}>
             {meta.join(" · ")}
           </span>
           {bottle.description && (
             <span
               className="cc-serif block mt-1 text-[14px] leading-relaxed line-clamp-2"
-              style={{ color: "rgba(13,11,8,0.65)", fontStyle: "italic" }}
+              style={{ color: "rgb(var(--ink-rgb) / 0.65)", fontStyle: "italic" }}
             >
               {bottle.description}
             </span>
@@ -127,7 +127,7 @@ function BottleRow({ entry }: { entry: BottleEntry }) {
         </div>
 
         <span className="flex flex-col items-end gap-1 flex-shrink-0 pt-0.5">
-          <span className="font-mono tabular-nums text-[15px] font-semibold" style={{ color: "#0d0b08" }}>
+          <span className="font-mono tabular-nums text-[15px] font-semibold" style={{ color: "var(--ink)" }}>
             {bottle.price > 0 ? `$${bottle.price.toLocaleString("en-US")}` : "—"}
           </span>
           <RatingBadge rating={rating} />
@@ -172,14 +172,14 @@ export default async function BrandPage({ params }: Params) {
   };
 
   return (
-    <div className="min-h-screen" style={{ background: "#f0e8d8", color: "#0d0b08" }}>
+    <div className="min-h-screen" style={{ background: "var(--bg)", color: "var(--ink)" }}>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <SiteHeader />
 
       <main className="max-w-4xl mx-auto px-5 sm:px-8 pt-8">
         <Breadcrumbs currentPath={path} trail={[{ name: "Distilleries", path: "/brands" }, { name: brand.name }]} />
 
-        <header className="pb-8" style={{ borderBottom: "1px solid rgba(13,11,8,0.15)" }}>
+        <header className="pb-8" style={{ borderBottom: "1px solid rgb(var(--ink-rgb) / 0.15)" }}>
           <h1
             className="cc-serif leading-[1.05] tracking-tight"
             style={{ fontSize: "clamp(2.2rem, 5vw, 3.6rem)", fontWeight: 400, textWrap: "balance" }}
@@ -188,14 +188,14 @@ export default async function BrandPage({ params }: Params) {
           </h1>
           <div className="flex items-center gap-3 mt-3 flex-wrap">
             {brand.region && (
-              <p className="cc-serif text-[17px]" style={{ color: "rgba(13,11,8,0.65)", fontStyle: "italic" }}>
+              <p className="cc-serif text-[17px]" style={{ color: "rgb(var(--ink-rgb) / 0.65)", fontStyle: "italic" }}>
                 {brand.region}
               </p>
             )}
             {brand.isNDP && (
               <span
                 className="cc-mono-label px-1.5 py-0.5 rounded-sm"
-                style={{ border: "1px solid rgba(13,11,8,0.25)" }}
+                style={{ border: "1px solid rgb(var(--ink-rgb) / 0.25)" }}
                 title="Non-distilling producer — bottles whiskey distilled elsewhere"
               >
                 Non-distilling producer
@@ -204,7 +204,7 @@ export default async function BrandPage({ params }: Params) {
           </div>
 
           {brand.description && (
-            <p className="cc-serif mt-6 max-w-2xl text-[17px] leading-[1.65]" style={{ color: "rgba(13,11,8,0.8)" }}>
+            <p className="cc-serif mt-6 max-w-2xl text-[17px] leading-[1.65]" style={{ color: "rgb(var(--ink-rgb) / 0.8)" }}>
               {brand.description}
             </p>
           )}
@@ -234,7 +234,7 @@ export default async function BrandPage({ params }: Params) {
                 <dt className="cc-mono-label">Highest rated</dt>
                 <dd className="text-[16px] mt-1.5">
                   <Link href={best.path} className="cc-link">{best.bottle.name}</Link>{" "}
-                  <span style={{ color: "#8b1515" }} className="font-mono font-semibold">{best.rating!.avg.toFixed(1)}</span>
+                  <span style={{ color: "var(--accent)" }} className="font-mono font-semibold">{best.rating!.avg.toFixed(1)}</span>
                 </dd>
               </div>
             )}
@@ -249,10 +249,10 @@ export default async function BrandPage({ params }: Params) {
               <section key={subBrand.id}>
                 {showSubBrandHeaders && (
                   <div className="flex items-center gap-3 mb-1">
-                    <h2 className="cc-mono-label" style={{ fontSize: "12px", color: "rgba(13,11,8,0.7)" }}>
+                    <h2 className="cc-mono-label" style={{ fontSize: "12px", color: "rgb(var(--ink-rgb) / 0.7)" }}>
                       {subBrand.name}
                     </h2>
-                    <span aria-hidden="true" className="flex-1 h-px" style={{ background: "rgba(13,11,8,0.12)" }} />
+                    <span aria-hidden="true" className="flex-1 h-px" style={{ background: "rgb(var(--ink-rgb) / 0.12)" }} />
                     <span className="cc-mono-label" aria-label={`${rows.length} bottles`}>{rows.length}</span>
                   </div>
                 )}
@@ -266,7 +266,7 @@ export default async function BrandPage({ params }: Params) {
           })}
         </div>
 
-        <p className="mt-6 text-[13px]" style={{ color: "rgba(13,11,8,0.55)" }}>
+        <p className="mt-6 text-[13px]" style={{ color: "var(--ink-muted)" }}>
           Prices are suggested retail. Ratings are out of 10, shown with the number of ratings; a bottle needs{" "}
           {MIN_RATINGS_TO_RANK} to be ranked. Most ratings are scores from public Reddit whiskey reviews.{" "}
           <Link href="/about#ratings" className="cc-link">How ratings work</Link>
@@ -282,7 +282,7 @@ export default async function BrandPage({ params }: Params) {
                 <li key={b.id}>
                   <Link href={catalog.brandPaths.get(b.id)!} className="cc-card flex items-baseline justify-between gap-3 rounded-sm px-4 py-3">
                     <span className="text-[15px]">{b.name}</span>
-                    <span className="font-mono text-[12px]" style={{ color: "rgba(13,11,8,0.55)" }}>
+                    <span className="font-mono text-[12px]" style={{ color: "var(--ink-muted)" }}>
                       {bottleCount(catalog, b)} bottles
                     </span>
                   </Link>

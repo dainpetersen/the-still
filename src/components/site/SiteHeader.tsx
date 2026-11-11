@@ -1,10 +1,11 @@
 import Link from "next/link";
 import Logo from "@/components/Logo";
+import ThemeToggle from "@/components/ThemeToggle";
 
 /** Header for the catalog pages (the explorer on "/" has its own). */
 export default function SiteHeader() {
   return (
-    <header style={{ borderBottom: "1px solid rgba(13,11,8,0.12)" }}>
+    <header style={{ borderBottom: "1px solid rgb(var(--ink-rgb) / 0.12)" }}>
       <div className="max-w-5xl mx-auto px-5 sm:px-8 py-3 flex items-center gap-6">
         <Link href="/" aria-label="Common Cask — home">
           <Logo />
@@ -16,6 +17,7 @@ export default function SiteHeader() {
           <Link href="/brands" className="cc-link" style={{ textDecoration: "none" }}>
             Distilleries
           </Link>
+          <ThemeToggle />
         </nav>
       </div>
     </header>

@@ -12,7 +12,15 @@ import {
 } from "@/types/whiskey";
 import { getAgeTier, getPriceTier } from "@/data/whiskeys";
 import { buildDistilleryColors } from "@/lib/distilleryColors";
-import { NO_DATA_COLOR, buildPriceScale, type PriceScale } from "@/lib/colorScales";
+import {
+  buildPriceScale,
+  chartPalette,
+  rarityScale as buildRarityScale,
+  ratingScale as buildRatingScale,
+  readableLabelColor,
+  type ChartTheme,
+  type PriceScale,
+} from "@/lib/colorScales";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -47,6 +55,8 @@ interface Props {
   sizeMode: BubbleSizeMode;
   onBottleClick: (node: BubbleNode) => void;
   ratings: Record<string, { avg: number; count: number }>;
+  /** Which theme is showing — the bubble colours are computed per theme. */
+  theme: ChartTheme;
   searchQuery?: string;
   distilleryColors?: Map<string, string>;
   /** Key of the currently-selected group label (distillery/style/etc) */
@@ -102,10 +112,12 @@ function getColorFn(
   mode: ColorMode,
   ratings: Record<string, { avg: number; count: number }>,
   priceScale: PriceScale,
+  theme: ChartTheme,
   distColors?: Map<string, string>
 ): (d: BubbleNode) => string {
-  const ratingScale = d3.scaleSequential(d3.interpolate("#c8b880", "#6b1200")).domain([1, 10]);
-  const rarityScale = d3.scaleSequential(d3.interpolate("#ddd0b0", "#5c0a0a")).domain([0, 100]);
+  const ratingScale = buildRatingScale(theme);
+  const rarityScale = buildRarityScale(theme);
+  const noData = chartPalette(theme).noData;
 
   return (d: BubbleNode) => {
     if (mode === "brand")  return distColors?.get(d.brandName) ?? "#8a7055";
@@ -113,7 +125,7 @@ function getColorFn(
     if (mode === "rarity") return rarityScale(d.rarityScore ?? 0);
     // rating
     const r = ratings[d.id] ?? (d.avgRating ? { avg: d.avgRating } : null);
-    return r ? ratingScale(r.avg) : NO_DATA_COLOR;
+    return r ? ratingScale(r.avg) : noData;
   };
 }
 
@@ -304,11 +316,11 @@ function updateHalos(
           .attr("r",  (d) => d.r)
           .attr("fill",   (d) => {
             const base = colorMap?.get(d.key);
-            return base ? hexToRgba(base, 0.09) : "rgba(0,0,0,0.035)";
+            return base ? hexToRgba(base, 0.09) : "rgb(var(--ink-rgb) / 0.035)";
           })
           .attr("stroke", (d) => {
             const base = colorMap?.get(d.key);
-            return base ? hexToRgba(base, 0.25) : "rgba(0,0,0,0.10)";
+            return base ? hexToRgba(base, 0.25) : "rgb(var(--ink-rgb) / 0.10)";
           })
           .attr("stroke-width", 1)
           .attr("opacity", 0)
@@ -320,11 +332,11 @@ function updateHalos(
           .attr("r",  (d) => d.r)
           .attr("fill",   (d) => {
             const base = colorMap?.get(d.key);
-            return base ? hexToRgba(base, 0.09) : "rgba(0,0,0,0.035)";
+            return base ? hexToRgba(base, 0.09) : "rgb(var(--ink-rgb) / 0.035)";
           })
           .attr("stroke", (d) => {
             const base = colorMap?.get(d.key);
-            return base ? hexToRgba(base, 0.25) : "rgba(0,0,0,0.10)";
+            return base ? hexToRgba(base, 0.25) : "rgb(var(--ink-rgb) / 0.10)";
           }),
       (exit) =>
         exit.transition().duration(250).attr("opacity", 0).remove()
@@ -340,6 +352,7 @@ export default function BubbleChart({
   sizeMode,
   onBottleClick,
   ratings,
+  theme,
   searchQuery,
   distilleryColors,
   selectedGroup,
@@ -356,6 +369,7 @@ export default function BubbleChart({
   const prevGroupModeRef = useRef<GroupMode | null>(null);
   const prevSizeModeRef  = useRef<BubbleSizeMode | null>(null);
   const prevColorModeRef = useRef<ColorMode | null>(null);
+  const prevThemeRef     = useRef<ChartTheme | null>(null);
 
   // Keep stable refs for callbacks (avoid sim re-init on every render)
   const onBottleClickRef = useRef(onBottleClick);
@@ -378,24 +392,24 @@ export default function BubbleChart({
     if (!tip) return;
     const r = ratingsRef.current[d.id];
     const ratingLine = r
-      ? `<div style="color:#7a3800;margin-top:5px;font-family:Georgia,serif;font-size:13px;">★ ${r.avg.toFixed(1)} <span style="color:rgba(13,11,8,0.6);font-size:12px;">(${r.count} rating${r.count !== 1 ? "s" : ""})</span></div>`
-      : `<div style="color:rgba(13,11,8,0.55);margin-top:5px;font-size:12px;">Not yet rated</div>`;
+      ? `<div style="color:var(--accent);margin-top:5px;font-family:Georgia,serif;font-size:13px;">★ ${r.avg.toFixed(1)} <span style="color:rgb(var(--ink-rgb) / 0.6);font-size:12px;">(${r.count} rating${r.count !== 1 ? "s" : ""})</span></div>`
+      : `<div style="color:var(--ink-muted);margin-top:5px;font-size:12px;">Not yet rated</div>`;
     const ageStr = d.age ? `${d.age}yr` : "NAS";
     const badges = [
-      d.source === "community" ? `<span style="color:#5a2890;font-size:11px;border:1px solid rgba(90,40,144,0.4);padding:1px 5px;border-radius:2px;">Community</span>` : "",
-      d.isNDP ? `<span style="color:rgba(90,50,10,0.85);font-size:11px;border:1px solid rgba(90,50,10,0.3);padding:1px 5px;border-radius:2px;">NDP</span>` : "",
+      d.source === "community" ? `<span style="color:rgb(var(--community-rgb));font-size:11px;border:1px solid rgb(var(--community-rgb) / 0.4);padding:1px 5px;border-radius:2px;">Community</span>` : "",
+      d.isNDP ? `<span style="color:rgb(var(--brown-rgb) / 0.85);font-size:11px;border:1px solid rgb(var(--brown-rgb) / 0.3);padding:1px 5px;border-radius:2px;">NDP</span>` : "",
     ].filter(Boolean).join(" ");
 
     tip.innerHTML = `
-      <div style="font-weight:700;font-size:14px;color:#0d0b08;margin-bottom:2px;font-family:Georgia,serif;">${esc(d.name)}</div>
-      <div style="font-size:12px;color:rgba(13,11,8,0.6);margin-bottom:4px;">${esc(d.brandName)} · ${esc(d.subBrandName)}</div>
-      <div style="font-size:12.5px;color:rgba(13,11,8,0.8);">$${esc(d.price)} · ${esc(d.abv)}% ABV · ${esc(ageStr)}</div>
-      <div style="font-size:12px;color:rgba(13,11,8,0.6);text-transform:capitalize;">${esc(d.rarity)}</div>
+      <div style="font-weight:700;font-size:14px;color:var(--ink);margin-bottom:2px;font-family:Georgia,serif;">${esc(d.name)}</div>
+      <div style="font-size:12px;color:rgb(var(--ink-rgb) / 0.6);margin-bottom:4px;">${esc(d.brandName)} · ${esc(d.subBrandName)}</div>
+      <div style="font-size:12.5px;color:rgb(var(--ink-rgb) / 0.8);">$${esc(d.price)} · ${esc(d.abv)}% ABV · ${esc(ageStr)}</div>
+      <div style="font-size:12px;color:rgb(var(--ink-rgb) / 0.6);text-transform:capitalize;">${esc(d.rarity)}</div>
       ${ratingLine}
-      ${d.sourceDistillery ? `<div style="font-size:12px;color:rgba(13,11,8,0.55);margin-top:3px;">Source: ${esc(d.sourceDistillery)}</div>` : ""}
-      ${d.description ? `<div style="font-size:12px;color:rgba(13,11,8,0.65);margin-top:6px;max-width:240px;line-height:1.45;">${esc(d.description.slice(0, 120))}${d.description.length > 120 ? "…" : ""}</div>` : ""}
+      ${d.sourceDistillery ? `<div style="font-size:12px;color:var(--ink-muted);margin-top:3px;">Source: ${esc(d.sourceDistillery)}</div>` : ""}
+      ${d.description ? `<div style="font-size:12px;color:rgb(var(--ink-rgb) / 0.65);margin-top:6px;max-width:240px;line-height:1.45;">${esc(d.description.slice(0, 120))}${d.description.length > 120 ? "…" : ""}</div>` : ""}
       ${badges ? `<div style="margin-top:6px;display:flex;gap:4px;">${badges}</div>` : ""}
-      <div style="font-size:11px;color:rgba(13,11,8,0.45);margin-top:6px;">Click for details</div>
+      <div style="font-size:11px;color:var(--ink-muted);margin-top:6px;">Click for details</div>
     `;
     tip.style.display = "block";
     tip.style.opacity = "1";
@@ -491,8 +505,11 @@ export default function BubbleChart({
     const distColors = distilleryColors ?? buildDistilleryColors(brands);
     const glowOpacity = isDistilleryMode ? 0.35 : 0;
 
-    const priceScale = buildPriceScale(newNodes.map((n) => n.price));
-    const colorFn = getColorFn(colorMode, ratingsRef.current, priceScale, distColors);
+    const priceScale = buildPriceScale(newNodes.map((n) => n.price), theme);
+    const colorFn = getColorFn(colorMode, ratingsRef.current, priceScale, theme, distColors);
+    // Group labels: a distillery's own colour (made legible on this ground) or plain ink.
+    const labelFill = (key: string) =>
+      isDistilleryMode && distColors.has(key) ? readableLabelColor(distColors.get(key)!, theme) : "var(--ink)";
 
     const prevGroupMode = prevGroupModeRef.current;
     const prevSizeMode  = prevSizeModeRef.current;
@@ -500,7 +517,9 @@ export default function BubbleChart({
 
     const groupChanged = prevGroupMode !== null && prevGroupMode !== groupMode;
     const sizeChanged  = prevSizeMode  !== null && prevSizeMode  !== sizeMode;
-    const colorChanged = prevColorMode !== null && prevColorMode !== colorMode;
+    const themeChanged = prevThemeRef.current !== null && prevThemeRef.current !== theme;
+    prevThemeRef.current = theme;
+    const colorChanged = (prevColorMode !== null && prevColorMode !== colorMode) || themeChanged;
 
     prevGroupModeRef.current = groupMode;
     prevSizeModeRef.current  = sizeMode;
@@ -561,13 +580,13 @@ export default function BubbleChart({
             .attr("x", (d) => d.x)
             .attr("y", (d) => d.y)
             .attr("text-anchor", "middle")
-            .attr("fill", (d) => isDistilleryMode ? (distColors.get(d.key) ?? "#1a0e04") : "#1a0e04")
+            .style("fill", (d) => labelFill(d.key))
             .attr("opacity", 0)
             .attr("font-size", "12px")
             .attr("font-weight", "700")
             .attr("letter-spacing", "0.08em")
             .attr("paint-order", "stroke")
-            .attr("stroke", "#f0e8d8")
+            .style("stroke", "var(--bg)")
             .attr("stroke-width", 3)
             .attr("stroke-linejoin", "round")
             .text((d) => d.key.toUpperCase())
@@ -585,13 +604,13 @@ export default function BubbleChart({
               .attr("x", (d) => d.x)
               .attr("y", (d) => d.y)
               .attr("text-anchor", "middle")
-              .attr("fill", (d) => isDistilleryMode ? (distColors.get(d.key) ?? "#1a0e04") : "#1a0e04")
+              .style("fill", (d) => labelFill(d.key))
               .attr("opacity", 0)
               .attr("font-size", "12px")
               .attr("font-weight", "700")
               .attr("letter-spacing", "0.08em")
               .attr("paint-order", "stroke")
-              .attr("stroke", "#f0e8d8")
+              .style("stroke", "var(--bg)")
               .attr("stroke-width", 3)
               .attr("stroke-linejoin", "round")
               .text((d) => d.key.toUpperCase())
@@ -601,7 +620,7 @@ export default function BubbleChart({
           (update) =>
             update
               .text((d) => d.key.toUpperCase())
-              .attr("fill", (d) => isDistilleryMode ? (distColors.get(d.key) ?? "#1a0e04") : "#1a0e04")
+              .style("fill", (d) => labelFill(d.key))
               .attr("x", (d) => d.x)
               .attr("y", (d) => d.y)
               .attr("opacity", isDistilleryMode ? 0 : 0.9),
@@ -613,6 +632,9 @@ export default function BubbleChart({
     // ── If only color changed, update gradient stop-colours and return ────────
     // Bubble fill attributes stay as url(#rg-…); we just retune the gradient stops.
     if (colorChanged && !groupChanged && !sizeChanged && prevGroupMode !== null) {
+      root
+        .selectAll<SVGTextElement, { key: string }>("text.group-label")
+        .style("fill", (d) => labelFill(d.key));
       const defsEl = root.select<SVGDefsElement>("defs");
       for (const n of nodesRef.current) {
         const c = colorFn(n);
@@ -824,10 +846,10 @@ export default function BubbleChart({
             .attr("cx", (d) => d.x ?? W / 2)
             .attr("cy", (d) => d.y ?? H / 2)
             .attr("fill", (d) => `url(#${rgId(d.id)})`)
-            .attr("stroke", (d) =>
-              d.source === "community" ? "rgba(90,40,160,0.7)" : "rgba(0,0,0,0.18)"
+            .style("stroke", (d) =>
+              d.source === "community" ? "rgb(var(--community-rgb) / 0.8)" : "var(--bubble-line)"
             )
-            .attr("stroke-width", (d) => (d.source === "community" ? 1.5 : 0.6))
+            .attr("stroke-width", (d) => (d.source === "community" ? 1.5 : 0.8))
             .attr("stroke-dasharray", (d) => (d.source === "community" ? "4,2" : "none"))
             .style("cursor", "pointer")
             .attr("opacity", 0)
@@ -1217,7 +1239,7 @@ export default function BubbleChart({
       onSettled();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [brands, colorMode, groupMode, sizeMode, buildNodes, showTooltip, moveTooltip, hideTooltip]);
+  }, [brands, colorMode, groupMode, sizeMode, theme, buildNodes, showTooltip, moveTooltip, hideTooltip]);
 
   // ── Resize observer ────────────────────────────────────────────────────────
   useEffect(() => {
@@ -1253,7 +1275,7 @@ export default function BubbleChart({
   useEffect(() => {
     draw();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [brands, groupMode, sizeMode, colorMode, ratings]);
+  }, [brands, groupMode, sizeMode, colorMode, ratings, theme]);
 
   // ── Search + group filter: fade non-matching bubbles out entirely ────────────
   useEffect(() => {
@@ -1322,9 +1344,9 @@ export default function BubbleChart({
     tip.style.cssText = `
       position: fixed; pointer-events: none; display: none; opacity: 0;
       z-index: 9999; padding: 10px 13px; border-radius: 2px;
-      background: rgba(244,238,224,0.97); border: 1px solid rgba(0,0,0,0.18);
+      background: rgb(var(--panel-rgb) / 0.97); border: 1px solid rgb(var(--ink-rgb) / 0.18);
       box-shadow: 2px 3px 12px rgba(0,0,0,0.12);
-      font-family: inherit; font-size: 12px; color: #0d0b08;
+      font-family: inherit; font-size: 12px; color: var(--ink);
       transition: opacity 0.12s ease;
       max-width: 260px;
     `;

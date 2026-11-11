@@ -1,9 +1,20 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import Script from "next/script";
 import { SITE_NAME, SITE_URL } from "@/lib/site";
+import { THEME_INIT_SCRIPT } from "@/lib/themeInit";
 import "./globals.css";
+
+// Tells the browser both themes exist (form controls, scrollbars) and tints
+// its own chrome to match whichever the device asks for.
+export const viewport: Viewport = {
+  colorScheme: "light dark",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#f0e8d8" },
+    { media: "(prefers-color-scheme: dark)", color: "#15110c" },
+  ],
+};
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -65,8 +76,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    // data-theme is set by the inline script before React hydrates, so the
+    // attribute legitimately differs from the server render.
+    <html lang="en" suppressHydrationWarning>
       <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}

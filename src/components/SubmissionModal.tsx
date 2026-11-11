@@ -157,8 +157,8 @@ export default function SubmissionModal({ onClose, userId }: Props) {
   }
 
   const inputCls =
-    "w-full bg-gray-900 border border-gray-700 rounded px-3 py-2 text-sm text-gray-200 placeholder-gray-600 focus:outline-none focus:border-amber-500";
-  const labelCls = "block text-xs text-gray-500 mb-1";
+    "w-full bg-panel border border-line-strong rounded px-3 py-2 text-sm text-ink placeholder:text-muted focus:outline-none focus:border-accent";
+  const labelCls = "block text-xs text-muted mb-1";
 
   // ── Header label ──────────────────────────────────────────────────
   function headerSub() {
@@ -182,28 +182,28 @@ export default function SubmissionModal({ onClose, userId }: Props) {
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ background: "rgba(0,0,0,0.8)" }}
+      style={{ background: "var(--scrim)" }}
       onClick={onClose}
     >
       <div
         className="relative w-full max-w-md rounded-xl overflow-y-auto max-h-[90vh]"
         style={{
-          background: "linear-gradient(135deg, #0f0d1a 0%, #0a0f0d 100%)",
-          border: "1px solid rgba(245,158,11,0.35)",
-          boxShadow: "0 20px 60px rgba(0,0,0,0.9)",
+          background: "var(--panel)",
+          border: "1px solid rgb(var(--accent-rgb) / 0.35)",
+          boxShadow: "0 20px 60px rgba(0,0,0,0.35)",
         }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div
           className="px-6 pt-5 pb-4 flex items-start justify-between"
-          style={{ borderBottom: "1px solid rgba(245,158,11,0.15)" }}
+          style={{ borderBottom: "1px solid rgb(var(--accent-rgb) / 0.15)" }}
         >
           <div>
-            <h2 className="text-base font-bold text-amber-400">Submit an Entry</h2>
-            <p className="text-xs text-gray-500 mt-0.5">{headerSub()}</p>
+            <h2 className="text-base font-bold text-accent">Submit an Entry</h2>
+            <p className="text-xs text-muted mt-0.5">{headerSub()}</p>
           </div>
-          <button onClick={onClose} className="text-gray-500 hover:text-white text-xl leading-none ml-4">×</button>
+          <button onClick={onClose} className="text-muted hover:text-ink text-xl leading-none ml-4">×</button>
         </div>
 
         <div className="px-6 py-5">
@@ -217,14 +217,14 @@ export default function SubmissionModal({ onClose, userId }: Props) {
                   onClick={() => setPath(p)}
                   className={`w-full text-left px-4 py-3 rounded-lg border transition-all ${
                     path === p
-                      ? "border-amber-500 bg-amber-500/10 text-amber-300"
-                      : "border-gray-700 text-gray-400 hover:border-gray-500"
+                      ? "border-accent bg-accent/10 text-accent"
+                      : "border-line-strong text-muted hover:border-ink/50"
                   }`}
                 >
                   <div className="font-semibold text-sm">
                     {p === "distillery" ? "🏭 New Distillery" : "🍾 Add a Bottle"}
                   </div>
-                  <div className="text-xs text-gray-500 mt-0.5">
+                  <div className="text-xs text-muted mt-0.5">
                     {p === "distillery"
                       ? "Add a brand that's not yet on the site, with sub-brand and bottles"
                       : "Add an expression to a distillery already on the site"}
@@ -262,10 +262,10 @@ export default function SubmissionModal({ onClose, userId }: Props) {
                   onChange={(e) => setIsNDP(e.target.checked)}
                   className="accent-amber-500"
                 />
-                <span className="text-sm text-gray-400">This is a Non-Distilling Producer (NDP)</span>
+                <span className="text-sm text-muted">This is a Non-Distilling Producer (NDP)</span>
               </label>
               {isNDP && (
-                <p className="text-xs text-purple-400 bg-purple-900/20 rounded px-3 py-2 border border-purple-800/40">
+                <p className="text-xs text-community bg-community/10 rounded px-3 py-2 border border-community/40">
                   This will be marked as an NDP in the visualization.
                 </p>
               )}
@@ -283,29 +283,29 @@ export default function SubmissionModal({ onClose, userId }: Props) {
                   onChange={(e) => setSubBrandName(e.target.value)}
                   placeholder={`e.g. ${brandName || "Sagamore Spirit"}`}
                 />
-                <p className="text-xs text-gray-600 mt-1">
+                <p className="text-xs text-muted mt-1">
                   Often the same as the distillery name. Used to group bottles.
                 </p>
               </div>
 
               <div
                 className="pt-1"
-                style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}
+                style={{ borderTop: "1px solid rgb(var(--ink-rgb) / 0.06)" }}
               >
-                <p className="text-xs text-gray-500 mb-3 font-medium uppercase tracking-wider">Bottles</p>
+                <p className="text-xs text-muted mb-3 font-medium uppercase tracking-wider">Bottles</p>
                 <div className="space-y-4">
                   {bottles.map((bt, i) => (
                     <div
                       key={i}
                       className="rounded-lg p-3 space-y-2"
-                      style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}
+                      style={{ background: "rgb(var(--ink-rgb) / 0.03)", border: "1px solid rgb(var(--ink-rgb) / 0.07)" }}
                     >
                       <div className="flex items-center justify-between mb-1">
-                        <span className="text-xs text-gray-500">Bottle {i + 1}</span>
+                        <span className="text-xs text-muted">Bottle {i + 1}</span>
                         {bottles.length > 1 && (
                           <button
                             onClick={() => removeBottle(i)}
-                            className="text-xs text-red-500 hover:text-red-400"
+                            className="text-xs text-danger hover:text-danger"
                           >
                             Remove
                           </button>
@@ -411,8 +411,8 @@ export default function SubmissionModal({ onClose, userId }: Props) {
                   onClick={addBottle}
                   className="mt-3 w-full py-2 rounded-lg text-xs font-medium transition-colors"
                   style={{
-                    border: "1px dashed rgba(245,158,11,0.3)",
-                    color: "rgba(245,158,11,0.6)",
+                    border: "1px dashed rgb(var(--accent-rgb) / 0.3)",
+                    color: "rgb(var(--accent-rgb) / 0.6)",
                   }}
                 >
                   + Add another bottle
@@ -424,26 +424,26 @@ export default function SubmissionModal({ onClose, userId }: Props) {
           {/* ── Distillery: confirm ───────────────────────────────────── */}
           {step === "dist_confirm" && !submitted && (
             <div className="space-y-3">
-              <div className="bg-gray-900 rounded-lg p-4 text-sm space-y-2">
-                <div className="text-gray-500 text-xs uppercase tracking-wider mb-2">Summary</div>
-                <div className="font-semibold text-amber-400">{brandName}</div>
-                <div className="text-xs text-gray-400">{brandRegion}{isNDP ? " · NDP" : ""}</div>
+              <div className="bg-panel rounded-lg p-4 text-sm space-y-2">
+                <div className="text-muted text-xs uppercase tracking-wider mb-2">Summary</div>
+                <div className="font-semibold text-accent">{brandName}</div>
+                <div className="text-xs text-muted">{brandRegion}{isNDP ? " · NDP" : ""}</div>
                 <div
                   className="mt-2 pt-2"
-                  style={{ borderTop: "1px solid rgba(255,255,255,0.07)" }}
+                  style={{ borderTop: "1px solid rgb(var(--ink-rgb) / 0.07)" }}
                 >
-                  <div className="text-xs text-gray-500 mb-1">Sub-brand: <span className="text-gray-300">{subBrandName}</span></div>
+                  <div className="text-xs text-muted mb-1">Sub-brand: <span className="text-ink">{subBrandName}</span></div>
                   {bottles.map((bt, i) => (
-                    <div key={i} className="text-xs text-gray-400 ml-2 mt-0.5">
+                    <div key={i} className="text-xs text-muted ml-2 mt-0.5">
                       · {bt.name} — {bt.abv}% ABV, ${bt.price}{bt.age ? `, ${bt.age}yr` : ""}{bt.style ? `, ${bt.style}` : ""}
                     </div>
                   ))}
                 </div>
               </div>
-              <p className="text-xs text-gray-600">
+              <p className="text-xs text-muted">
                 Your submission will be reviewed before appearing on the map.
               </p>
-              {error && <p className="text-red-400 text-xs">{error}</p>}
+              {error && <p className="text-danger text-xs">{error}</p>}
             </div>
           )}
 
@@ -598,8 +598,8 @@ export default function SubmissionModal({ onClose, userId }: Props) {
           {/* ── Bottle path: confirm ──────────────────────────────────── */}
           {step === "bottle_confirm" && !submitted && (
             <div className="space-y-3">
-              <div className="bg-gray-900 rounded-lg p-4 text-sm space-y-1.5">
-                <div className="text-gray-500 text-xs uppercase tracking-wider mb-2">Summary</div>
+              <div className="bg-panel rounded-lg p-4 text-sm space-y-1.5">
+                <div className="text-muted text-xs uppercase tracking-wider mb-2">Summary</div>
                 <Row label="Type" value="Bottle" />
                 <Row label="Name" value={bottleName} />
                 <Row
@@ -613,10 +613,10 @@ export default function SubmissionModal({ onClose, userId }: Props) {
                 <Row label="Rarity" value={bottleRarity} />
                 {bottleSource && <Row label="Source" value={bottleSource} />}
               </div>
-              <p className="text-xs text-gray-600">
+              <p className="text-xs text-muted">
                 Your submission will be reviewed before appearing on the map.
               </p>
-              {error && <p className="text-red-400 text-xs">{error}</p>}
+              {error && <p className="text-danger text-xs">{error}</p>}
             </div>
           )}
 
@@ -624,8 +624,8 @@ export default function SubmissionModal({ onClose, userId }: Props) {
           {submitted && (
             <div className="text-center py-6">
               <div className="text-3xl mb-3">🥃</div>
-              <p className="text-amber-400 font-semibold">Submission received!</p>
-              <p className="text-gray-500 text-sm mt-1">It will appear on the map once reviewed.</p>
+              <p className="text-accent font-semibold">Submission received!</p>
+              <p className="text-muted text-sm mt-1">It will appear on the map once reviewed.</p>
             </div>
           )}
         </div>
@@ -634,15 +634,15 @@ export default function SubmissionModal({ onClose, userId }: Props) {
         {!submitted && (
           <div
             className="px-6 pb-5 flex justify-between gap-3"
-            style={{ borderTop: "1px solid rgba(255,255,255,0.05)", paddingTop: "16px" }}
+            style={{ borderTop: "1px solid rgb(var(--ink-rgb) / 0.05)", paddingTop: "16px" }}
           >
             {/* Path selection */}
             {step === "path" && (
               <>
-                <button onClick={onClose} className="text-sm text-gray-500 hover:text-gray-300">Cancel</button>
+                <button onClick={onClose} className="text-sm text-muted hover:text-ink">Cancel</button>
                 <button
                   onClick={() => setStep(path === "distillery" ? "brand" : "bottle_details")}
-                  className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-black text-sm font-semibold rounded"
+                  className="px-4 py-2 bg-accent hover:bg-accent/85 text-on-accent text-sm font-semibold rounded"
                 >
                   Next →
                 </button>
@@ -652,14 +652,14 @@ export default function SubmissionModal({ onClose, userId }: Props) {
             {/* Distillery: brand → subbrand */}
             {step === "brand" && (
               <>
-                <button onClick={() => setStep("path")} className="text-sm text-gray-500 hover:text-gray-300">← Back</button>
+                <button onClick={() => setStep("path")} className="text-sm text-muted hover:text-ink">← Back</button>
                 <button
                   onClick={() => setStep("subbrand")}
                   disabled={!distBrandValid()}
                   className={`px-4 py-2 text-sm font-semibold rounded transition-all ${
                     distBrandValid()
-                      ? "bg-amber-500 hover:bg-amber-400 text-black"
-                      : "bg-gray-700 text-gray-500 cursor-not-allowed"
+                      ? "bg-accent hover:bg-accent/85 text-on-accent"
+                      : "bg-ink/10 text-muted cursor-not-allowed"
                   }`}
                 >
                   Next →
@@ -670,14 +670,14 @@ export default function SubmissionModal({ onClose, userId }: Props) {
             {/* Distillery: subbrand → confirm */}
             {step === "subbrand" && (
               <>
-                <button onClick={() => setStep("brand")} className="text-sm text-gray-500 hover:text-gray-300">← Back</button>
+                <button onClick={() => setStep("brand")} className="text-sm text-muted hover:text-ink">← Back</button>
                 <button
                   onClick={() => setStep("dist_confirm")}
                   disabled={!distSubBrandValid()}
                   className={`px-4 py-2 text-sm font-semibold rounded transition-all ${
                     distSubBrandValid()
-                      ? "bg-amber-500 hover:bg-amber-400 text-black"
-                      : "bg-gray-700 text-gray-500 cursor-not-allowed"
+                      ? "bg-accent hover:bg-accent/85 text-on-accent"
+                      : "bg-ink/10 text-muted cursor-not-allowed"
                   }`}
                 >
                   Review →
@@ -688,14 +688,14 @@ export default function SubmissionModal({ onClose, userId }: Props) {
             {/* Distillery: confirm → submit */}
             {step === "dist_confirm" && (
               <>
-                <button onClick={() => setStep("subbrand")} className="text-sm text-gray-500 hover:text-gray-300">← Edit</button>
+                <button onClick={() => setStep("subbrand")} className="text-sm text-muted hover:text-ink">← Edit</button>
                 <button
                   onClick={handleSubmit}
                   disabled={submitting}
                   className={`px-4 py-2 text-sm font-semibold rounded transition-all ${
                     submitting
-                      ? "bg-gray-700 text-gray-500 cursor-not-allowed"
-                      : "bg-amber-500 hover:bg-amber-400 text-black"
+                      ? "bg-ink/10 text-muted cursor-not-allowed"
+                      : "bg-accent hover:bg-accent/85 text-on-accent"
                   }`}
                 >
                   {submitting ? "Submitting…" : "Submit for Review"}
@@ -706,14 +706,14 @@ export default function SubmissionModal({ onClose, userId }: Props) {
             {/* Bottle: details → confirm */}
             {step === "bottle_details" && (
               <>
-                <button onClick={() => setStep("path")} className="text-sm text-gray-500 hover:text-gray-300">← Back</button>
+                <button onClick={() => setStep("path")} className="text-sm text-muted hover:text-ink">← Back</button>
                 <button
                   onClick={() => setStep("bottle_confirm")}
                   disabled={!bottleDetailsValid()}
                   className={`px-4 py-2 text-sm font-semibold rounded transition-all ${
                     bottleDetailsValid()
-                      ? "bg-amber-500 hover:bg-amber-400 text-black"
-                      : "bg-gray-700 text-gray-500 cursor-not-allowed"
+                      ? "bg-accent hover:bg-accent/85 text-on-accent"
+                      : "bg-ink/10 text-muted cursor-not-allowed"
                   }`}
                 >
                   Review →
@@ -724,14 +724,14 @@ export default function SubmissionModal({ onClose, userId }: Props) {
             {/* Bottle: confirm → submit */}
             {step === "bottle_confirm" && (
               <>
-                <button onClick={() => setStep("bottle_details")} className="text-sm text-gray-500 hover:text-gray-300">← Edit</button>
+                <button onClick={() => setStep("bottle_details")} className="text-sm text-muted hover:text-ink">← Edit</button>
                 <button
                   onClick={handleSubmit}
                   disabled={submitting}
                   className={`px-4 py-2 text-sm font-semibold rounded transition-all ${
                     submitting
-                      ? "bg-gray-700 text-gray-500 cursor-not-allowed"
-                      : "bg-amber-500 hover:bg-amber-400 text-black"
+                      ? "bg-ink/10 text-muted cursor-not-allowed"
+                      : "bg-accent hover:bg-accent/85 text-on-accent"
                   }`}
                 >
                   {submitting ? "Submitting…" : "Submit for Review"}
@@ -743,7 +743,7 @@ export default function SubmissionModal({ onClose, userId }: Props) {
 
         {submitted && (
           <div className="px-6 pb-5">
-            <button onClick={onClose} className="w-full py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 text-sm rounded">
+            <button onClick={onClose} className="w-full py-2 bg-ink/5 hover:bg-ink/10 text-ink text-sm rounded">
               Close
             </button>
           </div>
@@ -757,8 +757,8 @@ function Row({ label, value }: { label: string; value?: string }) {
   if (!value) return null;
   return (
     <div className="flex justify-between text-sm">
-      <span className="text-gray-500">{label}</span>
-      <span className="text-gray-200 text-right max-w-[60%] truncate">{value}</span>
+      <span className="text-muted">{label}</span>
+      <span className="text-ink text-right max-w-[60%] truncate">{value}</span>
     </div>
   );
 }

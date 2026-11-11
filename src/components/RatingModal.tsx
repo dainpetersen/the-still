@@ -38,21 +38,21 @@ interface ReviewEntry {
 }
 
 const SCORES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
-const MUTED = "rgba(13,11,8,0.6)";
+const MUTED = "rgb(var(--ink-rgb) / 0.6)";
 const MAX_NOTES_SHOWN = 30;
 
 const RARITY_STYLES: Record<string, { bg: string; text: string; border: string }> = {
-  common:    { bg: "rgba(13,11,8,0.05)",   text: "rgba(13,11,8,0.65)",  border: "rgba(13,11,8,0.15)" },
-  limited:   { bg: "rgba(180,120,0,0.08)", text: "rgba(140,90,0,0.95)", border: "rgba(180,120,0,0.25)" },
-  rare:      { bg: "rgba(160,60,0,0.08)",  text: "rgba(130,50,0,0.95)", border: "rgba(160,60,0,0.25)" },
-  allocated: { bg: "rgba(139,21,21,0.08)", text: "#8b1515",             border: "rgba(139,21,21,0.25)" },
-  unicorn:   { bg: "rgba(90,40,160,0.08)", text: "rgba(90,40,160,0.95)", border: "rgba(90,40,160,0.25)" },
+  common:    { bg: "rgb(var(--ink-rgb) / 0.05)",   text: "rgb(var(--ink-rgb) / 0.65)",  border: "rgb(var(--ink-rgb) / 0.15)" },
+  limited:   { bg: "rgb(var(--warm-rgb) / 0.08)", text: "rgb(var(--warm-rgb) / 0.95)", border: "rgb(var(--warm-rgb) / 0.25)" },
+  rare:      { bg: "rgb(var(--warm-rgb) / 0.08)",  text: "rgb(var(--warm-rgb) / 0.95)", border: "rgb(var(--warm-rgb) / 0.25)" },
+  allocated: { bg: "rgb(var(--accent-rgb) / 0.08)", text: "var(--accent)",             border: "rgb(var(--accent-rgb) / 0.25)" },
+  unicorn:   { bg: "rgb(var(--community-rgb) / 0.08)", text: "rgb(var(--community-rgb) / 0.95)", border: "rgb(var(--community-rgb) / 0.25)" },
 };
 
 const chip = {
-  background: "rgba(13,11,8,0.06)",
-  color: "rgba(13,11,8,0.8)",
-  border: "1px solid rgba(13,11,8,0.1)",
+  background: "rgb(var(--ink-rgb) / 0.06)",
+  color: "rgb(var(--ink-rgb) / 0.8)",
+  border: "1px solid rgb(var(--ink-rgb) / 0.1)",
 };
 
 /**
@@ -133,7 +133,7 @@ export default function RatingModal({ bottle, onClose, onRatingSubmitted, onFlag
   return (
     <div
       className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4"
-      style={{ background: "rgba(13,11,8,0.45)", backdropFilter: "blur(3px)" }}
+      style={{ background: "var(--scrim)", backdropFilter: "blur(3px)" }}
       onClick={onClose}
     >
       <div
@@ -142,14 +142,14 @@ export default function RatingModal({ bottle, onClose, onRatingSubmitted, onFlag
         aria-labelledby={titleId}
         className="relative w-full sm:max-w-lg rounded-t-md sm:rounded-sm overflow-y-auto max-h-[92vh]"
         style={{
-          background: "#f4eed8",
-          border: "1px solid rgba(13,11,8,0.18)",
+          background: "var(--panel)",
+          border: "1px solid rgb(var(--ink-rgb) / 0.18)",
           boxShadow: "0 8px 40px rgba(0,0,0,0.22)",
         }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="px-6 pt-6 pb-5" style={{ borderBottom: "1px solid rgba(13,11,8,0.1)" }}>
+        <div className="px-6 pt-6 pb-5" style={{ borderBottom: "1px solid rgb(var(--ink-rgb) / 0.1)" }}>
           <button
             onClick={onClose}
             aria-label="Close"
@@ -162,7 +162,7 @@ export default function RatingModal({ bottle, onClose, onRatingSubmitted, onFlag
           <h2
             id={titleId}
             className="text-[22px] pr-10 leading-tight"
-            style={{ fontFamily: "Georgia,serif", fontWeight: 400, color: "#0d0b08" }}
+            style={{ fontFamily: "Georgia,serif", fontWeight: 400, color: "var(--ink)" }}
           >
             {bottle.name}
           </h2>
@@ -171,7 +171,7 @@ export default function RatingModal({ bottle, onClose, onRatingSubmitted, onFlag
             {bottle.brandId && (
               <Link
                 href={`/brands/${encodeURIComponent(bottle.brandId)}`}
-                style={{ color: "#8b1515", fontFamily: "Georgia,serif", fontStyle: "italic" }}
+                style={{ color: "var(--accent)", fontFamily: "Georgia,serif", fontStyle: "italic" }}
                 className="hover:underline"
               >
                 {bottle.brandName ?? "View distillery"}
@@ -180,7 +180,7 @@ export default function RatingModal({ bottle, onClose, onRatingSubmitted, onFlag
             <Link
               href={`/bottles/${encodeURIComponent(bottle.id)}`}
               className="underline underline-offset-2"
-              style={{ color: "rgba(13,11,8,0.75)" }}
+              style={{ color: "rgb(var(--ink-rgb) / 0.75)" }}
             >
               Full page →
             </Link>
@@ -214,7 +214,7 @@ export default function RatingModal({ bottle, onClose, onRatingSubmitted, onFlag
           {bottle.description && (
             <p
               className="mt-3 text-[15px] leading-relaxed"
-              style={{ color: "rgba(13,11,8,0.75)", fontFamily: "Georgia,serif", fontStyle: "italic" }}
+              style={{ color: "rgb(var(--ink-rgb) / 0.75)", fontFamily: "Georgia,serif", fontStyle: "italic" }}
             >
               {bottle.description}
             </p>
@@ -224,7 +224,7 @@ export default function RatingModal({ bottle, onClose, onRatingSubmitted, onFlag
           <div className="mt-4">
             {avgRating !== null ? (
               <p className="flex items-baseline gap-2 flex-wrap">
-                <span className="text-[26px] leading-none" style={{ color: "#8b1515", fontFamily: "Georgia,serif" }}>
+                <span className="text-[26px] leading-none" style={{ color: "var(--accent)", fontFamily: "Georgia,serif" }}>
                   {avgRating.toFixed(1)}
                 </span>
                 <span className="text-[14px]" style={{ color: MUTED }}>
@@ -249,26 +249,26 @@ export default function RatingModal({ bottle, onClose, onRatingSubmitted, onFlag
           {!userId ? (
             <div
               className="rounded-sm p-4 flex items-center justify-between gap-4 flex-wrap"
-              style={{ background: "rgba(13,11,8,0.04)", border: "1px solid rgba(13,11,8,0.1)" }}
+              style={{ background: "rgb(var(--ink-rgb) / 0.04)", border: "1px solid rgb(var(--ink-rgb) / 0.1)" }}
             >
-              <p className="text-[14px]" style={{ color: "rgba(13,11,8,0.75)" }}>
+              <p className="text-[14px]" style={{ color: "rgb(var(--ink-rgb) / 0.75)" }}>
                 Tried it? Sign in to add your rating.
               </p>
               <button
                 onClick={onSignIn}
                 className="px-4 py-2 rounded-sm text-[14px] font-semibold"
-                style={{ background: "#0d0b08", color: "#f4eed8" }}
+                style={{ background: "var(--ink)", color: "var(--panel)" }}
               >
                 Sign in to rate
               </button>
             </div>
           ) : submitted ? (
             <div className="text-center py-4">
-              <p className="font-semibold text-lg" style={{ fontFamily: "Georgia,serif", color: "#0d0b08" }}>
+              <p className="font-semibold text-lg" style={{ fontFamily: "Georgia,serif", color: "var(--ink)" }}>
                 Rating submitted
               </p>
               <p className="text-[14px] mt-1" style={{ color: MUTED }}>
-                You rated this <span style={{ fontWeight: 700, color: "#8b1515" }}>{rating}/10</span>
+                You rated this <span style={{ fontWeight: 700, color: "var(--accent)" }}>{rating}/10</span>
               </p>
               <button
                 onClick={() => setSubmitted(false)}
@@ -298,11 +298,11 @@ export default function RatingModal({ bottle, onClose, onRatingSubmitted, onFlag
                       aria-pressed={isSelected}
                       className="flex-1 h-10 rounded-sm text-sm font-bold transition-all"
                       style={{
-                        background: isActive ? "rgba(139,21,21,0.1)" : "rgba(13,11,8,0.04)",
+                        background: isActive ? "rgb(var(--accent-rgb) / 0.1)" : "rgb(var(--ink-rgb) / 0.04)",
                         border: isActive
-                          ? `1px solid ${isSelected ? "#8b1515" : "rgba(139,21,21,0.4)"}`
-                          : "1px solid rgba(13,11,8,0.12)",
-                        color: isActive ? "#8b1515" : "rgba(13,11,8,0.55)",
+                          ? `1px solid ${isSelected ? "var(--accent)" : "rgb(var(--accent-rgb) / 0.4)"}`
+                          : "1px solid rgb(var(--ink-rgb) / 0.12)",
+                        color: isActive ? "var(--accent)" : "rgb(var(--ink-rgb) / 0.55)",
                       }}
                       onMouseEnter={() => setHovered(n)}
                       onMouseLeave={() => setHovered(0)}
@@ -322,7 +322,7 @@ export default function RatingModal({ bottle, onClose, onRatingSubmitted, onFlag
                 ].map(({ label, value, setter }) => (
                   <div key={label}>
                     <label className="block text-[13px] mb-1" style={{ color: MUTED, fontFamily: "Georgia,serif" }}>
-                      {label} <span style={{ color: "rgba(13,11,8,0.45)" }}>(optional)</span>
+                      {label} <span style={{ color: "var(--ink-muted)" }}>(optional)</span>
                       <input
                         type="text"
                         value={value}
@@ -330,13 +330,13 @@ export default function RatingModal({ bottle, onClose, onRatingSubmitted, onFlag
                         placeholder={`Describe the ${label.toLowerCase()}…`}
                         className="mt-1 block w-full rounded-sm px-3 py-2 text-[15px] outline-none transition-all"
                         style={{
-                          background: "rgba(255,255,255,0.6)",
-                          border: "1px solid rgba(13,11,8,0.15)",
-                          color: "#0d0b08",
+                          background: "var(--field-bg)",
+                          border: "1px solid rgb(var(--ink-rgb) / 0.15)",
+                          color: "var(--ink)",
                           fontFamily: "system-ui, -apple-system, sans-serif",
                         }}
-                        onFocus={(e) => (e.currentTarget.style.borderColor = "rgba(13,11,8,0.4)")}
-                        onBlur={(e) => (e.currentTarget.style.borderColor = "rgba(13,11,8,0.15)")}
+                        onFocus={(e) => (e.currentTarget.style.borderColor = "rgb(var(--ink-rgb) / 0.4)")}
+                        onBlur={(e) => (e.currentTarget.style.borderColor = "rgb(var(--ink-rgb) / 0.15)")}
                       />
                     </label>
                   </div>
@@ -344,7 +344,7 @@ export default function RatingModal({ bottle, onClose, onRatingSubmitted, onFlag
               </div>
 
               {error && (
-                <p className="mt-3 text-[13px]" role="alert" style={{ color: "#8b1515" }}>{error}</p>
+                <p className="mt-3 text-[13px]" role="alert" style={{ color: "var(--accent)" }}>{error}</p>
               )}
 
               <button
@@ -353,8 +353,8 @@ export default function RatingModal({ bottle, onClose, onRatingSubmitted, onFlag
                 className="mt-5 w-full py-2.5 rounded-sm text-[15px] font-semibold transition-all"
                 style={
                   rating === 0 || submitting
-                    ? { background: "rgba(13,11,8,0.07)", color: "rgba(13,11,8,0.45)", cursor: "not-allowed" }
-                    : { background: "#0d0b08", color: "#f4eed8", cursor: "pointer" }
+                    ? { background: "rgb(var(--ink-rgb) / 0.07)", color: "var(--ink-muted)", cursor: "not-allowed" }
+                    : { background: "var(--ink)", color: "var(--panel)", cursor: "pointer" }
                 }
               >
                 {submitting ? "Submitting…" : "Submit rating"}
@@ -375,7 +375,7 @@ export default function RatingModal({ bottle, onClose, onRatingSubmitted, onFlag
 
         {/* Tasting notes people left with their ratings */}
         {withNotes.length > 0 && (
-          <div className="px-6 pb-6" style={{ borderTop: "1px solid rgba(13,11,8,0.08)" }}>
+          <div className="px-6 pb-6" style={{ borderTop: "1px solid rgb(var(--ink-rgb) / 0.08)" }}>
             <p
               className="text-xs uppercase pt-4 mb-3"
               style={{ color: MUTED, fontFamily: "Georgia,serif", letterSpacing: "0.13em" }}
@@ -387,10 +387,10 @@ export default function RatingModal({ bottle, onClose, onRatingSubmitted, onFlag
                 <div
                   key={i}
                   className="rounded-sm p-3"
-                  style={{ background: "rgba(13,11,8,0.03)", border: "1px solid rgba(13,11,8,0.08)" }}
+                  style={{ background: "rgb(var(--ink-rgb) / 0.03)", border: "1px solid rgb(var(--ink-rgb) / 0.08)" }}
                 >
                   <div className="flex items-center gap-2 mb-1.5">
-                    <span className="font-semibold text-[14px]" style={{ color: "#8b1515", fontFamily: "Georgia,serif" }}>
+                    <span className="font-semibold text-[14px]" style={{ color: "var(--accent)", fontFamily: "Georgia,serif" }}>
                       {r.rating}/10
                     </span>
                     <span className="text-[12px]" style={{ color: MUTED }}>
@@ -406,7 +406,7 @@ export default function RatingModal({ bottle, onClose, onRatingSubmitted, onFlag
                       <span className="capitalize" style={{ color: MUTED, fontFamily: "Georgia,serif", fontStyle: "italic" }}>
                         {key}:{" "}
                       </span>
-                      <span style={{ color: "rgba(13,11,8,0.8)" }}>{val}</span>
+                      <span style={{ color: "rgb(var(--ink-rgb) / 0.8)" }}>{val}</span>
                     </p>
                   ))}
                 </div>

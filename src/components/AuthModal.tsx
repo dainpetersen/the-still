@@ -131,21 +131,21 @@ export default function AuthModal({ onSuccess, onClose }: Props) {
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ background: "rgba(0,0,0,0.75)", backdropFilter: "blur(4px)" }}
+      style={{ background: "var(--scrim)", backdropFilter: "blur(4px)" }}
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div
         className="relative w-full max-w-sm rounded-2xl p-8"
         style={{
-          background: "linear-gradient(135deg,#0d0d18 0%,#0a0610 100%)",
-          border: "1px solid rgba(245,158,11,0.2)",
-          boxShadow: "0 24px 60px rgba(0,0,0,0.6)",
+          background: "var(--panel)",
+          border: "1px solid rgb(var(--accent-rgb) / 0.2)",
+          boxShadow: "0 24px 60px rgba(0,0,0,0.35)",
         }}
       >
         {/* Close button */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 w-7 h-7 flex items-center justify-center rounded-full text-white/40 hover:text-white hover:bg-white/10 transition-colors"
+          className="absolute top-4 right-4 w-7 h-7 flex items-center justify-center rounded-full text-muted hover:text-ink hover:bg-ink/10 transition-colors"
         >
           ✕
         </button>
@@ -153,11 +153,11 @@ export default function AuthModal({ onSuccess, onClose }: Props) {
         {/* ── VIEW: choose ───────────────────────────────────────────────── */}
         {view === "choose" && (
           <>
-            <p className="text-xs uppercase tracking-[0.2em] mb-1" style={{ color: "rgba(245,158,11,0.6)" }}>
+            <p className="text-xs uppercase tracking-[0.2em] mb-1" style={{ color: "rgb(var(--accent-rgb) / 0.6)" }}>
               Common Cask
             </p>
-            <h2 className="text-xl font-bold text-white mb-1">Sign in to continue</h2>
-            <p className="text-sm mb-8" style={{ color: "rgba(255,255,255,0.35)" }}>
+            <h2 className="text-xl font-bold text-ink mb-1">Sign in to continue</h2>
+            <p className="text-sm mb-8" style={{ color: "var(--ink-muted)" }}>
               Rate bottles and submit new entries.
             </p>
 
@@ -167,9 +167,9 @@ export default function AuthModal({ onSuccess, onClose }: Props) {
               disabled={loading}
               className="w-full flex items-center justify-center gap-3 rounded-xl py-3 px-4 font-semibold text-sm mb-4 transition-all"
               style={{
-                background: "rgba(255,255,255,0.06)",
-                border: "1px solid rgba(255,255,255,0.15)",
-                color: "#fff",
+                background: "rgb(var(--ink-rgb) / 0.06)",
+                border: "1px solid rgb(var(--ink-rgb) / 0.15)",
+                color: "var(--ink)",
               }}
             >
               <svg width="18" height="18" viewBox="0 0 18 18">
@@ -183,9 +183,9 @@ export default function AuthModal({ onSuccess, onClose }: Props) {
 
             {/* Divider */}
             <div className="flex items-center gap-3 mb-4">
-              <div className="flex-1 h-px" style={{ background: "rgba(255,255,255,0.08)" }} />
-              <span className="text-xs" style={{ color: "rgba(255,255,255,0.25)" }}>or</span>
-              <div className="flex-1 h-px" style={{ background: "rgba(255,255,255,0.08)" }} />
+              <div className="flex-1 h-px" style={{ background: "rgb(var(--ink-rgb) / 0.08)" }} />
+              <span className="text-xs" style={{ color: "var(--ink-muted)" }}>or</span>
+              <div className="flex-1 h-px" style={{ background: "rgb(var(--ink-rgb) / 0.08)" }} />
             </div>
 
             {/* Email link */}
@@ -194,15 +194,15 @@ export default function AuthModal({ onSuccess, onClose }: Props) {
               className="w-full rounded-xl py-3 px-4 font-semibold text-sm transition-all"
               style={{
                 background: "transparent",
-                border: "1px solid rgba(245,158,11,0.25)",
-                color: "rgba(245,158,11,0.85)",
+                border: "1px solid rgb(var(--accent-rgb) / 0.25)",
+                color: "rgb(var(--accent-rgb) / 0.85)",
               }}
             >
               Sign in with email
             </button>
 
             {error && (
-              <p className="mt-4 text-xs text-center" style={{ color: "rgba(239,68,68,0.85)" }}>{error}</p>
+              <p className="mt-4 text-xs text-center" style={{ color: "rgb(var(--danger-rgb) / 0.85)" }}>{error}</p>
             )}
           </>
         )}
@@ -214,7 +214,7 @@ export default function AuthModal({ onSuccess, onClose }: Props) {
             <button
               onClick={() => { setView("choose"); setError(null); }}
               className="flex items-center gap-1 text-xs mb-6 transition-colors"
-              style={{ color: "rgba(255,255,255,0.35)" }}
+              style={{ color: "var(--ink-muted)" }}
             >
               ← Back
             </button>
@@ -222,7 +222,7 @@ export default function AuthModal({ onSuccess, onClose }: Props) {
             {/* Toggle */}
             <div
               className="flex rounded-xl p-1 mb-6"
-              style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}
+              style={{ background: "rgb(var(--ink-rgb) / 0.05)", border: "1px solid rgb(var(--ink-rgb) / 0.08)" }}
             >
               {(["signin", "signup"] as EmailMode[]).map((mode) => (
                 <button
@@ -230,9 +230,9 @@ export default function AuthModal({ onSuccess, onClose }: Props) {
                   onClick={() => { setEmailMode(mode); setError(null); }}
                   className="flex-1 rounded-lg py-2 text-sm font-semibold transition-all"
                   style={{
-                    background: emailMode === mode ? "rgba(245,158,11,0.15)" : "transparent",
-                    color: emailMode === mode ? "rgba(245,158,11,0.9)" : "rgba(255,255,255,0.35)",
-                    border: emailMode === mode ? "1px solid rgba(245,158,11,0.25)" : "1px solid transparent",
+                    background: emailMode === mode ? "rgb(var(--accent-rgb) / 0.15)" : "transparent",
+                    color: emailMode === mode ? "rgb(var(--accent-rgb) / 0.9)" : "rgb(var(--ink-rgb) / 0.35)",
+                    border: emailMode === mode ? "1px solid rgb(var(--accent-rgb) / 0.25)" : "1px solid transparent",
                   }}
                 >
                   {mode === "signin" ? "Sign In" : "Create Account"}
@@ -243,7 +243,7 @@ export default function AuthModal({ onSuccess, onClose }: Props) {
             <form onSubmit={handleEmail} className="space-y-3">
               {emailMode === "signup" && (
                 <div>
-                  <label className="block text-xs mb-1" style={{ color: "rgba(255,255,255,0.4)" }}>
+                  <label className="block text-xs mb-1" style={{ color: "var(--ink-muted)" }}>
                     Display name
                   </label>
                   <input
@@ -251,13 +251,13 @@ export default function AuthModal({ onSuccess, onClose }: Props) {
                     value={displayName}
                     onChange={(e) => setDisplayName(e.target.value)}
                     placeholder="Your name"
-                    className="w-full rounded-xl px-4 py-3 text-sm text-white placeholder-white/20 outline-none"
-                    style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }}
+                    className="w-full rounded-xl px-4 py-3 text-sm text-ink placeholder:text-muted outline-none"
+                    style={{ background: "rgb(var(--ink-rgb) / 0.05)", border: "1px solid rgb(var(--ink-rgb) / 0.1)" }}
                   />
                 </div>
               )}
               <div>
-                <label className="block text-xs mb-1" style={{ color: "rgba(255,255,255,0.4)" }}>
+                <label className="block text-xs mb-1" style={{ color: "var(--ink-muted)" }}>
                   Email
                 </label>
                 <input
@@ -266,12 +266,12 @@ export default function AuthModal({ onSuccess, onClose }: Props) {
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="you@example.com"
                   required
-                  className="w-full rounded-xl px-4 py-3 text-sm text-white placeholder-white/20 outline-none"
-                  style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }}
+                  className="w-full rounded-xl px-4 py-3 text-sm text-ink placeholder:text-muted outline-none"
+                  style={{ background: "rgb(var(--ink-rgb) / 0.05)", border: "1px solid rgb(var(--ink-rgb) / 0.1)" }}
                 />
               </div>
               <div>
-                <label className="block text-xs mb-1" style={{ color: "rgba(255,255,255,0.4)" }}>
+                <label className="block text-xs mb-1" style={{ color: "var(--ink-muted)" }}>
                   Password
                 </label>
                 <input
@@ -281,13 +281,13 @@ export default function AuthModal({ onSuccess, onClose }: Props) {
                   placeholder="••••••••"
                   required
                   minLength={6}
-                  className="w-full rounded-xl px-4 py-3 text-sm text-white placeholder-white/20 outline-none"
-                  style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }}
+                  className="w-full rounded-xl px-4 py-3 text-sm text-ink placeholder:text-muted outline-none"
+                  style={{ background: "rgb(var(--ink-rgb) / 0.05)", border: "1px solid rgb(var(--ink-rgb) / 0.1)" }}
                 />
               </div>
 
               {error && (
-                <p className="text-xs pt-1" style={{ color: "rgba(239,68,68,0.85)" }}>{error}</p>
+                <p className="text-xs pt-1" style={{ color: "rgb(var(--danger-rgb) / 0.85)" }}>{error}</p>
               )}
 
               <button
@@ -295,8 +295,8 @@ export default function AuthModal({ onSuccess, onClose }: Props) {
                 disabled={loading}
                 className="w-full rounded-xl py-3 px-4 font-semibold text-sm mt-2 transition-all disabled:opacity-50"
                 style={{
-                  background: "linear-gradient(135deg,rgba(245,158,11,0.8) 0%,rgba(217,119,6,0.9) 100%)",
-                  color: "#000",
+                  background: "var(--accent)",
+                  color: "var(--on-accent)",
                 }}
               >
                 {loading ? "Please wait…" : emailMode === "signin" ? "Sign In" : "Create Account"}
@@ -308,17 +308,17 @@ export default function AuthModal({ onSuccess, onClose }: Props) {
         {/* ── VIEW: profile ──────────────────────────────────────────────── */}
         {view === "profile" && (
           <>
-            <p className="text-xs uppercase tracking-[0.2em] mb-1" style={{ color: "rgba(245,158,11,0.6)" }}>
+            <p className="text-xs uppercase tracking-[0.2em] mb-1" style={{ color: "rgb(var(--accent-rgb) / 0.6)" }}>
               Optional
             </p>
-            <h2 className="text-xl font-bold text-white mb-1">Complete your profile</h2>
-            <p className="text-sm mb-6" style={{ color: "rgba(255,255,255,0.35)" }}>
+            <h2 className="text-xl font-bold text-ink mb-1">Complete your profile</h2>
+            <p className="text-sm mb-6" style={{ color: "var(--ink-muted)" }}>
               Tell us a bit about yourself — you can skip this anytime.
             </p>
 
             <div className="space-y-3">
               <div>
-                <label className="block text-xs mb-1" style={{ color: "rgba(255,255,255,0.4)" }}>
+                <label className="block text-xs mb-1" style={{ color: "var(--ink-muted)" }}>
                   Display name
                 </label>
                 <input
@@ -326,20 +326,20 @@ export default function AuthModal({ onSuccess, onClose }: Props) {
                   value={profileName}
                   onChange={(e) => setProfileName(e.target.value)}
                   placeholder="Your name"
-                  className="w-full rounded-xl px-4 py-3 text-sm text-white placeholder-white/20 outline-none"
-                  style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }}
+                  className="w-full rounded-xl px-4 py-3 text-sm text-ink placeholder:text-muted outline-none"
+                  style={{ background: "rgb(var(--ink-rgb) / 0.05)", border: "1px solid rgb(var(--ink-rgb) / 0.1)" }}
                 />
               </div>
 
               <div>
-                <label className="block text-xs mb-1" style={{ color: "rgba(255,255,255,0.4)" }}>
+                <label className="block text-xs mb-1" style={{ color: "var(--ink-muted)" }}>
                   Location (state)
                 </label>
                 <select
                   value={location}
                   onChange={(e) => setLocation(e.target.value)}
-                  className="w-full rounded-xl px-4 py-3 text-sm text-white outline-none appearance-none"
-                  style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }}
+                  className="w-full rounded-xl px-4 py-3 text-sm text-ink outline-none appearance-none"
+                  style={{ background: "rgb(var(--ink-rgb) / 0.05)", border: "1px solid rgb(var(--ink-rgb) / 0.1)" }}
                 >
                   <option value="">Select state…</option>
                   {US_STATES.map((s) => (
@@ -349,14 +349,14 @@ export default function AuthModal({ onSuccess, onClose }: Props) {
               </div>
 
               <div>
-                <label className="block text-xs mb-1" style={{ color: "rgba(255,255,255,0.4)" }}>
+                <label className="block text-xs mb-1" style={{ color: "var(--ink-muted)" }}>
                   Favorite style
                 </label>
                 <select
                   value={favoriteStyle}
                   onChange={(e) => setFavoriteStyle(e.target.value)}
-                  className="w-full rounded-xl px-4 py-3 text-sm text-white outline-none appearance-none"
-                  style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }}
+                  className="w-full rounded-xl px-4 py-3 text-sm text-ink outline-none appearance-none"
+                  style={{ background: "rgb(var(--ink-rgb) / 0.05)", border: "1px solid rgb(var(--ink-rgb) / 0.1)" }}
                 >
                   <option value="">Select style…</option>
                   {STYLES.map((s) => (
@@ -366,7 +366,7 @@ export default function AuthModal({ onSuccess, onClose }: Props) {
               </div>
 
               <div>
-                <label className="block text-xs mb-1" style={{ color: "rgba(255,255,255,0.4)" }}>
+                <label className="block text-xs mb-1" style={{ color: "var(--ink-muted)" }}>
                   Favorite distiller / brand
                 </label>
                 <input
@@ -374,14 +374,14 @@ export default function AuthModal({ onSuccess, onClose }: Props) {
                   value={favoriteBrand}
                   onChange={(e) => setFavoriteBrand(e.target.value)}
                   placeholder="e.g. Buffalo Trace"
-                  className="w-full rounded-xl px-4 py-3 text-sm text-white placeholder-white/20 outline-none"
-                  style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }}
+                  className="w-full rounded-xl px-4 py-3 text-sm text-ink placeholder:text-muted outline-none"
+                  style={{ background: "rgb(var(--ink-rgb) / 0.05)", border: "1px solid rgb(var(--ink-rgb) / 0.1)" }}
                 />
               </div>
             </div>
 
             {error && (
-              <p className="mt-3 text-xs" style={{ color: "rgba(239,68,68,0.85)" }}>{error}</p>
+              <p className="mt-3 text-xs" style={{ color: "rgb(var(--danger-rgb) / 0.85)" }}>{error}</p>
             )}
 
             <div className="flex gap-3 mt-6">
@@ -391,8 +391,8 @@ export default function AuthModal({ onSuccess, onClose }: Props) {
                 className="flex-1 rounded-xl py-3 px-4 text-sm font-medium transition-all disabled:opacity-50"
                 style={{
                   background: "transparent",
-                  border: "1px solid rgba(255,255,255,0.1)",
-                  color: "rgba(255,255,255,0.4)",
+                  border: "1px solid rgb(var(--ink-rgb) / 0.1)",
+                  color: "var(--ink-muted)",
                 }}
               >
                 Skip
@@ -402,8 +402,8 @@ export default function AuthModal({ onSuccess, onClose }: Props) {
                 disabled={loading}
                 className="flex-1 rounded-xl py-3 px-4 text-sm font-semibold transition-all disabled:opacity-50"
                 style={{
-                  background: "linear-gradient(135deg,rgba(245,158,11,0.8) 0%,rgba(217,119,6,0.9) 100%)",
-                  color: "#000",
+                  background: "var(--accent)",
+                  color: "var(--on-accent)",
                 }}
               >
                 {loading ? "Saving…" : "Save & Continue"}

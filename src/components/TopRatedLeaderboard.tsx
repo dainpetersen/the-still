@@ -103,7 +103,7 @@ function computeEntries(
   return { entries: all.sort(byRating).slice(0, 10), label: "Top Rated" };
 }
 
-const MUTED = "rgba(13,11,8,0.6)";
+const MUTED = "rgb(var(--ink-rgb) / 0.6)";
 
 export default function TopRatedLeaderboard({
   brands, ratings, searchQuery, groupMode, selectedGroup, onSelect,
@@ -119,7 +119,7 @@ export default function TopRatedLeaderboard({
   return (
     <div
       className="flex flex-col h-full overflow-hidden"
-      style={{ borderRight: "1px solid rgba(13,11,8,0.1)", padding: "16px 14px 12px" }}
+      style={{ borderRight: "1px solid rgb(var(--ink-rgb) / 0.1)", padding: "16px 14px 12px" }}
     >
       {/* Header */}
       <div className="flex-shrink-0 mb-2">
@@ -132,7 +132,7 @@ export default function TopRatedLeaderboard({
         {sublabel && (
           <p
             className="text-[13px] mt-0.5 truncate"
-            style={{ color: "#8b1515", fontFamily: "Georgia,serif", fontStyle: "italic" }}
+            style={{ color: "var(--accent)", fontFamily: "Georgia,serif", fontStyle: "italic" }}
           >
             {sublabel}
           </p>
@@ -140,7 +140,7 @@ export default function TopRatedLeaderboard({
         <p className="text-[11px] mt-1" style={{ color: MUTED }}>
           {MIN_RATINGS_TO_RANK}+ ratings to qualify
         </p>
-        <div className="mt-2" style={{ height: "1px", background: "rgba(13,11,8,0.1)" }} />
+        <div className="mt-2" style={{ height: "1px", background: "rgb(var(--ink-rgb) / 0.1)" }} />
       </div>
 
       {/* Body */}
@@ -165,12 +165,12 @@ export default function TopRatedLeaderboard({
               <button
                 type="button"
                 onClick={() => onSelect(item.id)}
-                className="w-full flex items-start gap-2 text-left rounded-sm px-1.5 py-2 transition-colors hover:bg-black/[0.04]"
+                className="w-full flex items-start gap-2 text-left rounded-sm px-1.5 py-2 transition-colors hover:bg-ink/5"
               >
                 {/* Rank */}
                 <span
                   className="text-[12px] font-bold tabular-nums w-4 text-right flex-shrink-0 mt-px"
-                  style={{ color: i < 3 ? "#8b1515" : "rgba(13,11,8,0.45)", fontFamily: "Georgia,serif" }}
+                  style={{ color: i < 3 ? "var(--accent)" : "rgb(var(--ink-rgb) / 0.45)", fontFamily: "Georgia,serif" }}
                 >
                   {i + 1}
                 </span>
@@ -179,7 +179,7 @@ export default function TopRatedLeaderboard({
                 <span className="flex-1 min-w-0">
                   <span
                     className="block text-[13px] font-semibold leading-snug line-clamp-2"
-                    style={{ color: "#0d0b08" }}
+                    style={{ color: "var(--ink)" }}
                   >
                     {item.name}
                   </span>
@@ -194,15 +194,15 @@ export default function TopRatedLeaderboard({
                   <span className="flex items-center gap-1.5 mt-1">
                     <span
                       className="flex-1 rounded-full overflow-hidden"
-                      style={{ height: "2px", background: "rgba(13,11,8,0.08)" }}
+                      style={{ height: "2px", background: "rgb(var(--ink-rgb) / 0.08)" }}
                     >
                       <span
                         className="block h-full rounded-full transition-all duration-500"
-                        style={{ width: `${(item.avg / 10) * 100}%`, background: "rgba(139,21,21,0.5)" }}
+                        style={{ width: `${(item.avg / 10) * 100}%`, background: "rgb(var(--accent-rgb) / 0.5)" }}
                       />
                     </span>
                     <span className="text-[12px] tabular-nums flex-shrink-0" style={{ fontFamily: "Georgia,serif" }}>
-                      <span className="font-semibold" style={{ color: "#8b1515" }}>{item.avg.toFixed(1)}</span>
+                      <span className="font-semibold" style={{ color: "var(--accent)" }}>{item.avg.toFixed(1)}</span>
                       <span style={{ color: MUTED }}> · {item.count}</span>
                     </span>
                   </span>

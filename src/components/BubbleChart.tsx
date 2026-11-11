@@ -1100,15 +1100,22 @@ export default function BubbleChart({
           angleMap.set(d.key, Math.atan2(c.cy - cY, c.cx - cX));
         });
 
-      // ── Pass 2: bounding-box collision avoidance across multiple rings ────
-      // Sort labels by angle, then greedily assign each to the innermost
-      // radial ring where its measured text box doesn't overlap any already-
-      // placed label.  Prefer rings that keep the box within SVG bounds.
-      const BASE_PAD  = 28;        // px from cluster edge to ring 0
-      const RING_STEP = 18;        // px between ring centres
-      const LABEL_H   = 15;        // estimated label line-height in px
-      const BOX_GAP   = 5;         // minimum clear space between boxes
-      const SVG_MARG  = 4;         // minimum margin from SVG edge
+      // ── Pass 2: a column of labels down each side of the cloud ────────────
+      // Each label wants to sit beside its own distillery: at the height its
+      // angle gives, just outside the cloud. Labels on the same side are then
+      // spaced so no two share a line. That holds however narrow the chart
+      // is, because labels on one side can only ever be stacked, and the two
+      // sides never reach each other. (Finding a free spot one label at a
+      // time broke down on narrower charts: with ~35 labels there was often
+      // no free spot left, and the leftovers landed on top of each other.)
+      const PAD      = 28;         // px from the cloud's edge to a label
+      const LABEL_H  = 15;         // label line-height in px
+      const LINE_GAP = 3;          // clear space between stacked labels
+      const SVG_MARG = 4;          // minimum margin from the chart's edge
+      // Kept clear for the controls that sit over the chart's corners.
+      const TOP_CLEAR          = 68;  // search box (left), Submit a Bottle (right)
+      const BOTTOM_CLEAR_LEFT  = 56;  // the Show: All / Current toggle
+      const BOTTOM_CLEAR_RIGHT = 14;
 
       // Measure actual rendered text widths via SVG getComputedTextLength().
       // Labels are already in the DOM at opacity 0 from the join above.
@@ -1119,62 +1126,44 @@ export default function BubbleChart({
           textWidthMap.set(d.key, this.getComputedTextLength());
         });
 
-      type LabelBox = { x1: number; y1: number; x2: number; y2: number };
-      type Placement = { lx: number; ly: number; anchor: "start" | "end" | "middle"; box: LabelBox };
-      const placed: LabelBox[] = [];
-
-      // Where a label ends up for a given ring and vertical nudge, after being
-      // kept inside the chart. Collisions are tested on this final box.
-      function place(θ: number, pad: number, tw: number, dy: number): Placement {
-        const cosθ = Math.cos(θ);
-        const anchor = cosθ > 0.2 ? "start" : cosθ < -0.2 ? "end" : "middle";
-        let lx = cX + (overallR + pad) * cosθ;
-        let ly = cY + (overallR + pad) * Math.sin(θ) + dy;
-        if (anchor === "start")    lx = Math.max(SVG_MARG, Math.min(liveW - SVG_MARG - tw, lx));
-        else if (anchor === "end") lx = Math.max(SVG_MARG + tw, Math.min(liveW - SVG_MARG, lx));
-        else                       lx = Math.max(SVG_MARG + tw / 2, Math.min(liveW - SVG_MARG - tw / 2, lx));
-        ly = Math.max(SVG_MARG + LABEL_H / 2, Math.min(liveH - SVG_MARG - LABEL_H / 2, ly));
-        const x1 = anchor === "start" ? lx : anchor === "end" ? lx - tw : lx - tw / 2;
-        return { lx, ly, anchor, box: { x1, y1: ly - LABEL_H / 2, x2: x1 + tw, y2: ly + LABEL_H / 2 } };
-      }
-
-      function overlaps(a: LabelBox, b: LabelBox): boolean {
-        return (
-          a.x1 - BOX_GAP < b.x2 + BOX_GAP &&
-          a.x2 + BOX_GAP > b.x1 - BOX_GAP &&
-          a.y1 - BOX_GAP < b.y2 + BOX_GAP &&
-          a.y2 + BOX_GAP > b.y1 - BOX_GAP
-        );
-      }
-
-      // Candidate spots, nearest first: further rings out, and nudges up or
-      // down (which is what frees a label pinned against the left/right edge).
-      const candidates: { pad: number; dy: number; cost: number }[] = [];
-      for (let ring = 0; ring < 8; ring++) {
-        for (const step of [0, 1, -1, 2, -2, 3, -3, 4, -4]) {
-          candidates.push({
-            pad: BASE_PAD + ring * RING_STEP,
-            dy: step * (LABEL_H + BOX_GAP),
-            cost: ring * RING_STEP + Math.abs(step) * (LABEL_H + BOX_GAP) * 1.1,
-          });
-        }
-      }
-      candidates.sort((a, b) => a.cost - b.cost);
-
-      const sortedByAngle = [...angleMap.entries()].sort(([, a], [, b]) => a - b);
+      type Placement = { lx: number; ly: number; anchor: "start" | "end" };
       const placements = new Map<string, Placement>();
-      for (const [key, θ] of sortedByAngle) {
-        const tw = textWidthMap.get(key) ?? key.length * 8;
-        let chosen = place(θ, BASE_PAD, tw, 0);
-        for (const c of candidates) {
-          const attempt = place(θ, c.pad, tw, c.dy);
-          if (!placed.some((b) => overlaps(attempt.box, b))) {
-            chosen = attempt;
-            break;
-          }
+      const reach = overallR + PAD;
+
+      for (const side of ["left", "right"] as const) {
+        const column = [...angleMap.entries()]
+          .filter(([, θ]) => (side === "right" ? Math.cos(θ) >= 0 : Math.cos(θ) < 0))
+          .map(([key, θ]) => ({ key, y: cY + reach * Math.sin(θ) }))
+          .sort((a, b) => a.y - b.y);
+        if (column.length === 0) continue;
+
+        const top = TOP_CLEAR;
+        const bottom = liveH - (side === "left" ? BOTTOM_CLEAR_LEFT : BOTTOM_CLEAR_RIGHT);
+        // The usual line spacing, squeezed only if this side has more labels than fit.
+        const spacing = Math.min(LABEL_H + LINE_GAP, (bottom - top) / Math.max(1, column.length - 1));
+
+        // Push down anything too close to the label above it…
+        for (let i = 0; i < column.length; i++) {
+          const min = i === 0 ? top : column[i - 1].y + spacing;
+          column[i].y = Math.max(column[i].y, min);
         }
-        placements.set(key, chosen);
-        placed.push(chosen.box);
+        // …then, where that ran off the bottom, push back up from the last one.
+        for (let i = column.length - 1; i >= 0; i--) {
+          const max = i === column.length - 1 ? bottom : column[i + 1].y - spacing;
+          column[i].y = Math.min(column[i].y, max);
+        }
+
+        for (const { key, y } of column) {
+          const tw = textWidthMap.get(key) ?? key.length * 8;
+          // Just outside the cloud at this height; above or below the cloud, near its centre line.
+          const dy = y - cY;
+          const out = Math.max(10, Math.abs(dy) < reach ? Math.sqrt(reach * reach - dy * dy) : 0);
+          const lx =
+            side === "right"
+              ? Math.max(SVG_MARG, Math.min(liveW - SVG_MARG - tw, cX + out))
+              : Math.max(SVG_MARG + tw, Math.min(liveW - SVG_MARG, cX - out));
+          placements.set(key, { lx, ly: y, anchor: side === "right" ? "start" : "end" });
+        }
       }
 
       // ── Pass 3: apply positions ───────────────────────────────────────────

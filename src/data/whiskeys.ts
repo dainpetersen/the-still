@@ -406,21 +406,23 @@ export const WHISKEY_DATA: Brand[] = [
         ],
       },
       {
-        id: "buffalo-trace-distillery-reddit",
-        name: "Buffalo Trace Distillery Reddit Imports",
+        // Same id as the Blanton's line in Supabase, so this bottle is merged
+        // into that line (Gold, Straight From The Barrel, Special Reserve).
+        // The bottle id is unchanged: its ratings and its URL depend on it.
+        id: "blantons",
+        name: "Blanton's Single Barrel",
         brandId: "buffalo-trace-distillery",
         bottles: [
           {
             id: "blantons-single-barrel",
-            name: "Blanton’s Single Barrel",
-            subBrandId: "buffalo-trace-distillery-reddit",
+            name: "Blanton's Original Single Barrel",
+            subBrandId: "blantons",
             abv: 46.5,
             price: 65,
             rarity: "limited",
             rarityScore: 52,
             style: "Bourbon",
             description: "The original single barrel bourbon. Iconic bottle and stopper. Honey and citrus.",
-            source: "community",
             availability: "current",
           },
         ],
@@ -932,8 +934,8 @@ export const WHISKEY_DATA: Brand[] = [
             id: "woodford-double-oaked",
             name: "Woodford Reserve Double Oaked",
             subBrandId: "woodford-reserve",
-            abv: 43.2,
-            price: 55,
+            abv: 45.2,
+            price: 60,
             rarity: "common",
             rarityScore: 15,
             style: "Bourbon",

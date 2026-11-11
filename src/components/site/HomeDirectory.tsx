@@ -72,9 +72,13 @@ export default function HomeDirectory({ catalog }: { catalog: Catalog }) {
             placements and no paid rankings.
           </p>
           <p className="mt-3 text-[15px] leading-relaxed" style={{ color: "rgba(13,11,8,0.7)" }}>
-            The chart above plots every bottle: group it by distillery, style, state, age or price, colour it by
-            price, rating or rarity, and select any bottle to rate it. Missing something? Sign in and use{" "}
-            <em>Submit a Bottle</em> — every entry is reviewed before it goes live.
+            Use the explorer above to search, sort and group every bottle, and select one to see its details or
+            rate it. Most ratings are scores from public whiskey reviews on Reddit; the rest come from members
+            here. <Link href="/about#ratings" className="cc-link">How ratings work</Link>.
+          </p>
+          <p className="mt-3 text-[15px] leading-relaxed" style={{ color: "rgba(13,11,8,0.7)" }}>
+            Missing something? Sign in and use <em>Submit a Bottle</em> — every entry is reviewed before it goes
+            live.
           </p>
         </section>
 

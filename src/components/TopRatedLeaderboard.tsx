@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import { Brand, GroupMode } from "@/types/whiskey";
 import { getAgeTier, getPriceTier } from "@/data/whiskeys";
+import { MIN_RATINGS_TO_RANK, byRating, isRanked, type RatingMap } from "@/lib/ratings";
 
 interface RankedEntry {
   id: string;
@@ -15,10 +16,12 @@ interface RankedEntry {
 
 interface Props {
   brands: Brand[];
-  ratings: Record<string, { avg: number; count: number }>;
+  ratings: RatingMap;
   searchQuery: string;
   groupMode: GroupMode;
   selectedGroup: string | null;
+  /** Open a bottle's details. */
+  onSelect: (bottleId: string) => void;
 }
 
 const PANEL_LABEL: Record<GroupMode, string> = {
@@ -31,20 +34,20 @@ const PANEL_LABEL: Record<GroupMode, string> = {
 
 function computeEntries(
   brands: Brand[],
-  ratings: Record<string, { avg: number; count: number }>,
+  ratings: RatingMap,
   searchQuery: string,
   groupMode: GroupMode,
   selectedGroup: string | null,
 ): { entries: RankedEntry[]; label: string; sublabel?: string } {
   const q = searchQuery.toLowerCase().trim();
 
-  // Flatten all rated bottles with their groupKey
+  // Every bottle with enough ratings to be ranked, with its group for this view.
   const all: (RankedEntry & { searchText: string })[] = [];
   for (const brand of brands) {
     for (const sub of brand.subBrands) {
       for (const bottle of sub.bottles) {
         const r = ratings[bottle.id];
-        if (!r || r.count < 1) continue;
+        if (!isRanked(r)) continue;
 
         let groupLabel = "";
         switch (groupMode) {
@@ -68,14 +71,10 @@ function computeEntries(
     }
   }
 
-  const byRating = (a: RankedEntry, b: RankedEntry) =>
-    b.avg - a.avg || b.count - a.count;
-
   // ── Search active: top 10 across matching bottles ─────────────────────────
   if (q) {
-    const filtered = all.filter((e) => e.searchText.includes(q));
     return {
-      entries: filtered.sort(byRating).slice(0, 10),
+      entries: all.filter((e) => e.searchText.includes(q)).sort(byRating).slice(0, 10),
       label: "Top Rated",
       sublabel: `"${searchQuery}"`,
     };
@@ -83,9 +82,8 @@ function computeEntries(
 
   // ── Group label selected (clicked a label on the chart) ───────────────────
   if (selectedGroup) {
-    const filtered = all.filter((e) => e.groupLabel === selectedGroup);
     return {
-      entries: filtered.sort(byRating).slice(0, 10),
+      entries: all.filter((e) => e.groupLabel === selectedGroup).sort(byRating).slice(0, 10),
       label: "Top Rated",
       sublabel: selectedGroup,
     };
@@ -96,25 +94,19 @@ function computeEntries(
     const best = new Map<string, RankedEntry>();
     for (const e of all) {
       const prev = best.get(e.groupLabel);
-      if (!prev || e.avg > prev.avg || (e.avg === prev.avg && e.count > prev.count)) {
-        best.set(e.groupLabel, e);
-      }
+      if (!prev || byRating(e, prev) < 0) best.set(e.groupLabel, e);
     }
-    return {
-      entries: [...best.values()].sort(byRating),
-      label: PANEL_LABEL[groupMode],
-    };
+    return { entries: [...best.values()].sort(byRating), label: PANEL_LABEL[groupMode] };
   }
 
   // ── Default: global top 10 ────────────────────────────────────────────────
-  return {
-    entries: all.sort(byRating).slice(0, 10),
-    label: "Top Rated",
-  };
+  return { entries: all.sort(byRating).slice(0, 10), label: "Top Rated" };
 }
 
+const MUTED = "rgba(13,11,8,0.6)";
+
 export default function TopRatedLeaderboard({
-  brands, ratings, searchQuery, groupMode, selectedGroup,
+  brands, ratings, searchQuery, groupMode, selectedGroup, onSelect,
 }: Props) {
   const { entries, label, sublabel } = useMemo(
     () => computeEntries(brands, ratings, searchQuery, groupMode, selectedGroup),
@@ -126,98 +118,99 @@ export default function TopRatedLeaderboard({
 
   return (
     <div
-      className="flex flex-col h-full overflow-hidden select-none"
+      className="flex flex-col h-full overflow-hidden"
       style={{ borderRight: "1px solid rgba(13,11,8,0.1)", padding: "16px 14px 12px" }}
     >
       {/* Header */}
-      <div className="flex-shrink-0 mb-3">
+      <div className="flex-shrink-0 mb-2">
         <p
-          className="text-[9px] uppercase tracking-[0.15em]"
-          style={{ color: "rgba(13,11,8,0.35)", fontFamily: "Georgia,serif" }}
+          className="text-xs uppercase"
+          style={{ color: MUTED, fontFamily: "Georgia,serif", letterSpacing: "0.13em" }}
         >
           {label}
         </p>
         {sublabel && (
           <p
-            className="text-[10px] mt-0.5 truncate"
+            className="text-[13px] mt-0.5 truncate"
             style={{ color: "#8b1515", fontFamily: "Georgia,serif", fontStyle: "italic" }}
           >
             {sublabel}
           </p>
         )}
+        <p className="text-[11px] mt-1" style={{ color: MUTED }}>
+          {MIN_RATINGS_TO_RANK}+ ratings to qualify
+        </p>
         <div className="mt-2" style={{ height: "1px", background: "rgba(13,11,8,0.1)" }} />
       </div>
 
       {/* Body */}
       {!hasAnyRatings ? (
         <p
-          className="text-[10px] mt-1 leading-relaxed"
-          style={{ color: "rgba(13,11,8,0.3)", fontFamily: "Georgia,serif", fontStyle: "italic" }}
+          className="text-[13px] mt-1 leading-relaxed"
+          style={{ color: MUTED, fontFamily: "Georgia,serif", fontStyle: "italic" }}
         >
-          No ratings yet. Click any bubble to rate a bottle.
+          No ratings yet. Select any bottle to rate it.
         </p>
       ) : entries.length === 0 ? (
         <p
-          className="text-[10px] mt-1 leading-relaxed"
-          style={{ color: "rgba(13,11,8,0.3)", fontFamily: "Georgia,serif", fontStyle: "italic" }}
+          className="text-[13px] mt-1 leading-relaxed"
+          style={{ color: MUTED, fontFamily: "Georgia,serif", fontStyle: "italic" }}
         >
-          No rated bottles match.
+          No matching bottle has {MIN_RATINGS_TO_RANK} ratings yet.
         </p>
       ) : (
-        <div className="flex flex-col gap-3 overflow-y-auto flex-1">
+        <ol className="flex flex-col overflow-y-auto flex-1 -mx-1.5">
           {entries.map((item, i) => (
-            <div key={item.id} className="flex items-start gap-2">
-              {/* Rank */}
-              <span
-                className="text-[10px] font-bold tabular-nums w-4 text-right flex-shrink-0 mt-px"
-                style={{
-                  color: i < 3 ? "#8b1515" : "rgba(13,11,8,0.22)",
-                  fontFamily: "Georgia,serif",
-                }}
+            <li key={item.id}>
+              <button
+                type="button"
+                onClick={() => onSelect(item.id)}
+                className="w-full flex items-start gap-2 text-left rounded-sm px-1.5 py-2 transition-colors hover:bg-black/[0.04]"
               >
-                {i + 1}
-              </span>
-
-              {/* Info */}
-              <div className="flex-1 min-w-0">
-                <p
-                  className="text-[11px] font-semibold leading-tight truncate"
-                  style={{ color: "#0d0b08" }}
+                {/* Rank */}
+                <span
+                  className="text-[12px] font-bold tabular-nums w-4 text-right flex-shrink-0 mt-px"
+                  style={{ color: i < 3 ? "#8b1515" : "rgba(13,11,8,0.45)", fontFamily: "Georgia,serif" }}
                 >
-                  {item.name}
-                </p>
-                <p
-                  className="text-[9px] truncate mt-[1px]"
-                  style={{ color: "rgba(13,11,8,0.4)", fontFamily: "Georgia,serif", fontStyle: "italic" }}
-                >
-                  {showGroupLabel ? item.groupLabel : item.brandName}
-                </p>
+                  {i + 1}
+                </span>
 
-                {/* Rating bar */}
-                <div className="flex items-center gap-1.5 mt-1">
-                  <div
-                    className="flex-1 rounded-full overflow-hidden"
-                    style={{ height: "2px", background: "rgba(13,11,8,0.08)" }}
-                  >
-                    <div
-                      className="h-full rounded-full transition-all duration-500"
-                      style={{
-                        width: `${(item.avg / 10) * 100}%`,
-                        background: "rgba(139,21,21,0.45)",
-                      }}
-                    />
-                  </div>
+                {/* Info */}
+                <span className="flex-1 min-w-0">
                   <span
-                    className="text-[10px] tabular-nums flex-shrink-0"
-                    style={{ color: "rgba(13,11,8,0.55)", fontFamily: "Georgia,serif" }}
+                    className="block text-[13px] font-semibold leading-snug line-clamp-2"
+                    style={{ color: "#0d0b08" }}
                   >
-                    {item.avg.toFixed(1)}
+                    {item.name}
                   </span>
-                </div>
-              </div>
-            </div>
+                  <span
+                    className="block text-[12px] truncate mt-[1px]"
+                    style={{ color: MUTED, fontFamily: "Georgia,serif", fontStyle: "italic" }}
+                  >
+                    {showGroupLabel ? item.groupLabel : item.brandName}
+                  </span>
+
+                  {/* Rating bar */}
+                  <span className="flex items-center gap-1.5 mt-1">
+                    <span
+                      className="flex-1 rounded-full overflow-hidden"
+                      style={{ height: "2px", background: "rgba(13,11,8,0.08)" }}
+                    >
+                      <span
+                        className="block h-full rounded-full transition-all duration-500"
+                        style={{ width: `${(item.avg / 10) * 100}%`, background: "rgba(139,21,21,0.5)" }}
+                      />
+                    </span>
+                    <span className="text-[12px] tabular-nums flex-shrink-0" style={{ fontFamily: "Georgia,serif" }}>
+                      <span className="font-semibold" style={{ color: "#8b1515" }}>{item.avg.toFixed(1)}</span>
+                      <span style={{ color: MUTED }}> · {item.count}</span>
+                    </span>
+                  </span>
+                </span>
+              </button>
+            </li>
           ))}
-        </div>
+        </ol>
       )}
     </div>
   );

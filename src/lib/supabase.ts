@@ -154,6 +154,22 @@ export async function fetchAllAverageRatings(): Promise<
   );
 }
 
+/**
+ * How many ratings there are in total, and how many of those were imported
+ * from public Reddit reviews (their session_id is "reddit_<post id>") rather
+ * than entered by a Common Cask member. Two HEAD requests — no rows returned.
+ */
+export async function fetchRatingSourceCounts(): Promise<{ total: number; imported: number } | null> {
+  const client = getAnonClient();
+  if (!client) return null;
+  const [all, imported] = await Promise.all([
+    client.from("ratings").select("id", { count: "exact", head: true }),
+    client.from("ratings").select("id", { count: "exact", head: true }).like("session_id", "reddit_%"),
+  ]);
+  if (all.error || imported.error || all.count == null || imported.count == null) return null;
+  return { total: all.count, imported: imported.count };
+}
+
 export async function submitRating(payload: {
   bottleId: string;
   rating: number;

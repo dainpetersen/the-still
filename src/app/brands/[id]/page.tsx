@@ -36,7 +36,10 @@ async function findBrand(params: Params["params"]): Promise<{ catalog: Catalog; 
   const { id } = await params;
   const slug = decodeSlug(id);
   const catalog = await getCatalog();
-  return { catalog, brand: catalog.brandBySlug.get(slug), path: `/brands/${slug}` };
+  // The explorer links by catalog id, which for community entries isn't the
+  // slug; resolve those too and report the slug URL as canonical.
+  const brand = catalog.brandBySlug.get(slug) ?? catalog.brandById.get(slug);
+  return { catalog, brand, path: brand ? catalog.brandPaths.get(brand.id)! : `/brands/${slug}` };
 }
 
 function stylesOf(brand: Brand): WhiskeyStyle[] {
@@ -265,7 +268,8 @@ export default async function BrandPage({ params }: Params) {
 
         <p className="mt-6 text-[13px]" style={{ color: "rgba(13,11,8,0.55)" }}>
           Prices are suggested retail. Ratings are out of 10, shown with the number of ratings; a bottle needs{" "}
-          {MIN_RATINGS_TO_RANK} to be ranked.
+          {MIN_RATINGS_TO_RANK} to be ranked. Most ratings are scores from public Reddit whiskey reviews.{" "}
+          <Link href="/about#ratings" className="cc-link">How ratings work</Link>
         </p>
 
         {neighbours.length > 0 && (

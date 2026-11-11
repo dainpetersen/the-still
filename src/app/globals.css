@@ -45,7 +45,7 @@ body::before {
 
 /* Search input placeholder */
 .search-input::placeholder {
-  color: rgba(13, 11, 8, 0.3);
+  color: rgba(13, 11, 8, 0.5);
 }
 
 /* ── Catalog pages (distillery + bottle pages, home directory) ───────────── */

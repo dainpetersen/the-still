@@ -14,7 +14,7 @@ export const metadata: Metadata = {
 export default async function Home() {
   const catalog = await getCatalog();
   return (
-    <HomeClient>
+    <HomeClient initialRatings={catalog.ratings}>
       <HomeDirectory catalog={catalog} />
       <SiteFooter />
     </HomeClient>

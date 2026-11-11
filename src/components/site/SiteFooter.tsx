@@ -13,6 +13,7 @@ export default function SiteFooter() {
         <nav aria-label="Footer" className="sm:ml-auto flex gap-5">
           <Link href="/" className="cc-link">Explorer</Link>
           <Link href="/brands" className="cc-link">All distilleries</Link>
+          <Link href="/about" className="cc-link">About &amp; ratings</Link>
         </nav>
       </div>
     </footer>

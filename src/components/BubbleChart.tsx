@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useCallback } from "react";
+import { useEffect, useMemo, useRef, useCallback } from "react";
 import * as d3 from "d3";
 import {
   Brand,
@@ -12,6 +12,14 @@ import {
 } from "@/types/whiskey";
 import { getAgeTier, getPriceTier } from "@/data/whiskeys";
 import { buildDistilleryColors } from "@/lib/distilleryColors";
+import { stateFromRegion } from "@/lib/mergeCatalog";
+import {
+  ensureLayers,
+  leaveTerritories,
+  renderTerritories,
+  rgId,
+  type TerritoryController,
+} from "@/components/bubbleTerritories";
 import {
   buildPriceScale,
   chartPalette,
@@ -241,14 +249,6 @@ function estimatedClusterRadius(count: number, avgR: number): number {
   return Math.sqrt(count * Math.PI * avgR * avgR) * 1.1;
 }
 
-// ── Gradient helpers ──────────────────────────────────────────────────────────
-
-// Sanitize a bottle ID for use as an SVG element id (community IDs can have
-// spaces or special chars when the sub-brand name is embedded in the slug).
-function rgId(id: string): string {
-  return `rg-${id.replace(/[^a-zA-Z0-9_-]/g, "_")}`;
-}
-
 // ── Halo helpers ──────────────────────────────────────────────────────────────
 
 function hexToRgba(hex: string, alpha: number): string {
@@ -384,6 +384,14 @@ export default function BubbleChart({
   const ratingsRef = useRef(ratings);
   ratingsRef.current = ratings;
 
+  const searchQueryRef = useRef(searchQuery);
+  searchQueryRef.current = searchQuery;
+
+  /** The distillery view's controller while that view is showing. */
+  const territoryRef = useRef<TerritoryController | null>(null);
+  /** Latest draw(), for the resize observer. */
+  const drawRef = useRef<() => void>(() => {});
+
   // ── Tooltip ────────────────────────────────────────────────────────────────
   const tooltipRef = useRef<HTMLDivElement | null>(null);
 
@@ -430,6 +438,23 @@ export default function BubbleChart({
     tip.style.left = `${x}px`;
     tip.style.top  = `${y}px`;
   }, []);
+
+  const showTerritoryTooltip = useCallback(
+    (event: MouseEvent, info: { key: string; count: number; state: string }) => {
+      const tip = tooltipRef.current;
+      if (!tip) return;
+      tip.innerHTML = `
+        <div style="font-weight:700;font-size:14px;color:var(--ink);font-family:Georgia,serif;">${esc(info.key)}</div>
+        <div style="font-size:12px;color:var(--ink-muted);margin-top:2px;">${info.count} bottle${info.count !== 1 ? "s" : ""}${info.state !== "Other" ? ` · ${esc(info.state)}` : ""}</div>
+        <div style="font-size:11px;color:var(--ink-muted);margin-top:6px;">Click to zoom in</div>
+      `;
+      tip.style.display = "block";
+      tip.style.opacity = "1";
+      moveTooltip(event);
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    []
+  );
 
   const hideTooltip = useCallback(() => {
     const tip = tooltipRef.current;
@@ -531,6 +556,50 @@ export default function BubbleChart({
     root.on("click.clearGroup", () => {
       onLabelClickRef.current?.(null);
     });
+
+    // ── Distillery view: territories, drawn by bubbleTerritories.ts ──────────
+    // Plain geometry rather than a simulation: every bottle has a fixed place
+    // inside its own distillery's territory.
+    if (isDistilleryMode) {
+      simRef.current?.stop();
+      simRef.current = null;
+      nodesRef.current = newNodes;
+      const places = new Map(
+        brands.map((b) => [
+          b.name,
+          {
+            state: b.state ?? stateFromRegion(b.region) ?? "Other",
+            city: (b.region ?? "").split(",")[0].trim(),
+          },
+        ])
+      );
+      territoryRef.current = renderTerritories<BubbleNode>({
+        svg,
+        width: W,
+        height: H,
+        nodes: newNodes,
+        places,
+        colorOf: colorFn,
+        groupColor: (key) => distColors.get(key),
+        quietClay: isBrandMode,
+        theme,
+        selected: selectedGroupRef.current ?? null,
+        query: searchQueryRef.current ?? "",
+        onSelect: (key) => onLabelClickRef.current?.(key),
+        onBubbleClick: (d) => onBottleClickRef.current(d),
+        onBubbleOver: showTooltip,
+        onTerritoryOver: showTerritoryTooltip,
+        onPointerMove: moveTooltip,
+        onPointerOut: hideTooltip,
+      });
+      return;
+    }
+    // Another view: clear the territories away and make sure the layers exist.
+    if (territoryRef.current) {
+      leaveTerritories(svg);
+      territoryRef.current = null;
+    }
+    ensureLayers(svg);
 
     // ── Labels layer ─────────────────────────────────────────────────────────
     const updateLabels = (animated: boolean) => {
@@ -809,7 +878,7 @@ export default function BubbleChart({
       const bl = root.select("g.bubbles-layer");
       halosG = bl.empty()
         ? root.append("g").attr("class", "halos-layer")
-        : root.insert("g", "g.bubbles-layer").attr("class", "halos-layer");
+        : root.insert("g", "g.viewport").attr("class", "halos-layer");
     }
 
     // ── Glow layer (per-bubble colored glow, behind bubbles) ──────────────────
@@ -909,7 +978,7 @@ export default function BubbleChart({
     // Circles within the same group merge into coloured clay when touching.
     // Clay is suppressed in brand color mode — bubble color already encodes
     // distillery identity, so the gooey blobs would be redundant noise.
-    const distGroupKeys = [...new Set(newNodes.map((n) => n.groupKey))];
+    const distGroupKeys: string[] = []; // the blurred backing was only ever shown in the old distillery view
     // Moderate opacity so coloured blobs are visible on cream paper
     const clayOpacity = (isDistilleryMode && !isBrandMode) ? 0.52 : 0;
 
@@ -1050,173 +1119,7 @@ export default function BubbleChart({
     const onSettled = () => {
       updateHalos(halosG, newNodes, false);
 
-      const labelsLayer = root.select<SVGGElement>("g.labels-layer");
-
-      // ── Grouped views: label above each cluster ────────────────────────────
-      if (!isDistilleryMode) {
-        placeGroupLabels();
-        return;
-      }
-
-      // ── Distillery: radial edge labels + cluster-edge leader lines ────────
-      // Re-read live dimensions — the container may have been resized by the
-      // ResizeObserver between when draw() captured W/H and when this fires.
-      const liveW = svgRef.current?.clientWidth  ?? W;
-      const liveH = svgRef.current?.clientHeight ?? H;
-      const cX = liveW / 2;
-      const cY = liveH / 2;
-
-      // Actual centroid of each distillery's settled bubbles
-      const sums = new Map<string, { sx: number; sy: number; count: number }>();
-      for (const n of newNodes) {
-        if (n.x == null || n.y == null) continue;
-        const s = sums.get(n.groupKey) ?? { sx: 0, sy: 0, count: 0 };
-        s.sx += n.x; s.sy += n.y; s.count++;
-        sums.set(n.groupKey, s);
-      }
-      const actualCentroids = new Map<string, { cx: number; cy: number }>();
-      for (const [g, s] of sums) {
-        actualCentroids.set(g, { cx: s.sx / s.count, cy: s.sy / s.count });
-      }
-
-      // Overall cluster bounding radius (farthest bubble edge from chart center)
-      let overallR = 0;
-      for (const n of newNodes) {
-        if (n.x == null || n.y == null) continue;
-        const dist = Math.sqrt((n.x - cX) ** 2 + (n.y - cY) ** 2) + n.r;
-        if (dist > overallR) overallR = dist;
-      }
-
-      type LineDatum = { key: string; x1: number; y1: number; x2: number; y2: number };
-      const lineData: LineDatum[] = [];
-
-      // ── Pass 1: compute angle for each distillery ──────────────────────────
-      const angleMap = new Map<string, number>();
-      labelsLayer
-        .selectAll<SVGTextElement, { key: string; x: number; y: number }>("text.group-label")
-        .each(function (d) {
-          const c = actualCentroids.get(d.key);
-          if (!c) return;
-          angleMap.set(d.key, Math.atan2(c.cy - cY, c.cx - cX));
-        });
-
-      // ── Pass 2: a column of labels down each side of the cloud ────────────
-      // Each label wants to sit beside its own distillery: at the height its
-      // angle gives, just outside the cloud. Labels on the same side are then
-      // spaced so no two share a line. That holds however narrow the chart
-      // is, because labels on one side can only ever be stacked, and the two
-      // sides never reach each other. (Finding a free spot one label at a
-      // time broke down on narrower charts: with ~35 labels there was often
-      // no free spot left, and the leftovers landed on top of each other.)
-      const PAD      = 28;         // px from the cloud's edge to a label
-      const LABEL_H  = 15;         // label line-height in px
-      const LINE_GAP = 3;          // clear space between stacked labels
-      const SVG_MARG = 4;          // minimum margin from the chart's edge
-      // Kept clear for the controls that sit over the chart's corners.
-      const TOP_CLEAR          = 68;  // search box (left), Submit a Bottle (right)
-      const BOTTOM_CLEAR_LEFT  = 56;  // the Show: All / Current toggle
-      const BOTTOM_CLEAR_RIGHT = 14;
-
-      // Measure actual rendered text widths via SVG getComputedTextLength().
-      // Labels are already in the DOM at opacity 0 from the join above.
-      const textWidthMap = new Map<string, number>();
-      labelsLayer
-        .selectAll<SVGTextElement, { key: string }>("text.group-label")
-        .each(function (d) {
-          textWidthMap.set(d.key, this.getComputedTextLength());
-        });
-
-      type Placement = { lx: number; ly: number; anchor: "start" | "end" };
-      const placements = new Map<string, Placement>();
-      const reach = overallR + PAD;
-
-      for (const side of ["left", "right"] as const) {
-        const column = [...angleMap.entries()]
-          .filter(([, θ]) => (side === "right" ? Math.cos(θ) >= 0 : Math.cos(θ) < 0))
-          .map(([key, θ]) => ({ key, y: cY + reach * Math.sin(θ) }))
-          .sort((a, b) => a.y - b.y);
-        if (column.length === 0) continue;
-
-        const top = TOP_CLEAR;
-        const bottom = liveH - (side === "left" ? BOTTOM_CLEAR_LEFT : BOTTOM_CLEAR_RIGHT);
-        // The usual line spacing, squeezed only if this side has more labels than fit.
-        const spacing = Math.min(LABEL_H + LINE_GAP, (bottom - top) / Math.max(1, column.length - 1));
-
-        // Push down anything too close to the label above it…
-        for (let i = 0; i < column.length; i++) {
-          const min = i === 0 ? top : column[i - 1].y + spacing;
-          column[i].y = Math.max(column[i].y, min);
-        }
-        // …then, where that ran off the bottom, push back up from the last one.
-        for (let i = column.length - 1; i >= 0; i--) {
-          const max = i === column.length - 1 ? bottom : column[i + 1].y - spacing;
-          column[i].y = Math.min(column[i].y, max);
-        }
-
-        for (const { key, y } of column) {
-          const tw = textWidthMap.get(key) ?? key.length * 8;
-          // Just outside the cloud at this height; above or below the cloud, near its centre line.
-          const dy = y - cY;
-          const out = Math.max(10, Math.abs(dy) < reach ? Math.sqrt(reach * reach - dy * dy) : 0);
-          const lx =
-            side === "right"
-              ? Math.max(SVG_MARG, Math.min(liveW - SVG_MARG - tw, cX + out))
-              : Math.max(SVG_MARG + tw, Math.min(liveW - SVG_MARG, cX - out));
-          placements.set(key, { lx, ly: y, anchor: side === "right" ? "start" : "end" });
-        }
-      }
-
-      // ── Pass 3: apply positions ───────────────────────────────────────────
-      labelsLayer
-        .selectAll<SVGTextElement, { key: string; x: number; y: number }>("text.group-label")
-        .each(function (d) {
-          const spot = placements.get(d.key);
-          if (!spot) return;
-          const { lx, ly, anchor } = spot;
-          const θ = angleMap.get(d.key) ?? 0;
-
-          const sel = selectedGroupRef.current;
-          const targetOpacity = sel ? (sel === d.key ? 1.0 : 0.2) : 0.92;
-
-          d3.select(this)
-            .attr("text-anchor", anchor)
-            .style("cursor", "pointer")
-            .on("click.labelFilter", (event: MouseEvent) => {
-              event.stopPropagation(); // don't bubble to SVG background handler
-              const current = selectedGroupRef.current;
-              onLabelClickRef.current?.(current === d.key ? null : d.key);
-            })
-            .transition().duration(350)
-            .attr("x", lx)
-            .attr("y", ly + 4)
-            .attr("opacity", targetOpacity);
-
-          // Leader line: cluster outer edge → label anchor
-          const ex = cX + overallR * Math.cos(θ);
-          const ey = cY + overallR * Math.sin(θ);
-          lineData.push({ key: d.key, x1: ex, y1: ey, x2: lx, y2: ly });
-        });
-
-      linesG
-        .selectAll<SVGLineElement, LineDatum>("line.leader")
-        .data(lineData, (d) => d.key)
-        .join(
-          (enter) =>
-            enter.append("line").attr("class", "leader")
-              .attr("x1", (d) => d.x1).attr("y1", (d) => d.y1)
-              .attr("x2", (d) => d.x2).attr("y2", (d) => d.y2)
-              .attr("stroke", (d) => distColors.get(d.key) ?? "rgba(255,255,255,0.3)")
-              .attr("stroke-width", 0.75)
-              .attr("stroke-dasharray", "3,3")
-              .attr("opacity", 0)
-              .style("pointer-events", "none")
-              .call((e) => e.transition().duration(300).attr("opacity", 0.45)),
-          (update) =>
-            update
-              .attr("x1", (d) => d.x1).attr("y1", (d) => d.y1)
-              .attr("x2", (d) => d.x2).attr("y2", (d) => d.y2),
-          (exit) => exit.transition().duration(200).attr("opacity", 0).remove()
-        );
+      placeGroupLabels();
     };
     simulation.on("end", onSettled);
 
@@ -1228,7 +1131,8 @@ export default function BubbleChart({
       onSettled();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [brands, colorMode, groupMode, sizeMode, theme, buildNodes, showTooltip, moveTooltip, hideTooltip]);
+  }, [brands, colorMode, groupMode, sizeMode, theme, buildNodes, showTooltip, showTerritoryTooltip, moveTooltip, hideTooltip]);
+  drawRef.current = draw;
 
   // ── Resize observer ────────────────────────────────────────────────────────
   useEffect(() => {
@@ -1242,6 +1146,10 @@ export default function BubbleChart({
       // The observer also fires once when it is attached; nothing changed then.
       const last = lastSizeRef.current;
       if (last && last.w === W && last.h === H) return;
+      if (groupMode === "distillery") {
+        drawRef.current();
+        return;
+      }
       lastSizeRef.current = { w: W, h: H };
       d3.select(svgRef.current).attr("width", W).attr("height", H);
 
@@ -1270,6 +1178,10 @@ export default function BubbleChart({
   useEffect(() => {
     const svg = svgRef.current;
     if (!svg) return;
+    if (groupMode === "distillery") {
+      territoryRef.current?.setFocus(selectedGroup ?? null, searchQuery ?? "");
+      return;
+    }
     const q   = (searchQuery ?? "").toLowerCase().trim();
     const sel = selectedGroup ?? null;
 
@@ -1325,7 +1237,7 @@ export default function BubbleChart({
         sel ? (d.key === sel ? 1.0 : 0.15) : 0.92
       );
     }
-  }, [searchQuery, selectedGroup]);
+  }, [searchQuery, selectedGroup, groupMode]);
 
   // ── Tooltip DOM element ────────────────────────────────────────────────────
   useEffect(() => {
@@ -1347,6 +1259,26 @@ export default function BubbleChart({
     };
   }, []);
 
+  // ── Zoomed into a distillery: its title, and Escape to come back out ───────
+  const zoomed = groupMode === "distillery" && selectedGroup ? selectedGroup : null;
+  const zoomedInfo = useMemo(() => {
+    if (!zoomed) return null;
+    const brand = brands.find((b) => b.name === zoomed);
+    if (!brand) return null;
+    const count = brand.subBrands.reduce((sum, sb) => sum + sb.bottles.length, 0);
+    return { count, region: brand.region };
+  }, [zoomed, brands]);
+
+  useEffect(() => {
+    if (!zoomed) return;
+    const onKey = (e: KeyboardEvent) => {
+      // A dialog on top (bottle details, sign-in) gets Escape first.
+      if (e.key === "Escape" && !document.querySelector('[role="dialog"]')) onLabelClickRef.current?.(null);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [zoomed]);
+
   // ── Cleanup simulation on unmount ─────────────────────────────────────────
   useEffect(() => {
     return () => { simRef.current?.stop(); };
@@ -1358,6 +1290,39 @@ export default function BubbleChart({
         ref={svgRef}
         style={{ width: "100%", height: "100%", display: "block" }}
       />
+      {zoomed && (
+        <div
+          className="absolute left-1/2 -translate-x-1/2 z-10 flex items-center gap-3 rounded-sm pl-1.5 pr-4 py-1.5 max-w-[calc(100%-24px)]"
+          style={{
+            top: 64,
+            background: "rgb(var(--panel-rgb) / 0.95)",
+            border: "1px solid var(--line-strong)",
+            boxShadow: "0 4px 16px rgba(0,0,0,0.12)",
+            backdropFilter: "blur(8px)",
+          }}
+        >
+          <button
+            type="button"
+            onClick={() => onLabelClick?.(null)}
+            className="flex-shrink-0 rounded-sm px-2.5 py-1.5 text-[13px] font-semibold transition-colors hover:bg-ink/10"
+            style={{ color: "var(--ink)" }}
+          >
+            ← All distilleries
+          </button>
+          <span
+            className="truncate text-[16px]"
+            style={{ fontFamily: "Georgia,serif", color: "var(--ink)" }}
+          >
+            {zoomed}
+          </span>
+          {zoomedInfo && (
+            <span className="flex-shrink-0 text-[13px] hidden sm:inline" style={{ color: "var(--ink-muted)" }}>
+              {zoomedInfo.count} {zoomedInfo.count === 1 ? "bottle" : "bottles"}
+              {zoomedInfo.region ? ` · ${zoomedInfo.region}` : ""}
+            </span>
+          )}
+        </div>
+      )}
     </div>
   );
 }

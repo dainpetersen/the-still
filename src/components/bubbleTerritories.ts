@@ -1,13 +1,14 @@
 import * as d3 from "d3";
 import { readableLabelColor, type ChartTheme } from "@/lib/colorScales";
-import { layoutTerritories, type GroupPlace, type StateDisc, type TerritoryDisc } from "@/lib/territoryLayout";
+import { CLAY_PAD, layoutTerritories, type GroupPlace, type Territory } from "@/lib/territoryLayout";
 
 /**
  * Drawing for the "Group By: Distillery" view of the bubble chart.
  *
- * Each distillery is a tinted disc (its territory) holding its bottles; the
- * discs are packed by state. Hovering a territory or its label picks it out;
- * selecting one flies the camera into it and names the bottles.
+ * Each distillery is a tight cluster of bottles on a patch of clay in its own
+ * colour, with a narrow channel between one distillery and the next.
+ * Hovering a cluster or its label picks it out; selecting one flies the
+ * camera into it and names the bottles.
  *
  * BubbleChart owns the <svg>, the data and the other Group By views (which
  * are physics simulations). It calls renderTerritories() whenever something
@@ -43,6 +44,8 @@ export interface TerritoryContext<N extends TerritoryNode> {
   colorOf: (node: N) => string;
   /** A distillery's own colour. */
   groupColor: (key: string) => string | undefined;
+  /** Bottles are already coloured by distillery, so the clay can sit back. */
+  quietClay?: boolean;
   theme: ChartTheme;
   /** Distillery currently zoomed into, if any. */
   selected: string | null;
@@ -66,19 +69,18 @@ export interface TerritoryController {
 /** Kept clear at the top for the search box, Submit a Bottle and the zoom title. */
 const TOP_CLEAR = 68;
 const BOTTOM_PAD = 24;
+/** On a roomy chart the picture may grow a little past the bottles' natural size. */
+const MAX_SCALE = 1.15;
 const FALLBACK_COLOR = "#8a7055";
 
 type View = [number, number, number]; // centre x, centre y, visible width — in chart coordinates
 
-type SvgWithView = SVGSVGElement & { __ccView?: View };
+/** The camera's position, and a token for the render that currently owns the view. */
+type SvgWithView = SVGSVGElement & { __ccView?: View; __ccRender?: object };
 
 /** Sanitise a bottle id for use as an SVG element id. */
 export function rgId(id: string): string {
   return `rg-${id.replace(/[^a-zA-Z0-9_-]/g, "_")}`;
-}
-
-function slug(text: string): string {
-  return text.toLowerCase().replace(/[^a-z0-9]+/g, "-");
 }
 
 function reducedMotion(): boolean {
@@ -90,9 +92,8 @@ function reducedMotion(): boolean {
 type G = d3.Selection<SVGGElement, unknown, null, undefined>;
 
 interface Layers {
-  /** Everything that zooms: state outlines, territories, bottles. */
+  /** Everything that zooms: the clay and the bottles on it. */
   viewport: G;
-  states: G;
   territories: G;
   bubbles: G;
   /** Drawn in screen space, over the zooming content. */
@@ -121,7 +122,6 @@ export function ensureLayers(svg: SVGSVGElement): Layers {
       : (viewport.append(() => stray.node()!) as unknown as G);
     return g;
   };
-  const states = within("states-layer");
   const territories = within("territories-layer");
   const bubbles = within("bubbles-layer");
 
@@ -134,14 +134,14 @@ export function ensureLayers(svg: SVGSVGElement): Layers {
   const labels = top("labels-layer");
   const names = top("names-layer").style("pointer-events", "none");
 
-  // Back to front: viewport (states, territories, bottles), lines, labels, names.
-  states.lower();
+  // Back to front: viewport (clay, bottles), lines, labels, names.
+  territories.lower();
   bubbles.raise();
   lines.raise();
   labels.raise();
   names.raise();
 
-  return { viewport, states, territories, bubbles, lines, labels, names };
+  return { viewport, territories, bubbles, lines, labels, names };
 }
 
 /** One radial gradient per bottle: solid in the middle, a little translucent at the rim. */
@@ -178,9 +178,19 @@ export function leaveTerritories(svg: SVGSVGElement): void {
   root.selectAll("circle.bubble").interrupt("move").interrupt("fade").attr("opacity", 1);
   viewport.interrupt("zoom").attr("transform", null);
   (svg as SvgWithView).__ccView = undefined;
+  // Disown the view, so a hover timer still pending from it can't redraw anything.
+  (svg as SvgWithView).__ccRender = undefined;
 
   const gone = reducedMotion() ? 0 : 220;
-  root.selectAll("circle.territory, g.state").interrupt().transition().duration(gone).attr("opacity", 0).remove();
+  root
+    .selectAll("g.territory")
+    .interrupt("fade")
+    .transition()
+    .duration(gone)
+    .attr("opacity", 0)
+    .on("end interrupt", function () {
+      (this as SVGGElement).remove();
+    });
   root.selectAll("text.bottle-name, line.hover-link").remove();
 }
 
@@ -238,11 +248,17 @@ function sharedLeadingWords(names: string[]): number {
 export function renderTerritories<N extends TerritoryNode>(ctx: TerritoryContext<N>): TerritoryController {
   const { svg, width: W, height: H, nodes, theme } = ctx;
   const L = ensureLayers(svg);
+  // Only the latest render may touch the chart; timers and callbacks left over
+  // from an earlier one (or from before another view took over) do nothing.
+  const holder = svg as SvgWithView;
+  const token = {};
+  holder.__ccRender = token;
+  const live = () => holder.__ccRender === token;
   const still = reducedMotion();
   const ms = (n: number) => (still ? 0 : n);
 
   // Arriving from another view (or loading for the first time) gets a fuller entrance.
-  const arriving = L.territories.select("circle.territory").empty();
+  const arriving = L.territories.select("g.territory").empty();
 
   // ── Layout, scaled to fit beside the label columns ─────────────────────────
   const layout = layoutTerritories(
@@ -252,7 +268,7 @@ export function renderTerritories<N extends TerritoryNode>(ctx: TerritoryContext
   const labelSpace = Math.max(84, Math.min(190, W * 0.17));
   const availW = W - labelSpace * 2;
   const availH = H - TOP_CLEAR - BOTTOM_PAD;
-  const k = layout.radius > 0 ? Math.max(0.5, Math.min(1, Math.min(availW, availH) / (layout.radius * 2))) : 1;
+  const k = layout.radius > 0 ? Math.max(0.5, Math.min(MAX_SCALE, Math.min(availW, availH) / (layout.radius * 2))) : 1;
   const cX = W / 2;
   const cY = TOP_CLEAR + availH / 2;
   const cloudR = layout.radius * k;
@@ -263,10 +279,12 @@ export function renderTerritories<N extends TerritoryNode>(ctx: TerritoryContext
     n.x = cX + (p?.x ?? 0) * k;
     n.y = cY + (p?.y ?? 0) * k;
   }
-  const place = <D extends { x: number; y: number; r: number }>(d: D): D => ({ ...d, x: cX + d.x * k, y: cY + d.y * k, r: d.r * k });
-  const territories: TerritoryDisc[] = layout.territories.map(place);
-  const states: StateDisc[] = layout.states.map(place);
+  // Chart coordinates for the camera and labels; the clay outline stays in
+  // layout coordinates and is drawn through the same scale and shift.
+  const territories: Territory[] = layout.territories.map((t) => ({ ...t, x: cX + t.x * k, y: cY + t.y * k, r: t.r * k }));
   const territoryOf = new Map(territories.map((t) => [t.key, t]));
+  const membersOf = d3.group(nodes, (n) => n.groupKey);
+  const clayTransform = `translate(${cX},${cY}) scale(${k})`;
 
   // Entrance order: territories nearest the middle first.
   const rank = new Map(
@@ -277,7 +295,7 @@ export function renderTerritories<N extends TerritoryNode>(ctx: TerritoryContext
   const stagger = (key: string) => (still ? 0 : (rank.get(key) ?? 0) * 9);
 
   const ringColor = (key: string) => readableLabelColor(ctx.groupColor(key) ?? FALLBACK_COLOR, theme);
-  const tint = theme === "dark" ? 0.16 : 0.12;
+  const clayAlpha = (theme === "dark" ? 0.44 : 0.5) * (ctx.quietClay ? 0.55 : 1);
 
   // ── What is being pointed at, zoomed into, searched for ────────────────────
   const state = { selected: ctx.selected && territoryOf.has(ctx.selected) ? ctx.selected : null, query: ctx.query, hover: null as string | null };
@@ -344,39 +362,73 @@ export function renderTerritories<N extends TerritoryNode>(ctx: TerritoryContext
       ctx.onBubbleClick(d);
     });
 
-  // ── Territories ────────────────────────────────────────────────────────────
-  const discs = L.territories
-    .selectAll<SVGCircleElement, TerritoryDisc>("circle.territory")
+  // ── Clay: one patch under each distillery's bottles ────────────────────────
+  const patches = L.territories
+    .selectAll<SVGGElement, Territory>("g.territory")
     .data(territories, (d) => d.key)
     .join(
-      (enter) =>
-        enter
-          .append("circle")
-          .attr("class", "territory")
-          .attr("cx", (d) => d.x)
-          .attr("cy", (d) => d.y)
-          .attr("r", (d) => d.r * 0.7)
-          .attr("opacity", 0)
-          .attr("fill-opacity", tint)
-          .attr("stroke-width", 1.2)
-          .style("cursor", "pointer"),
+      (enter) => {
+        const g = enter.append("g").attr("class", "territory").attr("opacity", 0).style("cursor", "pointer");
+        g.append("path")
+          .attr("class", "clay")
+          .attr("vector-effect", "non-scaling-stroke")
+          .attr("stroke-linejoin", "round")
+          .attr("stroke-width", 1.5)
+          .attr("stroke-opacity", 0)
+          .attr("fill-opacity", clayAlpha);
+        return g;
+      },
       (update) => update,
-      (exit) => exit.interrupt().transition().duration(ms(200)).attr("opacity", 0).remove()
-    )
-    .attr("vector-effect", "non-scaling-stroke")
+      (exit) => exit.interrupt("fade").transition().duration(ms(200)).attr("opacity", 0).remove()
+    );
+
+  const clay = patches
+    .select<SVGPathElement>("path.clay")
     .attr("fill", (d) => ctx.groupColor(d.key) ?? FALLBACK_COLOR)
     .style("stroke", (d) => ringColor(d.key));
 
-  discs
-    .transition("move")
-    .delay((d) => (arriving ? stagger(d.key) + ms(180) : 0))
-    .duration(ms(arriving ? 620 : 520))
-    .ease(d3.easeCubicOut)
-    .attr("cx", (d) => d.x)
-    .attr("cy", (d) => d.y)
-    .attr("r", (d) => d.r);
+  clay.each(function (d) {
+    const path = d3.select(this);
+    const had = path.attr("d");
+    if (!had || still) {
+      // New (or no animation wanted): lay it down, letting the bottles land first.
+      path.interrupt("shape").attr("d", d.outline).attr("transform", clayTransform).attr("opacity", !had && !still ? 0 : 1);
+      if (!had && !still) {
+        path
+          .transition("shape")
+          .delay(stagger(d.key) + (arriving ? 420 : 0))
+          .duration(460)
+          .attr("opacity", 1);
+      }
+    } else if (had === d.outline) {
+      // Same shape, perhaps a new size: move in step with the bottles.
+      path
+        .interrupt("shape")
+        .transition("shape")
+        .duration(520)
+        .ease(d3.easeCubicInOut)
+        .attr("transform", clayTransform)
+        .attr("opacity", 1);
+    } else {
+      // The bottles are regrouping: lift the clay, lay the new shape once they land.
+      path
+        .interrupt("shape")
+        .transition("shape")
+        .duration(120)
+        .attr("opacity", 0)
+        .on("end", function () {
+          d3.select(this)
+            .attr("d", d.outline)
+            .attr("transform", clayTransform)
+            .transition("shape")
+            .delay(320)
+            .duration(360)
+            .attr("opacity", 1);
+        });
+    }
+  });
 
-  discs
+  patches
     .on("mouseover", (event: MouseEvent, d) => {
       ctx.onTerritoryOver(event, { key: d.key, count: d.count, state: d.state });
       setHover(d.key);
@@ -392,50 +444,9 @@ export function renderTerritories<N extends TerritoryNode>(ctx: TerritoryContext
       if (state.selected !== d.key) ctx.onSelect(d.key);
     });
 
-  // ── State outlines (only where a state has more than one distillery) ───────
-  const multi = states.filter((s) => s.count > 1);
-  const stateG = L.states
-    .selectAll<SVGGElement, StateDisc>("g.state")
-    .data(multi, (d) => d.key)
-    .join(
-      (enter) => {
-        const g = enter.append("g").attr("class", "state").attr("opacity", 0).style("pointer-events", "none");
-        g.append("circle")
-          .attr("class", "state-ring")
-          .attr("fill", "none")
-          .attr("vector-effect", "non-scaling-stroke")
-          .attr("stroke-width", 1)
-          .attr("stroke-dasharray", "2 5")
-          .style("stroke", "rgb(var(--ink-rgb) / 0.32)");
-        g.append("path").attr("class", "state-arc").attr("fill", "none");
-        g.append("text")
-          .attr("class", "state-name")
-          .attr("font-size", "10px")
-          .attr("font-weight", "600")
-          .attr("letter-spacing", "0.24em")
-          .style("fill", "var(--ink-muted)")
-          .append("textPath")
-          .attr("startOffset", "50%")
-          .attr("text-anchor", "middle");
-        return g;
-      },
-      (update) => update,
-      (exit) => exit.interrupt().transition().duration(ms(200)).attr("opacity", 0).remove()
-    );
-  stateG.each(function (d) {
-    const g = d3.select(this);
-    const ring = Math.max(4, d.r - 9 * k);
-    const arc = ring + 3;
-    const id = `state-arc-${slug(d.key)}`;
-    g.select("circle.state-ring").attr("cx", d.x).attr("cy", d.y).attr("r", ring);
-    // Left to right over the top, so the name reads along the upper edge.
-    g.select("path.state-arc").attr("id", id).attr("d", `M${d.x - arc} ${d.y}A${arc} ${arc} 0 0 1 ${d.x + arc} ${d.y}`);
-    g.select("textPath").attr("href", `#${id}`).text(d.key.toUpperCase());
-  });
-
   // ── Labels: a column down each side, each beside its own distillery ────────
   const labels = L.labels
-    .selectAll<SVGTextElement, TerritoryDisc>("text.group-label")
+    .selectAll<SVGTextElement, Territory>("text.group-label")
     .data(territories, (d) => d.key)
     .join(
       (enter) =>
@@ -522,7 +533,7 @@ export function renderTerritories<N extends TerritoryNode>(ctx: TerritoryContext
 
   // Short stubs from the edge of the cloud toward each label.
   const stubs = L.lines
-    .selectAll<SVGLineElement, TerritoryDisc>("line.leader")
+    .selectAll<SVGLineElement, Territory>("line.leader")
     .data(territories, (d) => d.key)
     .join((enter) => enter.append("line").attr("class", "leader").attr("opacity", 0).style("pointer-events", "none"))
     .attr("stroke-width", 0.75)
@@ -541,7 +552,7 @@ export function renderTerritories<N extends TerritoryNode>(ctx: TerritoryContext
 
   // ── Camera ─────────────────────────────────────────────────────────────────
   const home: View = [W / 2, H / 2, W];
-  const scaleFor = (t: TerritoryDisc) => Math.max(1, Math.min(8, (0.76 * Math.min(W, H - 110)) / (t.r * 2)));
+  const scaleFor = (t: Territory) => Math.max(1, Math.min(8, (0.76 * Math.min(W, H - 110)) / (t.r * 2)));
   const viewFor = (key: string | null): View => {
     const t = key ? territoryOf.get(key) : undefined;
     if (!t) return home;
@@ -550,7 +561,6 @@ export function renderTerritories<N extends TerritoryNode>(ctx: TerritoryContext
     return [t.x, t.y - 26 / s, W / s];
   };
   const toTransform = (v: View) => `translate(${W / 2},${H / 2}) scale(${W / v[2]}) translate(${-v[0]},${-v[1]})`;
-  const holder = svg as SvgWithView;
   const sameView = (a: View, b: View) => Math.abs(a[0] - b[0]) < 0.5 && Math.abs(a[1] - b[1]) < 0.5 && Math.abs(a[2] - b[2]) < 0.5;
 
   function drawNames(): void {
@@ -627,6 +637,7 @@ export function renderTerritories<N extends TerritoryNode>(ctx: TerritoryContext
         return toTransform(v);
       })
       .on("end", () => {
+        if (!live()) return;
         holder.__ccView = target;
         if (!key) L.viewport.attr("transform", null);
         drawNames();
@@ -635,6 +646,7 @@ export function renderTerritories<N extends TerritoryNode>(ctx: TerritoryContext
 
   // ── Emphasis: one place decides how strongly everything is drawn ───────────
   function applyEmphasis(duration: number): void {
+    if (!live()) return;
     const sel = state.selected;
     const hov = sel ? null : state.hover;
     const q = state.query.trim();
@@ -652,19 +664,21 @@ export function renderTerritories<N extends TerritoryNode>(ctx: TerritoryContext
         return hit ? 1 : 0.07;
       });
 
-    discs
+    patches
       .interrupt("fade")
       .transition("fade")
       .duration(duration)
       .attr("opacity", (d) => {
-        if (sel) return d.key === sel ? 1 : 0.18;
-        if (hov) return d.key === hov ? 1 : 0.45;
-        return q && !hasMatch.has(d.key) ? 0.3 : 1;
-      })
-      .attr("fill-opacity", (d) => (d.key === hov ? tint * 2 : d.key === sel ? tint * 1.5 : tint))
-      .attr("stroke-width", (d) => (d.key === hov ? 2.4 : 1.2));
-
-    stateG.interrupt("fade").transition("fade").duration(duration).attr("opacity", sel ? 0 : hov ? 0.5 : 1);
+        if (sel) return d.key === sel ? 1 : 0.16;
+        if (hov) return d.key === hov ? 1 : 0.4;
+        return q && !hasMatch.has(d.key) ? 0.25 : 1;
+      });
+    clay
+      .interrupt("fade")
+      .transition("fade")
+      .duration(duration)
+      .attr("fill-opacity", (d) => (d.key === hov ? Math.min(0.8, clayAlpha * 1.4) : clayAlpha))
+      .attr("stroke-opacity", (d) => (d.key === hov ? 0.9 : 0));
 
     labels
       .style("pointer-events", sel ? "none" : "auto")
@@ -686,12 +700,24 @@ export function renderTerritories<N extends TerritoryNode>(ctx: TerritoryContext
     const hovered = hov ? territoryOf.get(hov) : undefined;
     const spot = hov ? spots.get(hov) : undefined;
     if (hovered && spot) {
-      // From the label to the nearest point on the territory's edge.
-      const a = Math.atan2(spot.ly - hovered.y, spot.lx - hovered.x);
+      // From the label to the edge of the clay around the nearest of its bottles.
+      let near: N | undefined;
+      let nearest = Infinity;
+      for (const n of membersOf.get(hovered.key) ?? []) {
+        const gap = Math.hypot(spot.lx - (n.x ?? 0), spot.ly - (n.y ?? 0)) - n.r;
+        if (gap < nearest) {
+          nearest = gap;
+          near = n;
+        }
+      }
+      const fromX = near?.x ?? hovered.x;
+      const fromY = near?.y ?? hovered.y;
+      const fromR = (near?.r ?? hovered.r) + CLAY_PAD * k;
+      const a = Math.atan2(spot.ly - fromY, spot.lx - fromX);
       link
         .style("stroke", ringColor(hovered.key))
-        .attr("x1", hovered.x + hovered.r * Math.cos(a))
-        .attr("y1", hovered.y + hovered.r * Math.sin(a))
+        .attr("x1", fromX + fromR * Math.cos(a))
+        .attr("y1", fromY + fromR * Math.sin(a))
         .attr("x2", spot.lx)
         .attr("y2", spot.ly)
         .interrupt()
@@ -729,6 +755,7 @@ export function renderTerritories<N extends TerritoryNode>(ctx: TerritoryContext
 
   return {
     setFocus(selected, query) {
+      if (!live()) return;
       const next = selected && territoryOf.has(selected) ? selected : null;
       const moved = next !== state.selected;
       state.selected = next;

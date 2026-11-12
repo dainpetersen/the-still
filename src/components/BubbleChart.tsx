@@ -581,6 +581,7 @@ export default function BubbleChart({
         places,
         colorOf: colorFn,
         groupColor: (key) => distColors.get(key),
+        quietClay: isBrandMode,
         theme,
         selected: selectedGroupRef.current ?? null,
         query: searchQueryRef.current ?? "",

@@ -100,6 +100,8 @@ export default function HomeClient({ children, initialRatings }: Props) {
 
   const handleGroupModeChange = useCallback((mode: GroupMode) => {
     setGroupMode(mode);
+    // A selected distillery means nothing in the other views.
+    setSelectedGroup(null);
   }, []);
 
   // ── Derived display data ──────────────────────────────────────────────────

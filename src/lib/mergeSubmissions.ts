@@ -146,7 +146,9 @@ export function mergeApprovedSubmissions(
           description: d.bottleDescription ?? "",
           sourceDistillery: d.bottleSourceDistillery,
           style: d.bottleStyle ? (d.bottleStyle as WhiskeyStyle) : undefined,
-          source: "community",
+          availability: d.bottleAvailability,
+          // Release-watch entries are curated like the rest of the catalog.
+          source: d.curated ? "official" : "community",
         };
         parentSubBrand.bottles.push(newBottle);
       }

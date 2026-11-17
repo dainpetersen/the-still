@@ -303,6 +303,26 @@ export async function reviewSubmission(
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
 
+/** Approve or reject several submissions at once. */
+export async function reviewSubmissions(
+  ids: string[],
+  status: "approved" | "rejected",
+  adminNote?: string
+) {
+  if (ids.length === 0) return;
+  const client = getServiceClient();
+  if (!client) throw new Error("Service role key not configured");
+  const { error } = await client
+    .from("submissions")
+    .update({
+      status,
+      admin_note: adminNote ?? null,
+      reviewed_at: new Date().toISOString(),
+    })
+    .in("id", ids);
+  if (error) throw error;
+}
+
 export async function signInWithGoogle() {
   const client = getClient();
   if (!client) throw new Error("Supabase is not configured");

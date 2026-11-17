@@ -1,6 +1,7 @@
 import { fetchPendingSubmissions, fetchReviewedSubmissions } from "@/lib/supabase";
-import { Submission, SubmissionData } from "@/types/whiskey";
+import { RELEASE_WATCH_SESSION, Submission, SubmissionData } from "@/types/whiskey";
 import AdminActions from "./AdminActions";
+import ReleaseReview, { type ReleaseItem } from "./ReleaseReview";
 
 // Always fetch fresh data — never serve a cached version of the admin page
 export const dynamic = "force-dynamic";
@@ -56,6 +57,27 @@ function submissionDetail(s: Submission): string[] {
   return lines;
 }
 
+/** A release-watch submission, flattened for the review list. */
+function toReleaseItem(s: Submission): ReleaseItem {
+  const d = s.data as SubmissionData;
+  return {
+    id: s.id,
+    name: d.bottleName ?? "Unnamed bottle",
+    producer: d.release?.producer,
+    line: s.parentName,
+    proof: d.bottleAbv != null ? Math.round(d.bottleAbv * 20) / 10 : undefined,
+    age: d.bottleAge,
+    price: d.bottlePrice,
+    style: d.bottleStyle,
+    rarity: d.bottleRarity,
+    description: d.bottleDescription,
+    source: d.release?.source,
+    url: d.release?.url,
+    listedAs: d.release?.listedAs,
+    month: d.release?.month,
+  };
+}
+
 const TYPE_COLORS: Record<string, string> = {
   brand: "rgba(245,158,11,0.2)",
   sub_brand: "rgba(59,130,246,0.2)",
@@ -96,6 +118,11 @@ export default async function AdminPage() {
   } catch {
     configError = true;
   }
+
+  // New releases queued by the weekly release watch get their own one-button
+  // review; everything else is reviewed one at a time as before.
+  const releases = pending.filter((s) => s.sessionId === RELEASE_WATCH_SESSION && s.type === "bottle");
+  const others = pending.filter((s) => !releases.includes(s));
 
   const approved = reviewed.filter((s) => s.status === "approved");
   const rejected = reviewed.filter((s) => s.status === "rejected");
@@ -145,25 +172,44 @@ export default async function AdminPage() {
           </div>
         )}
 
+        {/* ── New releases ───────────────────────────────────────────── */}
+        {releases.length > 0 && (
+          <section>
+            <h2 className="text-lg font-bold mb-1 flex items-center gap-2">
+              <span style={{ color: "#4ade80" }}>New releases to review</span>
+              <span
+                className="text-xs font-semibold px-2 py-0.5 rounded-full"
+                style={{ background: "rgba(34,197,94,0.15)", color: "#4ade80" }}
+              >
+                {releases.length}
+              </span>
+            </h2>
+            <p className="text-xs text-gray-500 mb-4">
+              Found by the weekly release watch. Untick anything that shouldn&apos;t be added, then press the button.
+            </p>
+            <ReleaseReview items={releases.map(toReleaseItem)} />
+          </section>
+        )}
+
         {/* ── Pending ────────────────────────────────────────────────── */}
         <section>
           <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
             <span style={{ color: "#f59e0b" }}>Pending Review</span>
-            {pending.length > 0 && (
+            {others.length > 0 && (
               <span
                 className="text-xs font-semibold px-2 py-0.5 rounded-full"
                 style={{ background: "rgba(245,158,11,0.15)", color: "#f59e0b" }}
               >
-                {pending.length}
+                {others.length}
               </span>
             )}
           </h2>
 
-          {pending.length === 0 ? (
+          {others.length === 0 ? (
             <p className="text-sm text-gray-500 italic">No pending submissions.</p>
           ) : (
             <div className="space-y-3">
-              {pending.map((s) => (
+              {others.map((s) => (
                 <div
                   key={s.id}
                   className="rounded-xl p-4"

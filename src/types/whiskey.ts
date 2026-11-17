@@ -131,7 +131,30 @@ export interface SubmissionData {
   bottleDescription?: string;
   bottleSourceDistillery?: string;
   bottleStyle?: WhiskeyStyle;
+  bottleAvailability?: AvailabilityStatus;
+  /**
+   * Set by the weekly release watch. A curated entry is shown like the rest
+   * of the catalog once approved, rather than marked as a community entry.
+   */
+  curated?: boolean;
+  /** Where a release-watch entry came from, shown to the admin when reviewing. */
+  release?: ReleaseSource;
 }
+
+export interface ReleaseSource {
+  /** Producer name, for display. */
+  producer?: string;
+  /** Publication the release was found in. */
+  source?: string;
+  url?: string;
+  /** The line as the source printed it. */
+  listedAs?: string;
+  details?: string;
+  month?: string;
+}
+
+/** `session_id` of submissions queued by the weekly release watch. */
+export const RELEASE_WATCH_SESSION = "release-watch";
 
 export interface Submission {
   id: string;
